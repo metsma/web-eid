@@ -47,6 +47,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
       <![CDATA[Installed OR (VersionNT >= 601)]]>
     </Condition>
     <UIRef Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="LICENSE.LGPL.rtf"/>
+    <WixVariable Id="WixUIDialogBmp" Value="host-windows\dlgbmp.bmp"/>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id='ProgramFilesFolder'>
