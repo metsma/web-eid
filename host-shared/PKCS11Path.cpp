@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <map>
+#include <unistd.h>
 #include "PKCS11Path.h"
 #include "Logger.h"
 #include "BinaryUtils.h"
@@ -31,6 +32,7 @@ static std::map<std::string, std::string> createMap() {
     const std::string latPath("/Library/latvia-eid/lib/otlv-pkcs11.so");
     const std::string finPath("/Library/mPolluxDigiSign/libcryptoki.dylib");
     const std::string litPath("/System/Library/Security/tokend/CCSuite.tokend/Contents/Frameworks/libccpkip11.dylib");
+    const std::string etokenPath("/Library/Frameworks/eToken.framework/Versions/Current/libeToken.dylib");
 #else
     const std::string estPath("opensc-pkcs11.so");
     const std::string latPath("otlv-pkcs11.so");
@@ -61,6 +63,8 @@ static std::map<std::string, std::string> createMap() {
     
     m["3BF81300008131FE45536D617274417070F8"] = litPath;
     m["3B7D94000080318065B08311C0A983009000"] = litPath;
+
+    m["3BD518008131FE7D8073C82110F4"] = etokenPath;
     return m;
 }
 const std::map<std::string, std::string> atrToDriverMap = createMap();
@@ -78,8 +82,13 @@ std::string PKCS11Path::getPkcs11ModulePath() {
         if (it == atrToDriverMap.end()) {
             continue;
         }
-        driver = it -> second; //TODO: don't deal with multiple different drivers at the moment, just get the first match
-        break;
+        // Check that the file actually exists
+        if (access(it->second.c_str(), F_OK ) != -1) {
+            driver = it -> second; //TODO: don't deal with multiple different drivers at the moment, just get the first match
+            break;
+        } else {
+            _log("ignoring missing PKCS#11 module %s", it->second.c_str());
+        }
     }
     if (driver.empty()) {
         _log("no suitable driver found...");
