@@ -190,10 +190,8 @@
 
 - (void)controlTextDidChange:(NSNotification*)notification;
 {
-    // replace content with its intValue
-    pinField.stringValue = [[pinField.stringValue componentsSeparatedByCharactersInSet:
-                             NSCharacterSet.decimalDigitCharacterSet.invertedSet]
-                            componentsJoinedByString:@""];
+    // FIXME: the constant 5 here is quite arbitrary and not necessarily
+    // applies to signature tokens. But still a sensible minimum to keep.
     okButton.enabled = pinField.stringValue.length >= 5;
 }
 
