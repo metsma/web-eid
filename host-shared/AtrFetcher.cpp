@@ -84,7 +84,7 @@ void AtrFetcher::listReaders() {
 }
 
 void AtrFetcher::populateAtrs() {
-    for (int i = 0; i<readerList.size(); i++) {
+    for (unsigned int i = 0; i<readerList.size(); i++) {
         CardReader *reader = readerList[i];
         try {
             reader -> connect();
@@ -97,7 +97,7 @@ void AtrFetcher::populateAtrs() {
 }
 
 void AtrFetcher::release() {
-    for (int i = 0; i<readerList.size(); i++) {
+    for (unsigned int i = 0; i<readerList.size(); i++) {
         readerList[i] -> release();
     }
     SCardReleaseContext(hContext);

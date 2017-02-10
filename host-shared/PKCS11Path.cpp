@@ -77,7 +77,7 @@ std::string PKCS11Path::getPkcs11ModulePath() {
         return "";
     }
     std::string driver = "";
-    for (int i = 0; i < atrs.size(); i++) {
+    for (unsigned int i = 0; i < atrs.size(); i++) {
         auto it = atrToDriverMap.find(atrs[i]);
         if (it == atrToDriverMap.end()) {
             continue;
