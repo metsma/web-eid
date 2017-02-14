@@ -20,14 +20,18 @@
 UNAME = `uname`
 RELEASE = `grep '"version"' extension/manifest.json  | cut -d'"' -f 4`
 
-detect:
-	make $(UNAME)
+# the default target
+ifeq ($(UNAME),Linux)
+   DEFAULT=all
+else
+   DEFAULT=pkg
+endif
 
-Linux:
-	make -C host-linux
+default: $(DEFAULT)
 
-Darwin:
-	make -C host-osx
+# map uname output to subfolder and run make there.
+.DEFAULT:
+	$(MAKE) -C host-$(subst $(subst $(UNAME),Linux,linux),Darwin,osx) $@
 
 # Make the zip to be uploaded to chrome web store
 release:
