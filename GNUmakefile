@@ -17,8 +17,8 @@
 #
 
 # This is the Makefile for OSX/Linux. See Makefile for Windows NMake.
-UNAME = `uname`
-RELEASE = `grep '"version"' extension/manifest.json  | cut -d'"' -f 4`
+UNAME :=$(shell uname)
+RELEASE := $(shell grep '"version"' extension/manifest.json  | cut -d'"' -f 4)
 
 # the default target
 ifeq ($(UNAME),Linux)
@@ -31,7 +31,7 @@ default: $(DEFAULT)
 
 # map uname output to subfolder and run make there.
 .DEFAULT:
-	$(MAKE) -C host-$(subst $(subst $(UNAME),Linux,linux),Darwin,osx) $@
+	$(MAKE) -C host-$(subst Darwin,osx,$(subst Linux,linux,$(UNAME))) $@
 
 # Make the zip to be uploaded to chrome web store
 release:
