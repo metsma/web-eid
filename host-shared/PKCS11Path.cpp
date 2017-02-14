@@ -63,8 +63,9 @@ static std::map<std::string, std::string> createMap() {
     
     m["3BF81300008131FE45536D617274417070F8"] = litPath;
     m["3B7D94000080318065B08311C0A983009000"] = litPath;
-
+#ifdef __APPLE__
     m["3BD518008131FE7D8073C82110F4"] = etokenPath;
+#endif
     return m;
 }
 const std::map<std::string, std::string> atrToDriverMap = createMap();
