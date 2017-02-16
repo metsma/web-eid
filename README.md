@@ -1,4 +1,4 @@
-# hwcrypto installer
+# Web eID installer [![Build Status](https://travis-ci.org/hwcrypto/hwcrypto-native.svg?branch=master)](https://travis-ci.org/hwcrypto/hwcrypto-native) [![Coverity Scan Build Status](https://scan.coverity.com/projects/11786/badge.svg)](https://scan.coverity.com/projects/hwcrypto-hwcrypto-native)
 
  * License: LGPL 2.1
  * &copy; Estonian Information System Authority
@@ -6,8 +6,6 @@
 ## Please refer to the [wiki](https://github.com/hwcrypto/hwcrypto-native/wiki) for some time!
 
 ## Building
-[![Build Status](https://travis-ci.org/open-eid/chrome-token-signing.svg?branch=master)](https://travis-ci.org/open-eid/chrome-token-signing)
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/2449/badge.svg)](https://scan.coverity.com/projects/2449)
 
 1. Install dependencies
 
