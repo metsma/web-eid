@@ -9,7 +9,7 @@ os:
 - osx
 env:
   global:
-  - secure: oRtk0cC35ItGNDY0z9gRenVW8qTE8St+XmhFNkh/K4BWLp5vMzv+hOBzXK9ZJ38prppcGur6evVNqJ7NCrGyH6DjS3TjBzd/FalvD1lEZyAKPKVihHjLwOr2uayt6nGhA7wt7HlFLvL1pfiuWnR6tFWxP3fI8duuu0x9N0ILyu0=
+  - secure: "eQphLF0NVr0L9ZBF0GhLfVo1qOAVfmewIMt8a+/AZTryUvP86fx5YvbykNmO1wJszvJiMW82hQaLhVS9Acw90v7Gm54plM7+5maqIHatD/cO3cz0DmlzItP+RqRv8VdNNSlsPtBsmA1nlIQOajFYJt1TCCT0P/fHk9l/19uBn/cYUy4QaHJIDzNSyWykZfQBj4KJj+ebVH1soGSwOBMiaEn5qAAYMiSgL1ZRBGNQYd1/J++0NufOLcLXEqL0sVGb6an+yfu4ydMPFigmZRrDBUMq0oUr5lp6cL0P2TS9rZDSQ0oF7bBY0M2Zi/UmtpVC6ahJzuJcl3ethnuiYl/QDZJNwMdaws07Km6wIFgxSnDu9nId2kbLq5jGp3VrEaZV8CDy2ABbsbnsxOCPieOOwHLePpk/lIA7tnP+aBwNpB40hSdF5yzW3+HO1AFQXtJHTefdhn++OlR2mXG8EDVW6F33lTGp/3Mh9xo1Q09vnDpA87c7R7ERUn+Ga2WYogbphDuRCxsqo+Y17SJVLIqdhwd1HMRbDZmXv6xgNuLQv5v426cCc1LKpNFzlSre3r+pcveDOi3IPcp+w0vcwpSgF9kS8bZnLPKZhpyMJHpvG+a/uJ0S4hr+E4hHl+K3VLmigrxv5QRxHXATBv+Xg3g0SAKD0r9vLt0wWzJp6f/W57w="
 addons:
   apt:
     packages:
@@ -20,8 +20,8 @@ addons:
     - libpcsclite-dev
   coverity_scan:
     project:
-      name: open-eid/chrome-token-signing
-    notification_email: martin@martinpaljak.net
+      name: hwcrypto/hwcrypto-native
+    notification_email: hwcrypto@googlegroups.com
     build_command_prepend: 
     build_command: make
     branch_pattern: coverity_scan
