@@ -32,7 +32,7 @@ default: $(DEFAULT)
 .DEFAULT:
 	$(MAKE) -C host-$(subst Darwin,osx,$(subst Linux,linux,$(UNAME))) $@
 
-test: detect
+test: default
 	# wildcard will resolve to an empty string with a missing file
 	# so that OSX will not run with xvfb
 	$(wildcard /usr/bin/xvfb-run) python host-test/pipe-test.py -v
