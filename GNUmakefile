@@ -18,7 +18,6 @@
 
 # This is the Makefile for OSX/Linux. See Makefile for Windows NMake.
 UNAME :=$(shell uname)
-RELEASE := $(shell grep '"version"' extension/manifest.json  | cut -d'"' -f 4)
 
 # the default target
 ifeq ($(UNAME),Linux)
@@ -33,19 +32,11 @@ default: $(DEFAULT)
 .DEFAULT:
 	$(MAKE) -C host-$(subst Darwin,osx,$(subst Linux,linux,$(UNAME))) $@
 
-# Make the zip to be uploaded to chrome web store
-release:
-	test ! -f extension-$(RELEASE).zip
-	test -z "`git status -s extension`"
-	git clean -dfx extension
-	zip -r -j extension-$(RELEASE).zip extension
-
 test: detect
 	# wildcard will resolve to an empty string with a missing file
 	# so that OSX will not run with xvfb
 	$(wildcard /usr/bin/xvfb-run) python host-test/pipe-test.py -v
 
 # Make the targzip for the native components
-# FIXME: git describe vs $(RELEASE) ?
 dist:
 	git-archive-all chrome-token-signing-`git describe --tags --always`.tar.gz
