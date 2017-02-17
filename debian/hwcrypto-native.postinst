@@ -1,0 +1,4 @@
+#!/bin/bash
+set -e
+mkdir -p /etc/opt/chrome/native-messaging-hosts
+ln -sf /usr/share/hwcrypto-native/org.hwcrypto.native.json /etc/opt/chrome/native-messaging-hosts/org.hwcrypto.native.json

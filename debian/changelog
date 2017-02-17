@@ -1,5 +1,11 @@
-chrome-token-signing (1.0.0) stable; urgency=low
+hwcrypto-native (17.2.17.0-stretch) unstable; urgency=medium
 
-  * Initial release
+  * Release: 17.2.17.0.
 
- -- RIA <info@ria.ee>  Wed, 05 Feb 2014 13:08:56 +0300
+ -- Martin Paljak <martin@nummi.lan>  Fri, 17 Feb 2017 11:32:58 +0200
+
+hwcrypto-native (17.2.17) stable; urgency=medium
+
+  * Initial release of rebranded components
+
+ -- Martin Paljak <martin@martinpaljak.net>  Fri, 17 Feb 2017 11:29:42 +0200

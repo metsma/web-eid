@@ -23,7 +23,7 @@ def get_exe():
     if sys.platform == 'darwin':
         return "host-osx/build/Release/chrome-token-signing.app/Contents/MacOS/chrome-token-signing"
     elif sys.platform == "linux2":
-        return "host-linux/chrome-token-signing"
+        return "host-linux/hwcrypto-native"
     elif sys.platform == 'win32':
         if os.path.isfile("host-windows\\Debug\\chrome-token-signing.exe"):
             return "host-windows\\Debug\\chrome-token-signing.exe"
