@@ -4,6 +4,7 @@ language: c
 
 script:
 - make test
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then fakeroot debian/rules binary; fi
 os:
 - linux
 - osx
