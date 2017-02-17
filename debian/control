@@ -13,6 +13,7 @@ Package: hwcrypto-native
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Suggests: opensc
+Replaces: chrome-token-signing
 Description: Modern eID extension for browsers
  Software necessary for eID usage on the Web.
 
