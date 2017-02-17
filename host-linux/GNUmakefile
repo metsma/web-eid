@@ -29,7 +29,8 @@ clean:
 	make -f Makefile distclean
 
 install:
-	make -f Makefile install
+	# Debian scripts expect "standard DESTDIR" to work
+	make -f Makefile install INSTALL_ROOT=$(DESTDIR)
 
 uninstall:
 	make -f Makefile uninstall
