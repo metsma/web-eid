@@ -4,6 +4,7 @@
     "path": "/usr/bin/hwcrypto-native",
     "type": "stdio",
     "allowed_origins": [
-        "chrome-extension://ckjefchnfjhjfedoccjbhjpbncimppeg/"
+        "chrome-extension://ckjefchnfjhjfedoccjbhjpbncimppeg/",
+        "chrome-extension://iilgmppjalfjjenmkaepcdgbkoomifhg/"
     ]
 }

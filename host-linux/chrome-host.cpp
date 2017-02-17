@@ -37,7 +37,7 @@ public:
         : QApplication(argc, argv)
     {
         _log("Starting native host %s", VERSION);
-        setWindowIcon(QIcon(":/chrome-token-signing.png"));
+        setWindowIcon(QIcon(":/hwcrypto-native.png"));
         setQuitOnLastWindowClosed(false);
         in.open(stdin, QFile::ReadOnly);
         QSocketNotifier *n1 = new QSocketNotifier(0, QSocketNotifier::Read, this);
