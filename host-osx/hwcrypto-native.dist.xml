@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <installer-gui-script minSpecVersion="1">
-    <title>chrome-token-signing</title>
+    <title>Web eID</title>
     <background file="background.png"/>
     <license file="License.txt" />
     <options customize="never"/>
@@ -8,6 +8,6 @@
         <line choice="default"/>
     </choices-outline>
     <choice id="default">
-        <pkg-ref id="ee.ria.chrome-token-signing">chrome-token-signing.pkg</pkg-ref>
+        <pkg-ref id="org.hwcrypto.native">hwcrypto-native.pkg</pkg-ref>
     </choice>
 </installer-gui-script>

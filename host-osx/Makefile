@@ -25,18 +25,18 @@ BUILD_NUMBER ?= 0
 include ../VERSION.mk
 
 SIGNER ?= Riigi Infosüsteemi Amet
-OPENSSL ?= $(PWD)/target
+OPENSSL ?= /usr/local/Cellar/openssl/1.0.2j
 TMPROOT = $(PWD)/tmp
-TARGET = $(TMPROOT)/Library/Google/Chrome/NativeMessagingHosts/chrome-token-signing.app
-PKG = chrome-token-signing.pkg
+TARGET = $(TMPROOT)/Library/Google/Chrome/NativeMessagingHosts/hwcrypto-native.app
+PKG = hwcrypto-native.pkg
 
-PROJ = xcodebuild -project chrome-token-signing.xcodeproj -configuration Release VERSION=$(VERSION) BUILD_NUMBER=$(BUILD_NUMBER) OPENSSL=$(OPENSSL)
+PROJ = xcodebuild -project hwcrypto-native.xcodeproj -configuration Release VERSION=$(VERSION) BUILD_NUMBER=$(BUILD_NUMBER) OPENSSL=$(OPENSSL)
 
 $(TARGET): *.mm $(OPENSSL)
 	$(PROJ) install DSTROOT=$(TMPROOT)
 
 codesign: $(TARGET)
-	codesign -f --entitlements chrome-token-signing.entitlements -s "Developer ID Application: $(SIGNER)" "$(TARGET)"
+	codesign -f --entitlements hwcrypto-native.entitlements -s "Developer ID Application: $(SIGNER)" "$(TARGET)"
 
 clean:
 	$(PROJ) clean
@@ -45,7 +45,7 @@ clean:
 $(PKG): $(TARGET)
 	pkgbuild --version $(VERSION) \
 		--root $(TMPROOT) \
-		--identifier ee.ria.chrome-token-signing \
+		--identifier org.hwcrypto.native \
                 --install-location / \
 		$(PKG)
 
@@ -54,7 +54,7 @@ pkg: $(PKG)
 signed: codesign
 	pkgbuild --version $(VERSION) \
 		--root $(TMPROOT) \
-		--identifier ee.ria.chrome-token-signing \
+		--identifier org.hwcrypto.native \
                 --install-location / \
                 --sign "Developer ID Installer: $(SIGNER)" \
 		$(PKG)
@@ -73,18 +73,18 @@ $(OPENSSL):
 
 install:
 	mkdir -p $(NATIVE_PATH) $(FIREFOX_PATH) $(FFEXTENSION_PATH) $(EXTERNAL_PATH)
-	cp -rv build/Release/chrome-token-signing.app $(NATIVE_PATH)
-	cp -v ee.ria.esteid.json $(NATIVE_PATH)
-	cp -v ee.ria.esteid.firefox.json $(FIREFOX_PATH)/ee.ria.esteid.json
+	cp -rv build/Release/hwcrypto-native.app $(NATIVE_PATH)
+	cp -v org.hwcrypto.native.json $(NATIVE_PATH)
+	cp -v org.hwcrypto.native.firefox.json $(FIREFOX_PATH)/org.hwcrypto.native.json
 	cp -v ../{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi $(FFEXTENSION_PATH)
 	cp -v ../ckjefchnfjhjfedoccjbhjpbncimppeg.json $(EXTERNAL_PATH)
 
 uninstall:
 	rm -f $(EXTERNAL_PATH)/ckjefchnfjhjfedoccjbhjpbncimppeg.json
-	rm -f $(NATIVE_PATH)/ee.ria.esteid.json
-	rm -f $(FIREFOX_PATH)/ee.ria.esteid.json
+	rm -f $(NATIVE_PATH)/org.hwcrypto.native.json
+	rm -f $(FIREFOX_PATH)/org.hwcrypto.native.json
 	rm -f $(FFEXTENSION_PATH)/{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi
-	rm -rf $(NATIVE_PATH)/chrome-token-signing.app
+	rm -rf $(NATIVE_PATH)/hwcrypto-native.app
 
 test:
-	python ../host-test/stateless-test.py $(TARGET)/Contents/MacOS/chrome-token-signing
+	python ../host-test/stateless-test.py $(TARGET)/Contents/MacOS/hwcrypto-native

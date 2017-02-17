@@ -28,13 +28,13 @@
 		4E2028291AA74A6A00AB9BDC /* Labels.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Labels.cpp; sourceTree = "<group>"; };
 		4E20282A1AA74A6A00AB9BDC /* Labels.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Labels.h; sourceTree = "<group>"; };
 		4E20282C1AA74E0800AB9BDC /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
-		4E2EF6CB1DCE9F22000CD2CC /* ee.ria.esteid.firefox.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = ee.ria.esteid.firefox.json; sourceTree = "<group>"; };
+		4E2EF6CB1DCE9F22000CD2CC /* org.hwcrypto.native.firefox.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = org.hwcrypto.native.firefox.json; sourceTree = "<group>"; };
 		4E46FD1F1A979DA400D0F3C8 /* PINDialog.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PINDialog.xib; sourceTree = "<group>"; };
 		4E46FD211A979DA400D0F3C8 /* PINPadDialog.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = PINPadDialog.xib; sourceTree = "<group>"; };
 		4E46FD251A97A07000D0F3C8 /* PINDialog.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PINDialog.mm; sourceTree = "<group>"; };
 		4E46FD271A97A08600D0F3C8 /* PINDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PINDialog.h; sourceTree = "<group>"; };
-		4E490EC21A9DF45E00309C5B /* ee.ria.esteid.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = ee.ria.esteid.json; sourceTree = "<group>"; };
-		4E532CE01A96379500D28E40 /* chrome-token-signing.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "chrome-token-signing.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		4E490EC21A9DF45E00309C5B /* org.hwcrypto.native.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = org.hwcrypto.native.json; sourceTree = "<group>"; };
+		4E532CE01A96379500D28E40 /* hwcrypto-native.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hwcrypto-native.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4E532D081A96393D00D28E40 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4E532D091A96393D00D28E40 /* chrome-host.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = "chrome-host.mm"; sourceTree = "<group>"; };
 		4E532D0C1A96399600D28E40 /* CertificateSelection.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = CertificateSelection.xib; sourceTree = "<group>"; };
@@ -54,7 +54,7 @@
 		4E775F291AB04E9600A48B78 /* testconf.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = testconf.py; sourceTree = "<group>"; };
 		4E7C88641AA9EAF8008758AA /* PKCS11CardManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PKCS11CardManager.h; sourceTree = "<group>"; };
 		4E894C171AA655F70059CB93 /* stateless-test.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = "stateless-test.py"; sourceTree = "<group>"; };
-		4EF5F11B1AB8AA330023D7A3 /* chrome-token-signing.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "chrome-token-signing.entitlements"; sourceTree = "<group>"; };
+		4EF5F11B1AB8AA330023D7A3 /* hwcrypto-native.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "hwcrypto-native.entitlements"; sourceTree = "<group>"; };
 		5B0C569C1DAE2CCB00A022F5 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = ../../target/lib/libcrypto.a; sourceTree = "<group>"; };
 		9D29330E1C0DFA5200A9DEC4 /* PKCS11Path.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PKCS11Path.h; sourceTree = "<group>"; };
 		9D29330F1C0DFB8200A9DEC4 /* PKCS11Path.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PKCS11Path.cpp; sourceTree = "<group>"; };
@@ -111,7 +111,7 @@
 		4E532CE11A96379500D28E40 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4E532CE01A96379500D28E40 /* chrome-token-signing.app */,
+				4E532CE01A96379500D28E40 /* hwcrypto-native.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -119,8 +119,8 @@
 		4E532CE21A96379500D28E40 /* Host-OSX */ = {
 			isa = PBXGroup;
 			children = (
-				4E490EC21A9DF45E00309C5B /* ee.ria.esteid.json */,
-				4E2EF6CB1DCE9F22000CD2CC /* ee.ria.esteid.firefox.json */,
+				4E490EC21A9DF45E00309C5B /* org.hwcrypto.native.json */,
+				4E2EF6CB1DCE9F22000CD2CC /* org.hwcrypto.native.firefox.json */,
 				4E532D101A963AEF00D28E40 /* CertificateSelection.h */,
 				4E532D0E1A9639E600D28E40 /* CertificateSelection.mm */,
 				4E532D0C1A96399600D28E40 /* CertificateSelection.xib */,
@@ -138,7 +138,7 @@
 			isa = PBXGroup;
 			children = (
 				9D8198A41C19AF7900707089 /* PCSC.framework */,
-				4EF5F11B1AB8AA330023D7A3 /* chrome-token-signing.entitlements */,
+				4EF5F11B1AB8AA330023D7A3 /* hwcrypto-native.entitlements */,
 				4E20282C1AA74E0800AB9BDC /* Cocoa.framework */,
 				4E532D1B1A96843700D28E40 /* libcrypto.dylib */,
 				4E532D081A96393D00D28E40 /* Info.plist */,
@@ -182,9 +182,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		4E532CDF1A96379500D28E40 /* chrome-token-signing */ = {
+		4E532CDF1A96379500D28E40 /* hwcrypto-native */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4E532CFD1A96379500D28E40 /* Build configuration list for PBXNativeTarget "chrome-token-signing" */;
+			buildConfigurationList = 4E532CFD1A96379500D28E40 /* Build configuration list for PBXNativeTarget "hwcrypto-native" */;
 			buildPhases = (
 				4E532CDC1A96379500D28E40 /* Sources */,
 				4E532CDD1A96379500D28E40 /* Frameworks */,
@@ -195,9 +195,9 @@
 			);
 			dependencies = (
 			);
-			name = "chrome-token-signing";
-			productName = "chrome-token-signing";
-			productReference = 4E532CE01A96379500D28E40 /* chrome-token-signing.app */;
+			name = "hwcrypto-native";
+			productName = "hwcrypto-native";
+			productReference = 4E532CE01A96379500D28E40 /* hwcrypto-native.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -220,7 +220,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 4E532CDB1A96379500D28E40 /* Build configuration list for PBXProject "chrome-token-signing" */;
+			buildConfigurationList = 4E532CDB1A96379500D28E40 /* Build configuration list for PBXProject "hwcrypto-native" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -233,7 +233,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				4E532CDF1A96379500D28E40 /* chrome-token-signing */,
+				4E532CDF1A96379500D28E40 /* hwcrypto-native */,
 			);
 		};
 /* End PBXProject section */
@@ -263,7 +263,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p ${INSTALL_ROOT}/Library/Google/Chrome/NativeMessagingHosts \\\n    ${INSTALL_ROOT}/Library/Application\\ Support/Google/Chrome/External\\ Extensions/ \\\n    ${INSTALL_ROOT}/Library/Application\\ Support/Mozilla/NativeMessagingHosts/ \\\n    ${INSTALL_ROOT}/Library/Application\\ Support/Mozilla/Extensions/\\{ec8030f7-c20a-464f-9b0e-13a3a9e97384\\}\ncp ${SRCROOT}/ee.ria.esteid.json ${INSTALL_ROOT}/Library/Google/Chrome/NativeMessagingHosts/\ncp ${SRCROOT}/ee.ria.esteid.firefox.json ${INSTALL_ROOT}/Library/Application\\ Support/Mozilla/NativeMessagingHosts/ee.ria.esteid.json\ncp ${SRCROOT}/../ckjefchnfjhjfedoccjbhjpbncimppeg.json ${INSTALL_ROOT}/Library/Application\\ Support/Google/Chrome/External\\ Extensions/\ncp ${SRCROOT}/../\{443830f0-1fff-4f9a-aa1e-444bafbc7319\}.xpi ${INSTALL_ROOT}/Library/Application\\ Support/Mozilla/Extensions/\\{ec8030f7-c20a-464f-9b0e-13a3a9e97384\\}";
+			shellScript = "mkdir -p ${INSTALL_ROOT}/Library/Google/Chrome/NativeMessagingHosts \\\n    ${INSTALL_ROOT}/Library/Application\\ Support/Google/Chrome/External\\ Extensions/ \\\n    ${INSTALL_ROOT}/Library/Application\\ Support/Mozilla/NativeMessagingHosts/ \\\n    ${INSTALL_ROOT}/Library/Application\\ Support/Mozilla/Extensions/\\{ec8030f7-c20a-464f-9b0e-13a3a9e97384\\}\ncp ${SRCROOT}/org.hwcrypto.native.json ${INSTALL_ROOT}/Library/Google/Chrome/NativeMessagingHosts/\ncp ${SRCROOT}/org.hwcrypto.native.firefox.json ${INSTALL_ROOT}/Library/Application\\ Support/Mozilla/NativeMessagingHosts/org.hwcrypto.native.json\ncp ${SRCROOT}/../ckjefchnfjhjfedoccjbhjpbncimppeg.json ${INSTALL_ROOT}/Library/Application\\ Support/Google/Chrome/External\\ Extensions/\ncp ${SRCROOT}/../\{443830f0-1fff-4f9a-aa1e-444bafbc7319\}.xpi ${INSTALL_ROOT}/Library/Application\\ Support/Mozilla/Extensions/\\{ec8030f7-c20a-464f-9b0e-13a3a9e97384\\}";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -397,7 +397,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4E532CDB1A96379500D28E40 /* Build configuration list for PBXProject "chrome-token-signing" */ = {
+		4E532CDB1A96379500D28E40 /* Build configuration list for PBXProject "hwcrypto-native" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4E532CFB1A96379500D28E40 /* Debug */,
@@ -406,7 +406,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4E532CFD1A96379500D28E40 /* Build configuration list for PBXNativeTarget "chrome-token-signing" */ = {
+		4E532CFD1A96379500D28E40 /* Build configuration list for PBXNativeTarget "hwcrypto-native" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4E532CFE1A96379500D28E40 /* Debug */,

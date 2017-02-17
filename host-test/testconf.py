@@ -21,7 +21,7 @@ import os.path
 
 def get_exe():
     if sys.platform == 'darwin':
-        return "host-osx/build/Release/chrome-token-signing.app/Contents/MacOS/chrome-token-signing"
+        return "host-osx/build/Release/hwcrypto-native.app/Contents/MacOS/hwcrypto-native"
     elif sys.platform == "linux2":
         return "host-linux/hwcrypto-native"
     elif sys.platform == 'win32':
