@@ -60,6 +60,10 @@ signed: codesign
 		$(PKG)
 
 
+Web-eID.pkg: product
+
+product: signed
+	productbuild --distribution hwcrypto-native.dist.xml --package-path . --resources . --sign "Developer ID Installer: $(SIGNER)" Web-eID.pkg
 
 $(OPENSSL):
 	test -e openssl || git clone --depth=1 https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable

@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <installer-gui-script minSpecVersion="1">
     <title>Web eID</title>
+    <allowed-os-versions>
+      <os-version min="10.9"/>
+    </allowed-os-versions>
+    <options customize="never" require-scripts="false" rootVolumeOnly="true" hostArchitectures="x86_64"/>
+    <background file="background.png" scaling="none" alignment="topleft"/>
+    <license file="license.rtf" mime-type="text/rtf"/>
+    <welcome mime-type="text/rtf" file="welcome.rtf"/>
     <background file="background.png"/>
-    <license file="License.txt" />
-    <options customize="never"/>
     <choices-outline>
         <line choice="default"/>
     </choices-outline>
