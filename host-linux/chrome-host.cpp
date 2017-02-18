@@ -26,6 +26,11 @@
 #include <QJsonObject>
 #include <QSocketNotifier>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <stdio.h>
+
 #ifndef VERSION
 #define VERSION "1.0.0.0"
 #endif
@@ -138,5 +143,11 @@ void Application::write(QVariantMap &resp, const QString &nonce) const
 
 int main(int argc, char *argv[])
 {
+    struct stat sb;
+    fstat(fileno(stdin), &sb);
+    if (!S_ISFIFO(sb.st_mode)) {
+        printf("This is not a regular program, it is expected to be run from a browser.\n");
+        exit(1);
+    }
     return Application(argc, argv).exec();
 }
