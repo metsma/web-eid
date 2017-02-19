@@ -39,7 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
       Id="*" Language="1033" Version="$(var.VERSION)" Codepage="1251" Manufacturer="RIA">
     <Package Platform="$(var.Platform)" Keywords="Installer" InstallerVersion="405" Compressed="yes"/>
     <MediaTemplate EmbedCab="yes" CompressionLevel="high"/>
-    <Icon Id="Icon.ico" SourceFile="host-windows\ID.ico"/>
+    <Icon Id="Icon.ico" SourceFile="artwork\win_icon.ico"/>
     <Property Id="ARPPRODUCTICON" Value="Icon.ico"/>
     <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage=
       "A newer version of [ProductName] is already installed. If you are trying to downgrade, please uninstall the newer version first."/>
@@ -48,7 +48,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
     </Condition>
     <UIRef Id="WixUI_Minimal" />
     <WixVariable Id="WixUILicenseRtf" Value="artwork\license.rtf"/>
-    <WixVariable Id="WixUIDialogBmp" Value="host-windows\dlgbmp.bmp"/>
+    <WixVariable Id="WixUIDialogBmp" Value="artwork\win_background.bmp"/>
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id='ProgramFilesFolder'>
