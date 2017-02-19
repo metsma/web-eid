@@ -1,0 +1,5 @@
+# Windows icon
+
+apt-get install icoutils
+icotool -c icon48.png  -o  win_icon.ico
+
