@@ -30,17 +30,17 @@ build:
 pkg:
 	$(SIGN) host-windows/Release/chrome-token-signing.exe
 	"$(WIX)\bin\candle.exe" -nologo host-windows\chrome-token-signing.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
-	"$(WIX)\bin\light.exe" -nologo -out chrome-token-signing_$(VERSIONEX).x86.msi chrome-token-signing.wixobj -ext WixUIExtension -dWixUILicenseRtf=LICENSE.LGPL.rtf -dWixUIDialogBmp=host-windows/dlgbmp.bmp -dPlatform=x86
+	"$(WIX)\bin\light.exe" -nologo -out chrome-token-signing_$(VERSIONEX).x86.msi chrome-token-signing.wixobj -ext WixUIExtension -dPlatform=x86
 	"$(WIX)\bin\candle.exe" -nologo host-windows\chrome-token-signing.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
-	"$(WIX)\bin\light.exe" -nologo -out chrome-token-signing_$(VERSIONEX).x64.msi chrome-token-signing.wixobj -ext WixUIExtension -dWixUILicenseRtf=LICENSE.LGPL.rtf -dWixUIDialogBmp=host-windows/dlgbmp.bmp -dPlatform=x64
+	"$(WIX)\bin\light.exe" -nologo -out chrome-token-signing_$(VERSIONEX).x64.msi chrome-token-signing.wixobj -ext WixUIExtension -dPlatform=x64
 	$(SIGN) chrome-token-signing_$(VERSIONEX).x86.msi
 	$(SIGN) chrome-token-signing_$(VERSIONEX).x64.msi
 
 pkg-unsigned:
 	"$(WIX)\bin\candle.exe" -nologo host-windows\chrome-token-signing.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
-	"$(WIX)\bin\light.exe" -nologo -out chrome-token-signing_$(VERSIONEX).x86.msi chrome-token-signing.wixobj -ext WixUIExtension -dWixUILicenseRtf=LICENSE.LGPL.rtf -dWixUIDialogBmp=host-windows/dlgbmp.bmp -dPlatform=x86
+	"$(WIX)\bin\light.exe" -nologo -out chrome-token-signing_$(VERSIONEX).x86.msi chrome-token-signing.wixobj -ext WixUIExtension -dPlatform=x86
 	"$(WIX)\bin\candle.exe" -nologo host-windows\chrome-token-signing.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
-	"$(WIX)\bin\light.exe" -nologo -out chrome-token-signing_$(VERSIONEX).x64.msi chrome-token-signing.wixobj -ext WixUIExtension -dWixUILicenseRtf=LICENSE.LGPL.rtf -dWixUIDialogBmp=host-windows/dlgbmp.bmp -dPlatform=x64
+	"$(WIX)\bin\light.exe" -nologo -out chrome-token-signing_$(VERSIONEX).x64.msi chrome-token-signing.wixobj -ext WixUIExtension -dPlatform=x64
 
 test: build
 	python host-test\pipe-test.py -v
