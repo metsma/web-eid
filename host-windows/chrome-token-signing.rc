@@ -67,4 +67,4 @@ BEGIN
 END
 /* End of Version info */
 
-IDI_ICON1   ICON  DISCARDABLE  "ID.ico"
+IDI_ICON1   ICON  DISCARDABLE  "..\\artwork\\win_icon.ico"
