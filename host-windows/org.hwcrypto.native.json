@@ -4,6 +4,8 @@
     "path": "hwcrypto-native.exe",
     "type": "stdio",
     "allowed_origins": [
-        "chrome-extension://ckjefchnfjhjfedoccjbhjpbncimppeg/"
+        "chrome-extension://ckjefchnfjhjfedoccjbhjpbncimppeg/",
+        "chrome-extension://fmpfihjoladdfajbnkdfocnbcehjpogi/",
+        "chrome-extension://dpaadmibfooopdmommnjgmpkgdeeoppb/"
     ]
 }
