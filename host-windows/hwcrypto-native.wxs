@@ -58,7 +58,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
             <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.json'
                 Key='SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native'/>
             <RegistryValue Root='HKLM' Type='string' Name="update_url"
-                Key='SOFTWARE\Google\Chrome\Extensions\ckjefchnfjhjfedoccjbhjpbncimppeg'
+                Key='SOFTWARE\Google\Chrome\Extensions\fmpfihjoladdfajbnkdfocnbcehjpogi'
                 Value='https://clients2.google.com/service/update2/crx'/>
             <RegistryValue Root="HKLM" Type="string" Value="[APPLICATIONFOLDER]\{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi"
                 Key="SOFTWARE\Mozilla\Firefox\Extensions" Name="{443830f0-1fff-4f9a-aa1e-444bafbc7319}" />

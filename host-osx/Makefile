@@ -81,10 +81,10 @@ install:
 	cp -v org.hwcrypto.native.json $(NATIVE_PATH)
 	cp -v org.hwcrypto.native.firefox.json $(FIREFOX_PATH)/org.hwcrypto.native.json
 	cp -v ../{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi $(FFEXTENSION_PATH)
-	cp -v ../ckjefchnfjhjfedoccjbhjpbncimppeg.json $(EXTERNAL_PATH)
+	cp -v ../fmpfihjoladdfajbnkdfocnbcehjpogi.json $(EXTERNAL_PATH)
 
 uninstall:
-	rm -f $(EXTERNAL_PATH)/ckjefchnfjhjfedoccjbhjpbncimppeg.json
+	rm -f $(EXTERNAL_PATH)/fmpfihjoladdfajbnkdfocnbcehjpogi.json
 	rm -f $(NATIVE_PATH)/org.hwcrypto.native.json
 	rm -f $(FIREFOX_PATH)/org.hwcrypto.native.json
 	rm -f $(FFEXTENSION_PATH)/{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi

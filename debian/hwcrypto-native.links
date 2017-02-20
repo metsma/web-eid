@@ -1,5 +1,5 @@
 /usr/share/hwcrypto-native/org.hwcrypto.native.json /etc/chromium/native-messaging-hosts/org.hwcrypto.native.json
 /usr/share/hwcrypto-native/org.hwcrypto.native.json /etc/chromium-browser/native-messaging-hosts/org.hwcrypto.native.json
-/usr/share/hwcrypto-native/ckjefchnfjhjfedoccjbhjpbncimppeg.json /usr/share/chromium/extensions/ckjefchnfjhjfedoccjbhjpbncimppeg.json
-/usr/share/hwcrypto-native/ckjefchnfjhjfedoccjbhjpbncimppeg.json /usr/share/chromium-browser/extensions/ckjefchnfjhjfedoccjbhjpbncimppeg.json
-/usr/share/hwcrypto-native/ckjefchnfjhjfedoccjbhjpbncimppeg.json /usr/share/google-chrome/extensions/ckjefchnfjhjfedoccjbhjpbncimppeg.json
+/usr/share/hwcrypto-native/fmpfihjoladdfajbnkdfocnbcehjpogi.json /usr/share/chromium/extensions/fmpfihjoladdfajbnkdfocnbcehjpogi.json
+/usr/share/hwcrypto-native/fmpfihjoladdfajbnkdfocnbcehjpogi.json /usr/share/chromium-browser/extensions/fmpfihjoladdfajbnkdfocnbcehjpogi.json
+/usr/share/hwcrypto-native/fmpfihjoladdfajbnkdfocnbcehjpogi.json /usr/share/google-chrome/extensions/fmpfihjoladdfajbnkdfocnbcehjpogi.json
