@@ -4,6 +4,7 @@
     "path": "/Library/Google/Chrome/NativeMessagingHosts/hwcrypto-native.app/Contents/MacOS/hwcrypto-native",
     "type": "stdio",
     "allowed_origins": [
-        "chrome-extension://ckjefchnfjhjfedoccjbhjpbncimppeg/"
+        "chrome-extension://ckjefchnfjhjfedoccjbhjpbncimppeg/",
+        "chrome-extension://fmpfihjoladdfajbnkdfocnbcehjpogi/"
     ]
 }
