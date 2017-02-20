@@ -54,22 +54,24 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
             <File Source="host-windows/Release/hwcrypto-native.exe"/>
             <File Source="host-windows/org.hwcrypto.native.json"/>
             <File Source="host-windows/org.hwcrypto.native.firefox.json"/>
-            <File Source="{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi"/>
+            <!-- NOT installed, untill hwcrypto/hwcrypto-extension#12 is fixed
+               <File Source="{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi"/>
+            -->
             <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.json'
                 Key='SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native'/>
             <RegistryValue Root='HKLM' Type='string' Name="update_url"
                 Key='SOFTWARE\Google\Chrome\Extensions\fmpfihjoladdfajbnkdfocnbcehjpogi'
                 Value='https://clients2.google.com/service/update2/crx'/>
-            <RegistryValue Root="HKLM" Type="string" Value="[APPLICATIONFOLDER]\{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi"
-                Key="SOFTWARE\Mozilla\Firefox\Extensions" Name="{443830f0-1fff-4f9a-aa1e-444bafbc7319}" />
+            <!--<RegistryValue Root="HKLM" Type="string" Value="[APPLICATIONFOLDER]\{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi"
+                Key="SOFTWARE\Mozilla\Firefox\Extensions" Name="{443830f0-1fff-4f9a-aa1e-444bafbc7319}" />-->
           </Component>
         </Directory>
-      </Directory>
+      </Directory>      
 <?if $(var.Platform) = "x64" ?>
-      <Component Id="Firefox_X64" Win64="yes">
+      <!-- <Component Id="Firefox_X64" Win64="yes">
         <RegistryValue Root="HKLM" Type="string" Value="[APPLICATIONFOLDER]\{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi"
             Key="SOFTWARE\Mozilla\Firefox\Extensions" Name="{443830f0-1fff-4f9a-aa1e-444bafbc7319}" />
-      </Component>
+      </Component>-->
 <?endif ?>
       <Component Id="Firefox" Guid="60c6e502-529b-4d28-9e92-4cdbf1176afb" Win64="$(var.Win64)">
         <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.firefox.json'

@@ -24,6 +24,8 @@ ffconf.path = /usr/lib/mozilla/native-messaging-hosts
 ffconf.files += ff/org.hwcrypto.native.json
 extension.path = /opt/google/chrome/extensions
 extension.files += ../fmpfihjoladdfajbnkdfocnbcehjpogi.json
-ffextension.path = /usr/share/mozilla/extensions/{ec8030f7-c20a-464f-9b0e-13a3a9e97384}
-ffextension.files += ../{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi
-INSTALLS += target hostconf ffconf extension ffextension
+# NOT installed, until hwcrypto/hwcrypto-extension#12 is fixed
+# ffextension.path = /usr/share/mozilla/extensions/{ec8030f7-c20a-464f-9b0e-13a3a9e97384}
+# ffextension.files += ../{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi
+# INSTALLS += ffextension
+INSTALLS += target hostconf ffconf extension
