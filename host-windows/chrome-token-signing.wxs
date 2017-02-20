@@ -91,5 +91,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
       <ComponentRef Id="Firefox_X64"/>
 <?endif ?>
     </Feature>
+    <!-- Open browser after installation -->
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="OpenHello">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
+    </UI>
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1"/>
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Learn more about this software" />
+    <Property Id="WixShellExecTarget" Value="https://hwcrypto.org/installer/"/>
+    <CustomAction Id="OpenHello" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="yes" Return="ignore" />
   </Product>
 </Wix>
