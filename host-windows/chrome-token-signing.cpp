@@ -22,6 +22,7 @@
 #include "RequestHandler.h"
 #include "Logger.h"
 #include "HostExceptions.h"
+#include "Windows.h"
 
 using namespace std;
 using namespace jsonxx;
@@ -29,6 +30,11 @@ using namespace jsonxx;
 void handleException(const BaseException &e, IOCommunicator &ioCommunicator);
 
 int main(int argc, char **argv) {
+
+	if (GetFileType(GetStdHandle(STD_INPUT_HANDLE)) != FILE_TYPE_PIPE) {
+		printf("This is not a regular program, it is expected to be run from a browser.\n");
+		exit(1);
+	}
 
 	IOCommunicator ioCommunicator;
 
