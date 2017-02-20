@@ -25,7 +25,7 @@ BUILD_NUMBER=0
 SIGN = signtool sign /v /a /s MY /n "$(SIGNER)" /fd SHA256 /t http://timestamp.verisign.com/scripts/timstamp.dll
 EXE = host-windows/Release/chrome-token-signing.exe
 
-$(EXE):
+$(EXE): host-windows\*.cpp host-windows\*.h
 	msbuild /p:Configuration=Release;Platform=Win32 /property:MAJOR_VERSION=$(MAJOR_VERSION) /property:MINOR_VERSION=$(MINOR_VERSION) /property:RELEASE_VERSION=$(RELEASE_VERSION) /property:BUILD_NUMBER=$(BUILD_NUMBER) host-windows\host-windows.sln
 
 pkg: $(EXE)
