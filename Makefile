@@ -23,19 +23,20 @@ BUILD_NUMBER=0
 !ENDIF
 !include VERSION.mk
 SIGN = signtool sign /v /n "$(SIGNER)" /fd SHA256 /t http://timestamp.comodoca.com/?td=sha256 /td sha256
-EXE = host-windows/Release/chrome-token-signing.exe
+EXE = host-windows/Release/hwcrypto-native.exe
+DIST = web-eid
 
 $(EXE): host-windows\*.cpp host-windows\*.h
 	msbuild /p:Configuration=Release;Platform=Win32 /property:MAJOR_VERSION=$(MAJOR_VERSION) /property:MINOR_VERSION=$(MINOR_VERSION) /property:RELEASE_VERSION=$(RELEASE_VERSION) /property:BUILD_NUMBER=$(BUILD_NUMBER) host-windows\host-windows.sln
 
 pkg: $(EXE)
 	IF DEFINED SIGNER ($(SIGN) $(EXE))
-	"$(WIX)\bin\candle.exe" -nologo host-windows\chrome-token-signing.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
-	"$(WIX)\bin\light.exe" -nologo -out chrome-token-signing_$(VERSIONEX).x86.msi chrome-token-signing.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x86
-	"$(WIX)\bin\candle.exe" -nologo host-windows\chrome-token-signing.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
-	"$(WIX)\bin\light.exe" -nologo -out chrome-token-signing_$(VERSIONEX).x64.msi chrome-token-signing.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x64
-	IF DEFINED SIGNER ($(SIGN) chrome-token-signing_$(VERSIONEX).x86.msi)
-	IF DEFINED SIGNER ($(SIGN) chrome-token-signing_$(VERSIONEX).x64.msi)
+	"$(WIX)\bin\candle.exe" -nologo host-windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
+	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSIONEX).x86.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x86
+	"$(WIX)\bin\candle.exe" -nologo host-windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
+	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSIONEX).x64.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x64
+	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSIONEX).x86.msi)
+	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSIONEX).x64.msi)
 
 test: build
 	python host-test\pipe-test.py -v

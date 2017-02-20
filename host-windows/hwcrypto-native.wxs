@@ -17,13 +17,6 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 -->
 
-<!--
-"%WIX%\bin\candle.exe" chrome-token-signing.wxs -dVERSION=1.0.0
-"%WIX%\bin\light.exe" -out chrome-token-signing.msi chrome-token-signing.wixobj -ext WixUIExtension
-    -dWixUILicenseRtf=LICENSE.LGPL.rtf
-    -dWixUIDialogBmp=dlgbmp.bmp
--->
-
 <?ifndef Platform ?>
 <?define Platform="x64" ?>
 <?endif ?>
@@ -35,8 +28,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 <?endif ?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product Name="Chrome Token Signing" UpgradeCode="3e52954d-eee4-4dd8-a4f2-318521e3dbd9"
-      Id="*" Language="1033" Version="$(var.VERSION)" Codepage="1251" Manufacturer="RIA">
+  <Product Name="Web eID" UpgradeCode="3e52954d-eee4-4dd8-a4f2-318521e3dbd9"
+      Id="*" Language="1033" Version="$(var.VERSION)" Codepage="1251" Manufacturer="hwcrypto.org">
     <Package Platform="$(var.Platform)" Keywords="Installer" InstallerVersion="405" Compressed="yes"/>
     <MediaTemplate EmbedCab="yes" CompressionLevel="high"/>
     <Icon Id="Icon.ico" SourceFile="artwork\win_icon.ico"/>
@@ -52,18 +45,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id='ProgramFilesFolder'>
-        <Directory Id="APPLICATIONFOLDER" Name="Chrome Token Signing">
+        <Directory Id="APPLICATIONFOLDER" Name="Web eID">
           <Component Id="Application" Guid="85baa771-7c73-49bb-b546-ab6a4520d258" Win64="no">
             <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\msvcp140.dll"/>
             <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\vcruntime140.dll"/>
             <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\vccorlib140.dll"/>
             <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.MFC\mfc140u.dll"/>
-            <File Source="host-windows/Release/chrome-token-signing.exe"/>
-            <File Source="host-windows/ee.ria.esteid.json"/>
-            <File Source="host-windows/ee.ria.esteid.firefox.json"/>
+            <File Source="host-windows/Release/hwcrypto-native.exe"/>
+            <File Source="host-windows/org.hwcrypto.native.json"/>
+            <File Source="host-windows/org.hwcrypto.native.firefox.json"/>
             <File Source="{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi"/>
-            <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]ee.ria.esteid.json'
-                Key='SOFTWARE\Google\Chrome\NativeMessagingHosts\ee.ria.esteid'/>
+            <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.json'
+                Key='SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native'/>
             <RegistryValue Root='HKLM' Type='string' Name="update_url"
                 Key='SOFTWARE\Google\Chrome\Extensions\ckjefchnfjhjfedoccjbhjpbncimppeg'
                 Value='https://clients2.google.com/service/update2/crx'/>
@@ -79,12 +72,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
       </Component>
 <?endif ?>
       <Component Id="Firefox" Guid="60c6e502-529b-4d28-9e92-4cdbf1176afb" Win64="$(var.Win64)">
-        <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]ee.ria.esteid.firefox.json'
-            Key='SOFTWARE\Mozilla\NativeMessagingHosts\ee.ria.esteid' />
+        <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.firefox.json'
+            Key='SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native' />
       </Component>
     </Directory>
 
-    <Feature Id="Install" Level="1" Title="Chrome Token Signing" Display="expand" ConfigurableDirectory="APPLICATIONFOLDER">
+    <Feature Id="Install" Level="1" Title="Web eID" Display="expand" ConfigurableDirectory="APPLICATIONFOLDER">
       <ComponentRef Id="Application"/>
       <ComponentRef Id="Firefox"/>
 <?if $(var.Platform) = "x64" ?>

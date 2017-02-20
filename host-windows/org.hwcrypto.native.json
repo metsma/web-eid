@@ -1,7 +1,7 @@
 {
-    "name": "ee.ria.esteid",
+    "name": "org.hwcrypto.native",
     "description": "Give signatures with your eID on the web",
-    "path": "chrome-token-signing.exe",
+    "path": "hwcrypto-native.exe",
     "type": "stdio",
     "allowed_origins": [
         "chrome-extension://ckjefchnfjhjfedoccjbhjpbncimppeg/"

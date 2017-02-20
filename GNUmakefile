@@ -39,4 +39,4 @@ test: default
 
 # Make the targzip for the native components
 dist:
-	git-archive-all chrome-token-signing-`git describe --tags --always`.tar.gz
+	git-archive-all hwcrypto-native-`git describe --tags --always`.tar.gz

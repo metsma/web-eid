@@ -25,10 +25,10 @@ def get_exe():
     elif sys.platform == "linux2":
         return "host-linux/hwcrypto-native"
     elif sys.platform == 'win32':
-        if os.path.isfile("host-windows\\Debug\\chrome-token-signing.exe"):
-            return "host-windows\\Debug\\chrome-token-signing.exe"
+        if os.path.isfile("host-windows\\Debug\\hwcrypto-native.exe"):
+            return "host-windows\\Debug\\hwcrypto-native.exe"
         else:
-            return "host-windows\\Release\\chrome-token-signing.exe"
+            return "host-windows\\Release\\hwcrypto-native.exe"
     else:
         print("Unsupported platform: %s" % sys.platform)
         sys.exit(1)
