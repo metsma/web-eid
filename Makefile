@@ -22,7 +22,7 @@
 BUILD_NUMBER=0
 !ENDIF
 !include VERSION.mk
-SIGN = signtool sign /v /a /s MY /n "$(SIGNER)" /fd SHA256 /t http://timestamp.verisign.com/scripts/timstamp.dll
+SIGN = signtool sign /v /n "$(SIGNER)" /fd SHA256 /t http://timestamp.comodoca.com/?td=sha256 /td sha256
 EXE = host-windows/Release/chrome-token-signing.exe
 
 $(EXE): host-windows\*.cpp host-windows\*.h
