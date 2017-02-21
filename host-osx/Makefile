@@ -47,8 +47,11 @@ hwcrypto-native.pkg: $(TARGET)
         --install-location / \
 	$@
 
+scripts.pkg: installer-scripts/*
+	pkgbuild --nopayload --scripts installer-scripts --id org.hwcrypto.scripts --version 1 $@
+
 pkg: Web-eID-unsigned.pkg
-Web-eID-unsigned.pkg: hwcrypto-native.pkg installer-scripts/*
+Web-eID-unsigned.pkg: hwcrypto-native.pkg scripts.pkg
 	productbuild --distribution hwcrypto-native.dist.xml \
 	--package-path . \
 	--resources . \

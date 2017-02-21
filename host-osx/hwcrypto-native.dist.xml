@@ -13,5 +13,6 @@
     </choices-outline>
     <choice id="default">
         <pkg-ref id="org.hwcrypto.native">hwcrypto-native.pkg</pkg-ref>
+        <pkg-ref id="org.hwcrypto.scripts">scripts.pkg</pkg-ref>
     </choice>
 </installer-gui-script>
