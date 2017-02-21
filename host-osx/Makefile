@@ -40,27 +40,29 @@ clean:
 	$(PROJ) clean
 	git clean -dfx
 
-pkg: hwcrypto-native.pkg
 hwcrypto-native.pkg: $(TARGET)
 	pkgbuild --version $(VERSION) \
-		--root $(TMPROOT) \
-		--identifier org.hwcrypto.native \
-                --install-location / \
-		$@
+	--root $(TMPROOT) \
+	--identifier org.hwcrypto.native \
+        --install-location / \
+	$@
 
-product: Web-eID-unsigned.pkg
-Web-eID-unsigned.pkg: pkg installer-scripts/*
+pkg: Web-eID-unsigned.pkg
+Web-eID-unsigned.pkg: hwcrypto-native.pkg installer-scripts/*
 	productbuild --distribution hwcrypto-native.dist.xml \
 	--package-path . \
 	--resources . \
 	--scripts installer-scripts \
 	$@
 
+
 signed: Web-eID.pkg
-Web-eID.pkg: Web-eID-unsigned.pkg
+.PHONY: Web-eID.pkg
+Web-eID.pkg:
+	rm *.pkg
 	$(MAKE) codesign
-	$(MAKE) product
-	productsign --sign "Developer ID Installer: $(SIGNER)" $< $@
+	$(MAKE) pkg
+	productsign --sign "Developer ID Installer: $(SIGNER)" Web-eID-unsigned.pkg $@
 
 dmg: Web-eID.dmg
 Web-eID.dmg: Web-eID.pkg
