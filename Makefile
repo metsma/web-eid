@@ -22,9 +22,9 @@
 BUILD_NUMBER=0
 !ENDIF
 !include VERSION.mk
-SIGN = signtool sign /v /n "$(SIGNER)" /fd SHA256 /t http://timestamp.comodoca.com/?td=sha256 /td sha256
+SIGN = signtool sign /v /n "$(SIGNER)" /fd SHA256 /tr http://timestamp.comodoca.com/?td=sha256 /td sha256
 EXE = host-windows/Release/hwcrypto-native.exe
-DIST = web-eid
+DISTNAME = Web-eID
 
 $(EXE): host-windows\*.cpp host-windows\*.h
 	msbuild /p:Configuration=Release;Platform=Win32 /property:MAJOR_VERSION=$(MAJOR_VERSION) /property:MINOR_VERSION=$(MINOR_VERSION) /property:RELEASE_VERSION=$(RELEASE_VERSION) /property:BUILD_NUMBER=$(BUILD_NUMBER) host-windows\host-windows.sln
