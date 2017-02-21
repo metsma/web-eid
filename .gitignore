@@ -15,5 +15,5 @@
 /extension-*.zip
 /*.tar.gz
 /host-osx/build
-/host-osx/chrome-token-signing.xcodeproj/project.xcworkspace/
-/host-osx/chrome-token-signing.xcodeproj/xcuserdata/
+/host-osx/hwcrypto-native.xcodeproj/project.xcworkspace/
+/host-osx/hwcrypto-native.xcodeproj/xcuserdata/
