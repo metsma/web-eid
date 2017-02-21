@@ -27,7 +27,6 @@ include ../VERSION.mk
 OPENSSL ?= /usr/local/Cellar/openssl/1.0.2j
 TMPROOT = $(CURDIR)/tmp
 TARGET = $(TMPROOT)/Library/Google/Chrome/NativeMessagingHosts/hwcrypto-native.app
-PKG = hwcrypto-native.pkg
 
 PROJ = xcodebuild -project hwcrypto-native.xcodeproj -configuration Release VERSION=$(VERSION) BUILD_NUMBER=$(BUILD_NUMBER) OPENSSL=$(OPENSSL)
 
@@ -41,34 +40,31 @@ clean:
 	$(PROJ) clean
 	git clean -dfx
 
-$(PKG): $(TARGET)
+pkg: hwcrypto-native.pkg
+hwcrypto-native.pkg: $(TARGET)
 	pkgbuild --version $(VERSION) \
 		--root $(TMPROOT) \
 		--identifier org.hwcrypto.native \
                 --install-location / \
-		$(PKG)
+		$@
 
-pkg: $(PKG)
-
-signed: codesign
-	pkgbuild --version $(VERSION) \
-		--root $(TMPROOT) \
-		--identifier org.hwcrypto.native \
-                --install-location / \
-                --sign "Developer ID Installer: $(SIGNER)" \
-		$(PKG)
-
-
-Web-eID.pkg: product
-
-scripts.pkg: installer-scripts/*
-	pkgbuild --nopayload --scripts installer-scripts --id org.hwcrypto.scripts --sign "Developer ID Installer: $(SIGNER)" scripts.pkg
-
-product: signed scripts.pkg
+product: Web-eID-unsigned.pkg
+Web-eID-unsigned.pkg: pkg installer-scripts/*
 	productbuild --distribution hwcrypto-native.dist.xml \
 	--package-path . \
 	--resources . \
-	--sign "Developer ID Installer: $(SIGNER)" Web-eID.pkg
+	--scripts installer-scripts \
+	$@
+
+signed: Web-eID.pkg
+Web-eID.pkg: Web-eID-unsigned.pkg
+	$(MAKE) codesign
+	$(MAKE) product
+	productsign --sign "Developer ID Installer: $(SIGNER)" $< $@
+
+dmg: Web-eID.dmg
+Web-eID.dmg: Web-eID.pkg
+	hdiutil create $@ -ov -volname "Web eID installer" -srcfolder $<
 
 $(OPENSSL):
 	test -e openssl || git clone --depth=1 https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
