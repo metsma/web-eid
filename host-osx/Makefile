@@ -24,9 +24,8 @@ FFEXTENSION_PATH = /Library/Application\ Support/Mozilla/Extensions/\{ec8030f7-c
 BUILD_NUMBER ?= 0
 include ../VERSION.mk
 
-SIGNER ?= Riigi Infosüsteemi Amet
 OPENSSL ?= /usr/local/Cellar/openssl/1.0.2j
-TMPROOT = $(PWD)/tmp
+TMPROOT = $(CURDIR)/tmp
 TARGET = $(TMPROOT)/Library/Google/Chrome/NativeMessagingHosts/hwcrypto-native.app
 PKG = hwcrypto-native.pkg
 
@@ -62,8 +61,14 @@ signed: codesign
 
 Web-eID.pkg: product
 
-product: signed
-	productbuild --distribution hwcrypto-native.dist.xml --package-path . --resources . --sign "Developer ID Installer: $(SIGNER)" Web-eID.pkg
+scripts.pkg: installer-scripts/*
+	pkgbuild --nopayload --scripts installer-scripts --id org.hwcrypto.scripts --sign "Developer ID Installer: $(SIGNER)" scripts.pkg
+
+product: signed scripts.pkg
+	productbuild --distribution hwcrypto-native.dist.xml \
+	--package-path . \
+	--resources . \
+	--sign "Developer ID Installer: $(SIGNER)" Web-eID.pkg
 
 $(OPENSSL):
 	test -e openssl || git clone --depth=1 https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable

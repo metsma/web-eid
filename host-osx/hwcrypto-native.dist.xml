@@ -5,13 +5,14 @@
       <os-version min="10.9"/>
     </allowed-os-versions>
     <options customize="never" require-scripts="false" rootVolumeOnly="true" hostArchitectures="x86_64"/>
+    <domains enable_localSystem="true"/>
     <background file="../artwork/mac_background.png" scaling="none" alignment="topleft"/>
-    <license file="../artwork/license.rtf" mime-type="text/rtf"/>
     <welcome mime-type="text/rtf" file="../artwork/mac_welcome_en.rtf"/>
     <choices-outline>
         <line choice="default"/>
     </choices-outline>
     <choice id="default">
         <pkg-ref id="org.hwcrypto.native">hwcrypto-native.pkg</pkg-ref>
+        <pkg-ref id="org.hwcrypto.scripts">scripts.pkg</pkg-ref>
     </choice>
 </installer-gui-script>
