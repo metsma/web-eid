@@ -66,13 +66,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
                 Key="SOFTWARE\Mozilla\Firefox\Extensions" Name="{443830f0-1fff-4f9a-aa1e-444bafbc7319}" />-->
           </Component>
         </Directory>
-      </Directory>      
+      </Directory>
+<!--
 <?if $(var.Platform) = "x64" ?>
       <Component Id="Firefox_X64" Win64="yes">
-        <!--<RegistryValue Root="HKLM" Type="string" Value="[APPLICATIONFOLDER]\{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi"
-            Key="SOFTWARE\Mozilla\Firefox\Extensions" Name="{443830f0-1fff-4f9a-aa1e-444bafbc7319}" />-->
+        <RegistryValue Root="HKLM" Type="string" Value="[APPLICATIONFOLDER]\{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi"
+            Key="SOFTWARE\Mozilla\Firefox\Extensions" Name="{443830f0-1fff-4f9a-aa1e-444bafbc7319}" />
       </Component>
 <?endif ?>
+-->
       <Component Id="Firefox" Guid="60c6e502-529b-4d28-9e92-4cdbf1176afb" Win64="$(var.Win64)">
         <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.firefox.json'
             Key='SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native' />
@@ -82,9 +84,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
     <Feature Id="Install" Level="1" Title="Web eID" Display="expand" ConfigurableDirectory="APPLICATIONFOLDER">
       <ComponentRef Id="Application"/>
       <ComponentRef Id="Firefox"/>
+<!--
 <?if $(var.Platform) = "x64" ?>
       <ComponentRef Id="Firefox_X64"/>
 <?endif ?>
+-->
     </Feature>
     <!-- Open browser after installation -->
     <UI>
@@ -92,7 +96,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
     </UI>
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1"/>
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Learn more about this software" />
-    <Property Id="WixShellExecTarget" Value="https://hwcrypto.org/installer/"/>
+    <Property Id="WixShellExecTarget" Value="https://web-eid.com/?installer=windows-$(var.Platform)"/>
     <CustomAction Id="OpenHello" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="yes" Return="ignore" />
   </Product>
 </Wix>
