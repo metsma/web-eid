@@ -23,7 +23,7 @@ BUILD_NUMBER=0
 !ENDIF
 !include VERSION.mk
 SIGN = signtool sign /v /n "$(SIGNER)" /fd SHA256 /tr http://timestamp.comodoca.com/?td=sha256 /td sha256
-EXE = host-windows/Release/hwcrypto-native.exe
+EXE = host-qt/release/hwcrypto-native.exe
 DISTNAME = Web-eID
 
 $(EXE): host-windows\*.cpp host-windows\*.h
@@ -31,12 +31,12 @@ $(EXE): host-windows\*.cpp host-windows\*.h
 
 pkg: $(EXE)
 	IF DEFINED SIGNER ($(SIGN) $(EXE))
-	"$(WIX)\bin\candle.exe" -nologo host-windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
+	"$(WIX)\bin\candle.exe" -nologo windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
 	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSIONEX).x86.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x86
-	"$(WIX)\bin\candle.exe" -nologo host-windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
+	"$(WIX)\bin\candle.exe" -nologo windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
 	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSIONEX).x64.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x64
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSIONEX).x86.msi)
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSIONEX).x64.msi)
 
 test: build
-	python host-test\pipe-test.py -v
+	python tests\pipe-test.py -v

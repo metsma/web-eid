@@ -1,7 +1,7 @@
 Source: hwcrypto-native
 Section: web
 Priority: extra
-Maintainer: RIA <info@ria.ee>
+Maintainer: hwcrypto.org maintainers <help@hwcrypto.org>
 Build-Depends:
  libssl-dev,
  qtbase5-dev,

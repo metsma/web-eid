@@ -16,8 +16,24 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-MAJOR_VERSION=17
-MINOR_VERSION=3
-RELEASE_VERSION=2
-VERSION=$(MAJOR_VERSION).$(MINOR_VERSION).$(RELEASE_VERSION)
-VERSIONEX=$(VERSION).$(BUILD_NUMBER)
+import sys
+import os.path
+import os
+
+def get_exe():
+    if "EXE" in os.environ:
+        return os.environ["EXE"]
+    if sys.platform == 'darwin':
+        return "macos/tmp/Library/Google/Chrome/NativeMessagingHosts/hwcrypto-native.app/Contents/MacOS/hwcrypto-native"
+    elif sys.platform == "linux2":
+        return "linux/hwcrypto-native"
+    elif sys.platform == 'win32':
+        if os.path.isfile("host-windows\\Debug\\hwcrypto-native.exe"):
+            return "host-windows\\Debug\\hwcrypto-native.exe"
+        else:
+            return "host-windows\\Release\\hwcrypto-native.exe"
+    else:
+        print("Unsupported platform: %s" % sys.platform)
+        sys.exit(1)
+
+                                                        

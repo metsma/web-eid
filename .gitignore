@@ -11,9 +11,9 @@
 *.wixpdb
 *out/
 *~
-/host-test/*.pyc
-/extension-*.zip
+/tests/*.pyc
 /*.tar.gz
 /host-osx/build
 /host-osx/hwcrypto-native.xcodeproj/project.xcworkspace/
 /host-osx/hwcrypto-native.xcodeproj/xcuserdata/
+*.pkg

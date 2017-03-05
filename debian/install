@@ -1,4 +1,4 @@
-./host-linux/hwcrypto-native /usr/bin
-./host-linux/org.hwcrypto.native.json /usr/share/hwcrypto-native
-./host-linux/ff/org.hwcrypto.native.json /usr/lib/mozilla/native-messaging-hosts
+./linux/hwcrypto-native /usr/lib
+./linux/org.hwcrypto.native.json /usr/share/hwcrypto-native
+./linux/firefox/org.hwcrypto.native.json /usr/lib/mozilla/native-messaging-hosts
 ./fmpfihjoladdfajbnkdfocnbcehjpogi.json /usr/share/hwcrypto-native

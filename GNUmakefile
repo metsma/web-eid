@@ -19,23 +19,21 @@
 # This is the Makefile for OSX/Linux. See Makefile for Windows NMake.
 UNAME :=$(shell uname)
 
-# the default target
-ifeq ($(UNAME),Linux)
-   DEFAULT=all
-else
-   DEFAULT=pkg
+# the default choice for OSX
+ifeq ($(UNAME),Darwin)
+   DEFAULT=qt
 endif
 
-default: $(DEFAULT)
+default: $(DEFAULT) pkg
 
 # map uname output to subfolder and run make there.
 .DEFAULT:
-	$(MAKE) -C host-$(subst Darwin,osx,$(subst Linux,linux,$(UNAME))) $@
+	$(MAKE) -C $(subst Darwin,macos,$(subst Linux,linux,$(UNAME))) $@
 
-test: default
+test:
 	# wildcard will resolve to an empty string with a missing file
 	# so that OSX will not run with xvfb
-	$(wildcard /usr/bin/xvfb-run) python host-test/pipe-test.py -v
+	$(wildcard /usr/bin/xvfb-run) python tests/pipe-test.py -v
 
 # Make the targzip for the native components
 dist:

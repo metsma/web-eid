@@ -2,3 +2,10 @@
 set -e
 mkdir -p /etc/opt/chrome/native-messaging-hosts
 ln -sf /usr/share/hwcrypto-native/org.hwcrypto.native.json /etc/opt/chrome/native-messaging-hosts/org.hwcrypto.native.json
+
+# Nice trick to open the browser of the installing user
+set +e
+exec >/dev/null 2>&1
+if [ -n "${SUDO_USER-$USERNAME}" ]; then
+    su - ${SUDO_USER-$USERNAME} sh -c "which xdg-open && xdg-open https://web-eid.com/?installer=debian-amd64; exit 0"
+fi

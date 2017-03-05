@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>ExtensionInstallForcelist</key>
+	<array>
+		<string>fmpfihjoladdfajbnkdfocnbcehjpogi;https://clients2.google.com/service/update2/crx</string>
+	</array>
+	<key>ExtensionInstallWhitelist</key>
+	<array>
+		<string>fmpfihjoladdfajbnkdfocnbcehjpogi</string>
+	</array>
+</dict>
+</plist>

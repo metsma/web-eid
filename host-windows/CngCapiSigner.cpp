@@ -17,25 +17,23 @@
  */
 
 #include "CngCapiSigner.h"
-#include "BinaryUtils.h"
 #include "HostExceptions.h"
+#include "Common.h"
 #include <Windows.h>
 #include <ncrypt.h>
 #include <WinCrypt.h>
 #include <cryptuiapi.h>
 #include "Logger.h"
+#include <stdexcept>
 
-using namespace std;
-
-string CngCapiSigner::sign() {
+std::vector<unsigned char> CngCapiSigner::sign(const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert) {
 
 	BCRYPT_PKCS1_PADDING_INFO padInfo;
 	DWORD obtainKeyStrategy = CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG;
-	vector<unsigned char> digest = BinaryUtils::hex2bin(getHash()->c_str());
 
 	ALG_ID alg = 0;
-	
-	switch (digest.size())
+
+	switch (hash.size())
 	{
 	case BINARY_SHA1_LENGTH:
 		padInfo.pszAlgId = NCRYPT_SHA1_ALGORITHM;
@@ -58,28 +56,26 @@ string CngCapiSigner::sign() {
 		alg = CALG_SHA_512;
 		break;
 	default:
-		throw InvalidHashException();
+		throw std::invalid_argument("Hash size does not match a known size");
 	}
-	
+
 	SECURITY_STATUS err = 0;
-	DWORD size = 256;
+	DWORD size = 256; // FIXME use NULL and resize accordingly
 	vector<unsigned char> signature(size, 0);
 
 	HCERTSTORE store = CertOpenSystemStore(0, L"MY");
 	if (!store) {
-		throw TechnicalException("Failed to open Cert Store");
+		throw std::runtime_error("Could not open MY store");
 	}
-	
-	vector<unsigned char> certInBinary = BinaryUtils::hex2bin(getCertInHex()->c_str());
-	
-	PCCERT_CONTEXT certFromBinary = CertCreateCertificateContext(X509_ASN_ENCODING, &certInBinary[0], certInBinary.size());
+
+	PCCERT_CONTEXT certFromBinary = CertCreateCertificateContext(X509_ASN_ENCODING, &cert[0], cert.size());
 	PCCERT_CONTEXT certInStore = CertFindCertificateInStore(store, X509_ASN_ENCODING, 0, CERT_FIND_EXISTING, certFromBinary, 0);
 	CertFreeCertificateContext(certFromBinary);
 
 	if (!certInStore)
 	{
 		CertCloseStore(store, 0);
-		throw NoCertificatesException();
+		throw std::invalid_argument("Certificate is not found in store"); // TODO: TBS
 	}
 
 	DWORD flags = obtainKeyStrategy | CRYPT_ACQUIRE_COMPARE_KEY_FLAG;
@@ -91,12 +87,12 @@ string CngCapiSigner::sign() {
 	CertFreeCertificateContext(certInStore);
 	CertCloseStore(store, 0);
 
-	switch (spec) 
+	// Certificate not needed any more, key handle acquired
+	switch (spec)
 	{
 	case CERT_NCRYPT_KEY_SPEC:
 	{
-		err = NCryptSignHash(key, &padInfo, PBYTE(&digest[0]), DWORD(digest.size()),
-			&signature[0], DWORD(signature.size()), (DWORD*)&size, BCRYPT_PAD_PKCS1);
+		err = NCryptSignHash(key, &padInfo, PBYTE(&hash[0]), DWORD(hash.size()), &signature[0], DWORD(signature.size()), (DWORD*)&size, BCRYPT_PAD_PKCS1);
 		if (freeKeyHandle) {
 			NCryptFreeObject(key);
 		}
@@ -104,50 +100,51 @@ string CngCapiSigner::sign() {
 	}
 	case AT_SIGNATURE:
 	{
-		HCRYPTHASH hash = 0;
-		if (!CryptCreateHash(key, alg, 0, 0, &hash)) {
+		HCRYPTHASH capihash = 0;
+		if (!CryptCreateHash(key, alg, 0, 0, &capihash)) {
 			if (freeKeyHandle) {
 				CryptReleaseContext(key, 0);
 			}
-			throw TechnicalException("CreateHash failed");
+			throw std::invalid_argument("CreateHash failed");
 		}
 
-		if (!CryptSetHashParam(hash, HP_HASHVAL, digest.data(), 0))	{
+		if (!CryptSetHashParam(capihash, HP_HASHVAL, hash.data(), 0))	{
 			if (freeKeyHandle) {
 				CryptReleaseContext(key, 0);
 			}
-			CryptDestroyHash(hash);
-			throw TechnicalException("SetHashParam failed");
+			CryptDestroyHash(capihash);
+			throw std::invalid_argument("SetHashParam failed");
 		}
 
-		INT retCode = CryptSignHashW(hash, AT_SIGNATURE, 0, 0, LPBYTE(signature.data()), &size);
+		INT retCode = CryptSignHashW(capihash, AT_SIGNATURE, 0, 0, LPBYTE(signature.data()), &size);
 		err = retCode ? ERROR_SUCCESS : GetLastError();
 		_log("CryptSignHash() return code: %u (%s) %x", retCode, retCode ? "SUCCESS" : "FAILURE", err);
 		if (freeKeyHandle) {
 			CryptReleaseContext(key, 0);
 		}
-		CryptDestroyHash(hash);
+		CryptDestroyHash(capihash);
+		// TODO: link to docs
 		reverse(signature.begin(), signature.end());
 		break;
 	}
 	default:
-		throw TechnicalException("Incompatible key");
+		throw std::invalid_argument("Incompatible key");
 	}
 
 	switch (err)
 	{
 	case ERROR_SUCCESS:
 		break;
-	case SCARD_W_CANCELLED_BY_USER: case ERROR_CANCELLED:
-		throw UserCancelledException("Signing was cancelled");
+	case SCARD_W_CANCELLED_BY_USER:
+	case ERROR_CANCELLED:
+		throw UserCancelledException("Signing was cancelled"); // FIXME: exception
 	case SCARD_W_CHV_BLOCKED:
 		throw PinBlockedException();
 	case NTE_INVALID_HANDLE:
-		throw TechnicalException("The supplied handle is invalid");
+		throw std::invalid_argument("The supplied handle is invalid");
 	default:
-		throw TechnicalException("Signing failed");
+		throw std::invalid_argument("Signing failed");
 	}
 	signature.resize(size);
-	return BinaryUtils::bin2hex(signature);
+	return signature;
 }
-

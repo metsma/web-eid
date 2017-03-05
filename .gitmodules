@@ -1,3 +1,0 @@
-[submodule "json"]
-	path = host-shared/json
-	url = https://github.com/hjiang/jsonxx

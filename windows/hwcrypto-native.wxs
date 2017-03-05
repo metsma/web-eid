@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Chrome Token Signing Native Host
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+-->
+
+<?ifndef Platform ?>
+<?define Platform="x64" ?>
+<?endif ?>
+
+<?define qt_path = "C:\Qt\5.8\msvc2015" ?>
+<?define ssl_path = "C:\OpenSSL-Win32" ?>
+
+<?if $(var.Platform) = x64 ?>
+  <?define Win64 = "yes" ?>
+<?else ?>
+  <?define Win64 = "no" ?>
+<?endif ?>
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Name="Web eID" UpgradeCode="79730a31-61d7-4395-b91e-191279b08798"
+      Id="*" Language="1033" Version="$(var.VERSION)" Codepage="1251" Manufacturer="hwcrypto.org">
+    <Package Platform="$(var.Platform)" Keywords="Installer" InstallerVersion="405" Compressed="yes"/>
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high"/>
+    <Icon Id="Icon.ico" SourceFile="artwork\win_icon.ico"/>
+    <Property Id="ARPPRODUCTICON" Value="Icon.ico"/>
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage=
+      "A newer version of [ProductName] is already installed. If you are trying to downgrade, please uninstall the newer version first."/>
+    <Condition Message="[ProductName] requires Windows 7 or higher.">
+      <![CDATA[Installed OR (VersionNT >= 601)]]>
+    </Condition>
+    <UIRef Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="artwork\license.rtf"/>
+    <WixVariable Id="WixUIDialogBmp" Value="artwork\win_background.bmp"/>
+    <WixVariable Id="WixUIBannerBmp" Value="artwork\win_banner.bmp" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id='ProgramFilesFolder'>
+        <Directory Id="APPLICATIONFOLDER" Name="Web eID">
+          <Component Id="Application" Guid="79730a31-61d7-4395-b91e-191279b08798" Win64="no">
+            <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\msvcp140.dll"/>
+            <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\vcruntime140.dll"/>
+            <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\vccorlib140.dll"/>
+            <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.MFC\mfc140u.dll"/>
+            <File Source="host-qt/release/hwcrypto-native.exe"/>
+            <File Source="windows/org.hwcrypto.native.json"/>
+            <File Source="windows/org.hwcrypto.native.firefox.json"/>
+            <!-- Qt dependencies -->
+            <File Source="$(var.qt_path)\bin\Qt5Core.dll"/>
+            <File Source="$(var.qt_path)\bin\Qt5Gui.dll"/>
+            <File Source="$(var.qt_path)\bin\Qt5Network.dll"/>
+            <File Source="$(var.qt_path)\bin\Qt5PrintSupport.dll"/>
+            <File Source="$(var.qt_path)\bin\Qt5Widgets.dll"/>
+            <File Source="$(var.qt_path)\bin\Qt5WinExtras.dll"/>
+            <File Source="$(var.qt_path)\bin\libEGL.dll"/>
+            <File Source="$(var.qt_path)\bin\libGLESv2.dll"/>
+            <File Source="$(var.qt_path)\bin\D3DCompiler_47.dll"/>
+            <File Source="$(var.qt_path)\bin\opengl32sw.dll" />
+            <!-- OpenSSL dependencies -->
+            <File Source="$(var.ssl_path)\bin\libeay32.dll"/>
+            <File Source="$(var.ssl_path)\bin\ssleay32.dll" />
+            <!-- Register native component for Chrome -->
+            <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.json'
+                Key='SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native'/>
+            <RegistryValue Root='HKLM' Type='string' Name="update_url"
+                Key='SOFTWARE\Google\Chrome\Extensions\fmpfihjoladdfajbnkdfocnbcehjpogi'
+                Value='https://clients2.google.com/service/update2/crx'/>
+          </Component>
+        </Directory>
+      </Directory>
+<!--
+<?if $(var.Platform) = "x64" ?>
+      <Component Id="Firefox_X64" Win64="yes">
+        <RegistryValue Root="HKLM" Type="string" Value="[APPLICATIONFOLDER]\{443830f0-1fff-4f9a-aa1e-444bafbc7319}.xpi"
+            Key="SOFTWARE\Mozilla\Firefox\Extensions" Name="{443830f0-1fff-4f9a-aa1e-444bafbc7319}" />
+      </Component>
+<?endif ?>
+-->
+	  <!-- Register native component for Firefox -->
+      <Component Id="Firefox" Guid="60c6e502-529b-4d28-9e92-4cdbf1176afb" Win64="$(var.Win64)">
+        <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.firefox.json'
+            Key='SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native' />
+      </Component>
+    </Directory>
+
+    <Feature Id="Install" Level="1" Title="Web eID" Display="expand" ConfigurableDirectory="APPLICATIONFOLDER">
+      <ComponentRef Id="Application"/>
+      <ComponentRef Id="Firefox"/>
+<!--
+<?if $(var.Platform) = "x64" ?>
+      <ComponentRef Id="Firefox_X64"/>
+<?endif ?>
+-->
+    </Feature>
+    <!-- Open browser after installation -->
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="OpenHello">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
+    </UI>
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1"/>
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Learn more about this software" />
+    <Property Id="WixShellExecTarget" Value="https://web-eid.com/?installer=windows-$(var.Platform)"/>
+    <CustomAction Id="OpenHello" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="yes" Return="ignore" />
+  </Product>
+</Wix>

@@ -1,0 +1,11 @@
+{
+    "name": "org.hwcrypto.native",
+    "description": "Use your eID on the Web",
+    "path": "/Library/Web eID/hwcrypto-native.app/Contents/MacOS/hwcrypto-native",
+    "type": "stdio",
+    "allowed_origins": [
+        "chrome-extension://ckjefchnfjhjfedoccjbhjpbncimppeg/",
+        "chrome-extension://fmpfihjoladdfajbnkdfocnbcehjpogi/",
+        "chrome-extension://dpaadmibfooopdmommnjgmpkgdeeoppb/"
+    ]
+}

@@ -1,0 +1,6 @@
+/.qmake.stash
+/Makefile
+/hwcrypto-native.app
+/hwcrypto-native
+/qrc_hwcrypto-native.cpp
+/moc_*

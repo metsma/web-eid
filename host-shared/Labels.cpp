@@ -70,5 +70,8 @@ string Labels::get(const string &labelKey) const {
             "Выбирая сертификат, я соглащаюсь с тем, что мое имя и личный код будут переданы представителю услуг."
         }}
     };
+    auto label = labels.find(labelKey);
+    if (label == labels.end())
+        return labelKey;
     return labels.at(labelKey)[selectedLanguage];
 }

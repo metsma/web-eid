@@ -7,8 +7,8 @@ before_script:
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install openssl; fi
 
 script:
-- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then fakeroot debian/rules binary; fi
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then make pkg OPENSSL=/usr/local/Cellar/openssl/1.0.2j; fi
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then make OPENSSL=/usr/local/Cellar/openssl/1.0.2j; fi
 
 os:
 - linux

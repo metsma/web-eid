@@ -1,7 +1,0 @@
-#!/bin/bash
-# Without sudo the script would open the default brwoser of the
-# root user (which would probably be safary). 
-# Use sudo to switch to the context of the user running the installer
-
-sudo -u $USER open 'https://web-eid.com/?installer=macos' || echo "Could not open browser"
-exit 0

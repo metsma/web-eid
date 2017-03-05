@@ -18,11 +18,10 @@
 
 #pragma once
 
-#include "Signer.h"
 #include "Logger.h"
+#include <vector>
 
-class CngCapiSigner : public Signer {
+class CngCapiSigner {
 public:
-	CngCapiSigner(const string &_hash, const string &_certInHex) : Signer(_hash, _certInHex){}
-	string sign();
+	static std::vector<unsigned char> sign(const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert);
 };

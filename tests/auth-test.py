@@ -16,8 +16,20 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
-MAJOR_VERSION=17
-MINOR_VERSION=3
-RELEASE_VERSION=2
-VERSION=$(MAJOR_VERSION).$(MINOR_VERSION).$(RELEASE_VERSION)
-VERSIONEX=$(VERSION).$(BUILD_NUMBER)
+import json
+import unittest
+import uuid
+import re
+from chrome import ChromeTest
+
+version_re = "^(\d+|\.)+$"
+class TestHostPipe(ChromeTest):
+  def test_simple_auth(self):
+      cmd = {"type": "AUTH", "nonce": str(uuid.uuid4()), "origin": "https://example.com/", "auth_nonce": str(uuid.uuid4())}
+      resp = self.transceive(json.dumps(cmd))
+      self.assertEqual(resp["result"], "ok")
+      self.assertEqual("auth_token" in resp, True)
+
+if __name__ == '__main__':
+    # run tests
+    unittest.main()
