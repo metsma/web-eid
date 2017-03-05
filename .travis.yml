@@ -3,12 +3,13 @@ sudo: true
 dist: trusty
 language: c
 
-before_script:
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install openssl; fi
+before_install:
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo add-apt-repository ppa:beineri/opt-qt562-trusty -y; sudo apt-get update; sudo apt-get install -y qt56base qt56tools devscripts; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install qt5; fi
 
 script:
-- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make; fi
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then make OPENSSL=/usr/local/Cellar/openssl/1.0.2j; fi
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make pkg; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH=/usr/local/opt/qt5/bin:$PATH; make pkg; fi
 
 os:
 - linux
@@ -20,10 +21,9 @@ addons:
   apt:
     packages:
     - debhelper
+    - libdistro-info-perl
+    - libparse-debcontrol-perl
     - devscripts
-    - qtbase5-dev
-    - qttools5-dev
-    - qttools5-dev-tools
     - libssl-dev
     - libpcsclite-dev
   coverity_scan:

@@ -27,7 +27,7 @@ EXE = host-qt/release/hwcrypto-native.exe
 DISTNAME = Web-eID
 
 $(EXE): host-windows\*.cpp host-windows\*.h
-	msbuild /p:Configuration=Release;Platform=Win32 /property:MAJOR_VERSION=$(MAJOR_VERSION) /property:MINOR_VERSION=$(MINOR_VERSION) /property:RELEASE_VERSION=$(RELEASE_VERSION) /property:BUILD_NUMBER=$(BUILD_NUMBER) host-windows\host-windows.sln
+	cd host-qt & make & cd ..
 
 pkg: $(EXE)
 	IF DEFINED SIGNER ($(SIGN) $(EXE))

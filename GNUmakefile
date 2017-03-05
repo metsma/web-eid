@@ -19,11 +19,6 @@
 # This is the Makefile for OSX/Linux. See Makefile for Windows NMake.
 UNAME :=$(shell uname)
 
-# the default choice for OSX
-ifeq ($(UNAME),Darwin)
-   DEFAULT=qt
-endif
-
 default: $(DEFAULT) pkg
 
 # map uname output to subfolder and run make there.
