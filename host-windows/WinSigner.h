@@ -18,10 +18,9 @@
 
 #pragma once
 
-#include "Logger.h"
 #include <vector>
 
-class CngCapiSigner {
+class WinSigner {
 public:
 	static std::vector<unsigned char> sign(const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert);
 };

@@ -19,8 +19,6 @@
 #pragma once
 
 #include <vector>
-#include "Logger.h"
-#include "HostExceptions.h"
 
 enum CertificatePurpose {
 	Authentication,

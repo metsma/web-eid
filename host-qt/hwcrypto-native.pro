@@ -17,8 +17,8 @@ unix {
 }
 win32 {
     LIBS += winscard.lib ncrypt.lib crypt32.lib cryptui.lib Advapi32.lib
-    SOURCES += ../host-windows/WinCertSelect.cpp ../host-windows/CngCapiSigner.cpp
-    HEADERS += ../host-windows/WinCertSelect.h ../host-windows/CngCapiSigner.h
+    SOURCES += ../host-windows/WinCertSelect.cpp ../host-windows/WinSigner.cpp
+    HEADERS += ../host-windows/WinCertSelect.h ../host-windows/WinSigner.h
     INCLUDEPATH += ../host-windows
 }
 INCLUDEPATH += ../host-shared

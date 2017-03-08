@@ -16,17 +16,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "CngCapiSigner.h"
-#include "HostExceptions.h"
+#include "WinSigner.h"
+
 #include "Common.h"
+#include "Logger.h"
+
 #include <Windows.h>
 #include <ncrypt.h>
 #include <WinCrypt.h>
 #include <cryptuiapi.h>
-#include "Logger.h"
-#include <stdexcept>
 
-std::vector<unsigned char> CngCapiSigner::sign(const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert) {
+using namespace std;
+
+std::vector<unsigned char> WinSigner::sign(const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert) {
 
 	BCRYPT_PKCS1_PADDING_INFO padInfo;
 	DWORD obtainKeyStrategy = CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG;
@@ -68,7 +70,7 @@ std::vector<unsigned char> CngCapiSigner::sign(const std::vector<unsigned char> 
 		throw std::runtime_error("Could not open MY store");
 	}
 
-	PCCERT_CONTEXT certFromBinary = CertCreateCertificateContext(X509_ASN_ENCODING, &cert[0], cert.size());
+    PCCERT_CONTEXT certFromBinary = CertCreateCertificateContext(X509_ASN_ENCODING, cert.data(), cert.size());
 	PCCERT_CONTEXT certInStore = CertFindCertificateInStore(store, X509_ASN_ENCODING, 0, CERT_FIND_EXISTING, certFromBinary, 0);
 	CertFreeCertificateContext(certFromBinary);
 
@@ -92,7 +94,7 @@ std::vector<unsigned char> CngCapiSigner::sign(const std::vector<unsigned char> 
 	{
 	case CERT_NCRYPT_KEY_SPEC:
 	{
-		err = NCryptSignHash(key, &padInfo, PBYTE(&hash[0]), DWORD(hash.size()), &signature[0], DWORD(signature.size()), (DWORD*)&size, BCRYPT_PAD_PKCS1);
+        err = NCryptSignHash(key, &padInfo, PBYTE(hash.data()), DWORD(hash.size()), signature.data(), DWORD(signature.size()), (DWORD*)&size, BCRYPT_PAD_PKCS1);
 		if (freeKeyHandle) {
 			NCryptFreeObject(key);
 		}
@@ -116,7 +118,7 @@ std::vector<unsigned char> CngCapiSigner::sign(const std::vector<unsigned char> 
 			throw std::invalid_argument("SetHashParam failed");
 		}
 
-		INT retCode = CryptSignHashW(capihash, AT_SIGNATURE, 0, 0, LPBYTE(signature.data()), &size);
+        INT retCode = CryptSignHashW(capihash, AT_SIGNATURE, 0, 0, signature.data(), &size);
 		err = retCode ? ERROR_SUCCESS : GetLastError();
 		_log("CryptSignHash() return code: %u (%s) %x", retCode, retCode ? "SUCCESS" : "FAILURE", err);
 		if (freeKeyHandle) {
@@ -137,7 +139,7 @@ std::vector<unsigned char> CngCapiSigner::sign(const std::vector<unsigned char> 
 		break;
 	case SCARD_W_CANCELLED_BY_USER:
 	case ERROR_CANCELLED:
-		throw UserCancelledException("Signing was cancelled"); // FIXME: exception
+        throw UserCanceledError();
 	case SCARD_W_CHV_BLOCKED:
 		throw PinBlockedException();
 	case NTE_INVALID_HANDLE:

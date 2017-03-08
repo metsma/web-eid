@@ -17,14 +17,17 @@
  */
 
 #include "WinCertSelect.h"
-#include "HostExceptions.h"
+
+#include "Common.h"
+#include "util.h"
+#include "Logger.h"
+
 #include <stdexcept>
 #include <Windows.h>
 #include <WinError.h>
 #include <ncrypt.h>
 #include <WinCrypt.h>
 #include <cryptuiapi.h>
-#include "util.h"
 
 extern "C" {
 
@@ -195,7 +198,7 @@ std::vector<unsigned char> WinCertSelect::getCert(CertificatePurpose p) {
 		CertCloseStore(store, 0);
 		_log("User pressed cancel");
 		return cert;
-		throw UserCancelledException(); // FIXME: exception
+        throw UserCanceledError(); // FIXME: exception
 	}
 	//cert(cert_context->pbCertEncoded, cert_context->pbCertEncoded + cert_context->cbCertEncoded);
 	std::vector<unsigned char> data(cert_context->pbCertEncoded, cert_context->pbCertEncoded + cert_context->cbCertEncoded);

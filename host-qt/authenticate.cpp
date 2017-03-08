@@ -13,7 +13,7 @@
 
 #ifdef _WIN32
 #include "WinCertSelect.h"
-#include "CngCapiSigner.h"
+#include "WinSigner.h"
 #endif
 
 QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
@@ -40,7 +40,7 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
                 // Calculate the hash to be signed
                 QByteArray hash = QCryptographicHash::hash(dtbs, QCryptographicHash::Sha256);
                 // 2. Sign the token hash with the selected certificate
-                QByteArray signature = v2ba(CngCapiSigner::sign(ba2v(hash), ac));
+                QByteArray signature = v2ba(WinSigner::sign(ba2v(hash), ac));
                 // 3. Construct the JWT token to be returned
                 QByteArray jwt = dtbs + "." + signature.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
                 // 4. profit

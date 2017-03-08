@@ -9,7 +9,6 @@
 
 #ifdef _WIN32
 #include "WinCertSelect.h"
-#include "CngCapiSigner.h"
 #endif
 
 
