@@ -16,6 +16,7 @@ unix {
     LIBS += -ldl
 }
 win32 {
+    DEFINES += WIN32_LEAN_AND_MEAN
     LIBS += winscard.lib ncrypt.lib crypt32.lib cryptui.lib Advapi32.lib
     SOURCES += ../host-windows/WinCertSelect.cpp ../host-windows/WinSigner.cpp
     HEADERS += ../host-windows/WinCertSelect.h ../host-windows/WinSigner.h

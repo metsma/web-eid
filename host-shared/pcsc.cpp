@@ -19,6 +19,15 @@
 #include "pcsc.h"
 #include "Logger.h"
 #include "util.h"
+
+#ifdef __APPLE__
+#include <PCSC/winscard.h>
+#include <PCSC/wintypes.h>
+#else
+#undef UNICODE
+#include <winscard.h>
+#endif
+
 #include <stdexcept>
 
 #define MAX_ATR_SIZE 33	/**< Maximum ATR size */
