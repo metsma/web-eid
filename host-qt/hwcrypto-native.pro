@@ -1,5 +1,10 @@
 TEMPLATE = app
-isEmpty(VERSION):VERSION=1.0.4.0
+isEmpty(VERSION) {
+    include(../VERSION.mk)
+    BUILD_NUMBER = $$(BUILD_NUMBER)
+    isEmpty(BUILD_NUMBER) BUILD_NUMBER = 0
+    VERSION=$$VERSION"."$$BUILD_NUMBER
+}
 CONFIG += console c++11 release
 QT += widgets network
 RC_ICONS = ../artwork/win_icon.ico
