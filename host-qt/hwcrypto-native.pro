@@ -2,6 +2,7 @@ TEMPLATE = app
 isEmpty(VERSION):VERSION=1.0.4.0
 CONFIG += console c++11 release
 QT += widgets network
+RC_ICONS = ../artwork/win_icon.ico
 macx {
     LIBS += -framework PCSC
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
