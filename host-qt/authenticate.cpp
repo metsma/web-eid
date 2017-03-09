@@ -35,7 +35,6 @@
 #endif
 
 QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
-
     // Check for mandatory parameters
     if (!msg.contains("auth_nonce")) {
         return {{"result", "invalid_argument"}};
@@ -84,7 +83,7 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
                 } else if (certs.size() == 1) {
                     cert = certs.at(0);
                 } else {
-                    cert = QtCertSelect::getCert(certs);
+                    cert = QtCertSelect::getCert(certs, h->friendly_origin, false);
                 }
                 if (cert.empty()) {
                     // user pressed cancel
@@ -99,7 +98,7 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
                 // Calculate the hash to be signed
                 QByteArray hash = QCryptographicHash::hash(dtbs, QCryptographicHash::Sha256);
                 // 2. Sign the token hash with the selected certificate
-                QByteArray signature = v2ba(QtSigner::sign(h->pkcs11, ba2v(hash), cert));
+                QByteArray signature = v2ba(QtSigner::sign(h->pkcs11, ba2v(hash), cert, h->friendly_origin, false));
                 // 3. Construct the JWT token to be returned
                 QByteArray jwt = dtbs + "." + signature.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
                 // 4. profit

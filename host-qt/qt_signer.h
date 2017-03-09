@@ -25,14 +25,16 @@
 class QLabel;
 class QLineEdit;
 
-class QtSigner {
+class QtSigner: QObject {
+   Q_OBJECT
 public:
-   static std::vector<unsigned char> sign(const PKCS11Module &m, const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert);
+   static std::vector<unsigned char> sign(const PKCS11Module &m, const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert, const QString &origin, bool signing); // FIXME: bool->enum
 };
 
 class QtSignerDialog : public QDialog {
+   Q_OBJECT
 public:
-   QtSignerDialog(P11Token &token);
+   QtSignerDialog(P11Token &token, const QString &origin, bool signing);
    QLineEdit *pin = nullptr;
    QLabel *nameLabel, *pinLabel, *errorLabel;
 };

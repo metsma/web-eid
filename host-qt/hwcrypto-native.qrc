@@ -1,5 +1,5 @@
 <RCC>
 <qresource prefix="/">
-<file alias="hwcrypto-native.png">../artwork/icon128.png</file>
+   <file alias="hwcrypto-native.png">../artwork/icon128.png</file>
 </qresource>
 </RCC>

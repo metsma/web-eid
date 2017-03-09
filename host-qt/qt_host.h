@@ -21,6 +21,7 @@
 #include "pkcs11module.h"
 
 #include <QApplication>
+#include <QTranslator>
 #include <QFile>
 #include <QVariantMap>
 #include <QJsonObject>
@@ -43,6 +44,9 @@ public:
     // Thus the origin can not change, once set
     QString origin;
 
+    // Friently origin is something that can be shown to the user
+    QString friendly_origin;
+
     // And the chosen signing certificate can not change either
     // Only with a new cert message
     std::vector<unsigned char> signcert;
@@ -59,6 +63,7 @@ private:
     QFile out;
     void write(QVariantMap &resp, const QString &nonce = QString()) const;
 
+    QTranslator translator;
 #ifdef _WIN32
     HWND parent_window;
 #endif

@@ -19,7 +19,6 @@
 #include "qt_certselect.h"
 
 #include "Common.h"
-#include "Labels.h"
 #include "util.h"
 
 #include <QDialogButtonBox>
@@ -29,7 +28,7 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
-std::vector<unsigned char> QtCertSelect::getCert(const std::vector<std::vector<unsigned char>> &certs) {
+std::vector<unsigned char> QtCertSelect::getCert(const std::vector<std::vector<unsigned char>> &certs, const QString &origin, bool signing) {
         // what is returned.
         std::vector<unsigned char> result;
 
@@ -51,7 +50,7 @@ std::vector<unsigned char> QtCertSelect::getCert(const std::vector<std::vector<u
                           << cert.toDer().toHex());
             }
         }
-        QtCertSelectDialog dialog(uicerts);
+        QtCertSelectDialog dialog(uicerts, origin, signing);
 
         if (dialog.exec() == 0) {
             throw UserCanceledError();
@@ -62,7 +61,7 @@ std::vector<unsigned char> QtCertSelect::getCert(const std::vector<std::vector<u
     }
 
 
-QtCertSelectDialog::QtCertSelectDialog(const QList<QStringList> &certs)
+QtCertSelectDialog::QtCertSelectDialog(const QList<QStringList> &certs, const QString &origin, bool signing)
     : table(new QTreeWidget(this))
     {
         QLabel *message = new QLabel(this);
@@ -73,16 +72,16 @@ QtCertSelectDialog::QtCertSelectDialog(const QList<QStringList> &certs)
         layout->addWidget(buttons);
 
         setWindowFlags(Qt::WindowStaysOnTopHint);
-        setWindowTitle(Labels::l10n.get("select certificate").c_str());
-        message->setText(Labels::l10n.get("cert info").c_str());
-        //remove minimize and maximize
+        // remove minimize and maximize buttons
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) & ~(Qt::WindowMaximizeButtonHint|Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint));
+        setWindowTitle(tr("Select certificate for %1 on %2").arg(signing?tr("signing"):tr("authentication")).arg(origin));
+        message->setText(tr("Selected certificate will be forwarded to the remote website"));
         table->setColumnCount(3);
         table->setRootIsDecorated(false);
         table->setHeaderLabels(QStringList()
-                               << Labels::l10n.get("certificate").c_str()
-                               << Labels::l10n.get("type").c_str()
-                               << Labels::l10n.get("valid to").c_str());
+                               << tr("Certificate")
+                               << tr("Type")
+                               << tr("Valid to"));
         table->header()->setStretchLastSection(false);
         table->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
         table->header()->setSectionResizeMode(0, QHeaderView::Stretch);
@@ -90,8 +89,8 @@ QtCertSelectDialog::QtCertSelectDialog(const QList<QStringList> &certs)
             table->insertTopLevelItem(0, new QTreeWidgetItem(table, row));
         table->setCurrentIndex(table->model()->index(0, 0));
 
-        QPushButton *ok = buttons->addButton(Labels::l10n.get("select").c_str(), QDialogButtonBox::AcceptRole);
-        buttons->addButton(Labels::l10n.get("cancel").c_str(), QDialogButtonBox::RejectRole);
+        QPushButton *ok = buttons->addButton(tr("Select"), QDialogButtonBox::AcceptRole);
+        buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
         connect(table, &QTreeWidget::clicked, [=]{

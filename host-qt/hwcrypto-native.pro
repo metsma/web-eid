@@ -27,11 +27,11 @@ win32 {
     SOURCES += ../host-windows/WinCertSelect.cpp ../host-windows/WinSigner.cpp
     HEADERS += ../host-windows/WinCertSelect.h ../host-windows/WinSigner.h
     INCLUDEPATH += ../host-windows
+    QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
 }
 INCLUDEPATH += ../host-shared
 DEFINES += VERSION=\\\"$$VERSION\\\"
 SOURCES += \
-    ../host-shared/Labels.cpp \
     ../host-shared/Logger.cpp \
     ../host-shared/modulemap.cpp \
     ../host-shared/pcsc.cpp \
@@ -42,4 +42,13 @@ SOURCES += \
     qt_signer.cpp \
     qt_certselect.cpp
 HEADERS += *.h ../host-shared/*.h
-RESOURCES += hwcrypto-native.qrc
+RESOURCES += hwcrypto-native.qrc translations/strings.qrc
+TRANSLATIONS = translations/strings_et.ts translations/strings_ru.ts
+
+isEmpty(QMAKE_LRELEASE) {
+    win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
+    else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+}
+lrelease.commands = $$QMAKE_LRELEASE hwcrypto-native.pro
+PRE_TARGETDEPS += lrelease
+QMAKE_EXTRA_TARGETS += lrelease

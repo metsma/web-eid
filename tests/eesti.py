@@ -21,25 +21,21 @@ import unittest
 import uuid
 from chrome import ChromeTest
 
-# Tests to check how origin is shown
-class TestAuthOrigin(ChromeTest):
+# Tests to check how Estonian is showing
+class TestEstonian(ChromeTest):
   def test_simple_auth(self):
-      cmd = {"type": "AUTH", "nonce": str(uuid.uuid4()), "origin": "https://example.com/", "auth_nonce": str(uuid.uuid4())}
+      cmd = {"type": "AUTH", "nonce": str(uuid.uuid4()), "origin": "https://example.com/", "auth_nonce": str(uuid.uuid4()), "lang": "et"}
       resp = self.transceive(json.dumps(cmd))
       self.assertEqual(resp["result"], "ok")
       self.assertEqual("auth_token" in resp, True)
 
-  def test_simple_auth_file(self):
-      cmd = {"type": "AUTH", "nonce": str(uuid.uuid4()), "origin": "file:///some/folder/example.com/index.html", "auth_nonce": str(uuid.uuid4())}
+  def test_simple_sign(self):
+      cmd = {"type": "CERT", "nonce": str(uuid.uuid4()), "origin": "file:///some/folder/example.com/index.html", "auth_nonce": str(uuid.uuid4()), "lang": "et"}
       resp = self.transceive(json.dumps(cmd))
       self.assertEqual(resp["result"], "ok")
-      self.assertEqual("auth_token" in resp, True)
-
-  def test_simple_auth_localhost(self):
-      cmd = {"type": "AUTH", "nonce": str(uuid.uuid4()), "origin": "http://localhost:8080/", "auth_nonce": str(uuid.uuid4())}
+      self.assertEqual("cert" in resp, True)
+      cmd = {"type": "SIGN", "cert": resp["cert"], "nonce": str(uuid.uuid4()), "origin": "file:///some/folder/example.com/index.html", "hash": "AQIDBAUGBwgJAAECAwQFBgcICQA=", "lang": "et"}
       resp = self.transceive(json.dumps(cmd))
-      self.assertEqual(resp["result"], "ok")
-      self.assertEqual("auth_token" in resp, True)
 
 if __name__ == '__main__':
     unittest.main()

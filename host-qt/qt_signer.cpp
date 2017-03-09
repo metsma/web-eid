@@ -22,7 +22,6 @@
 #include "pkcs11module.h"
 #include "util.h" // helpers
 #include "Logger.h"
-#include "Labels.h"
 
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -33,6 +32,7 @@
 #include <QTimeLine>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QUrl>
 
 #include <thread>
 
@@ -42,7 +42,7 @@ enum {
     AuthError = -2,
 };
 
-std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert) {
+std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert, const QString &origin, bool signing) {
         switch(hash.size())
         {
         case BINARY_SHA1_LENGTH:
@@ -59,12 +59,12 @@ std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vect
         bool isInitialCheck = true;
         for (int retriesLeft = m.getPINRetryCount(cert); retriesLeft > 0; ) {
             P11Token token(m.getP11Token(cert));
-            QtSignerDialog dialog(token);
+            QtSignerDialog dialog(token, origin, signing);
             if (retriesLeft < 3) {
                 dialog.errorLabel->show();
                 dialog.errorLabel->setText(QString("<font color='red'><b>%1%2 %3</b></font>")
-                     .arg((!isInitialCheck ? Labels::l10n.get("incorrect PIN2") : "").c_str())
-                     .arg(Labels::l10n.get("tries left").c_str())
+                     .arg(!isInitialCheck ? tr("Incorrect PIN ") : "")
+                     .arg(tr("tries left:"))
                      .arg(retriesLeft));
             }
             isInitialCheck = false;
@@ -93,11 +93,9 @@ std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vect
             }
 
             int dialogresult = dialog.exec();
-            _log("Dialog executed just fine %d", dialogresult);
             switch (dialogresult)
             {
             case QDialog::Rejected:
-                _log("We are throwing!!!");
                 throw UserCanceledError();
             case AuthError:
                 continue;
@@ -123,7 +121,7 @@ std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vect
     }
 
 
-    QtSignerDialog::QtSignerDialog(P11Token &p11token)
+    QtSignerDialog::QtSignerDialog(P11Token &p11token, const QString &origin, bool signing)
         : nameLabel(new QLabel(this))
         , pinLabel(new QLabel(this))
         , errorLabel(new QLabel(this))
@@ -134,19 +132,21 @@ std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vect
         layout->addWidget(pinLabel);
 
         setMinimumWidth(400);
-        setWindowFlags(Qt::WindowStaysOnTopHint);
-        setWindowTitle(Labels::l10n.get("signing").c_str());
-        pinLabel->setText((Labels::l10n.get("Enter PIN for: ") + p11token.label).c_str());
-        errorLabel->setTextFormat(Qt::RichText);
-        errorLabel->hide();
-
+        // Force window to be topmost
+        setWindowFlags(windowFlags()|Qt::WindowStaysOnTopHint);
         // Remove minimize and maximize buttons from window chrome
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) & ~(Qt::WindowMaximizeButtonHint|Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint));
 
+        if (signing) {
+            setWindowTitle(tr("Signing at %1").arg(origin));
+        } else {
+            setWindowTitle(tr("Authenticating to %1").arg(origin));
+        }
+        pinLabel->setText(tr("Enter PIN for token \"%1\"").arg(QString::fromStdString(p11token.label)));
+        errorLabel->setTextFormat(Qt::RichText);
+        errorLabel->hide();
 
         if(p11token.has_pinpad) {
-            // Remove closing button, the window disappears when cancel is pressed.
-            setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) & ~Qt::WindowCloseButtonHint);
             QProgressBar *progress = new QProgressBar(this);
             // 30 seconds of time.
             progress->setRange(0, 30);
@@ -165,8 +165,8 @@ std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vect
             QDialogButtonBox *buttons = new QDialogButtonBox(this);
             connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
             connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-            buttons->addButton(Labels::l10n.get("cancel").c_str(), QDialogButtonBox::RejectRole);
-            QPushButton *ok = buttons->addButton(Labels::l10n.get("sign").c_str(), QDialogButtonBox::AcceptRole);
+            buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
+            QPushButton *ok = buttons->addButton(signing ? tr("Sign") : tr("Authenticate"), QDialogButtonBox::AcceptRole); // FiXME
             ok->setEnabled(false);
 
             pin = new QLineEdit(this);
@@ -178,7 +178,7 @@ std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vect
             });
 
             // TODO: UX use a gray "eye" icon if possible, instead
-            QPushButton *showpwd = new QPushButton("Show");
+            QPushButton *showpwd = new QPushButton(tr("Show"));
             connect(showpwd, &QPushButton::pressed, [=]{
                 pin->setEchoMode(QLineEdit::Normal);
             });

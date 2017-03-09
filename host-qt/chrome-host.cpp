@@ -25,12 +25,12 @@
 #include "util.h"
 #include "Common.h" // TODO: rename
 #include "Logger.h" // TODO: rename
-#include "Labels.h" // TODO: rename
 
 #include <QIcon>
 #include <QJsonDocument>
 #include <QSslCertificate>
 #include <QCommandLineParser>
+#include <QTranslator>
 #include <QUrl>
 
 #include <sys/types.h>
@@ -116,20 +116,36 @@ void QtHost::processMessage(const QJsonObject &json)
             // https, file or localhost
             if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost") {
                 origin = json.value("origin").toString();
+                // set the "human readable origin"
+                // use localhost for file url-s
+                if (url.scheme() == "file") {
+                    friendly_origin = "localhost";
+                } else {
+                    friendly_origin = url.host();
+                }
             } else {
                 resp = {{"result", "not_allowed"}};
                 write(resp, json.value("nonce").toString());
                 return exit(EXIT_FAILURE);
+            }
+            // Setting the language is also a onetime operation, thus do it here.
+            QLocale locale = json.contains("lang") ? QLocale(json.value("lang").toString()) : QLocale::system();
+            _log("Setting language to %s", locale.name().toStdString().c_str());
+            // look up translation rom resource :/translations/strings_XX.qm
+            if (translator.load(QLocale(json.value("lang").toString()), QLatin1String("strings"), QLatin1String("_"), QLatin1String(":/translations"))) {
+                if (installTranslator(&translator)) {
+                    _log("Language set");
+                } else {
+                    _log("Language NOT set");
+                }
+            } else {
+                _log("Failed to load translation");
             }
         } else if (origin != json.value("origin").toString()) {
             // Otherwise if already set, it must match
             resp = {{"result", "invalid_argument"}};
             write(resp, json.value("nonce").toString());
             return exit(EXIT_FAILURE);
-        }
-
-        if (json.contains("lang")) {
-            Labels::l10n.setLanguage(json.value("lang").toString().toStdString());
         }
 
         // Command dispatch

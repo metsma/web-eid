@@ -39,7 +39,7 @@ QVariantMap Sign::sign(QtHost *h, const QJsonObject &json) {
 
     std::vector<unsigned char> hash = ba2v(QByteArray::fromBase64(json.value("hash").toString().toLatin1()));
     _log("Signing: %s", toHex(hash).c_str());
-    std::vector<unsigned char> signature = QtSigner::sign(h->pkcs11, hash, h->signcert);
+    std::vector<unsigned char> signature = QtSigner::sign(h->pkcs11, hash, h->signcert, h->friendly_origin, true);
     return {{"signature", v2ba(signature).toBase64()}};
 }
 
@@ -72,7 +72,7 @@ QVariantMap Sign::select(QtHost *h, const QJsonObject &json) {
         if (certs.empty()) {
             return {{"result", "no_certificates"}};
         } else  {
-            cert = QtCertSelect::getCert(certs);
+            cert = QtCertSelect::getCert(certs, h->friendly_origin, true);
             h->signcert = cert;
             return {{"result", "ok"}, {"cert", v2ba(cert).toBase64() }};
         }
