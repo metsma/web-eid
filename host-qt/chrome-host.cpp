@@ -31,6 +31,7 @@
 #include <QJsonDocument>
 #include <QSslCertificate>
 #include <QCommandLineParser>
+#include <QUrl>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -108,9 +109,20 @@ void QtHost::processMessage(const QJsonObject &json)
         }
         msgnonce = json.value("nonce").toString();
 
-        if (origin.empty()) {
-            origin = json.value("origin").toString().toStdString();
-        } else if (origin != json.value("origin").toString().toStdString()) {
+        // Origin. If unset for instance, set
+        if (origin.isEmpty()) {
+            // Check if origin is secure
+            QUrl url(json.value("origin").toString());
+            // https, file or localhost
+            if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost") {
+                origin = json.value("origin").toString();
+            } else {
+                resp = {{"result", "not_allowed"}};
+                write(resp, json.value("nonce").toString());
+                return exit(EXIT_FAILURE);
+            }
+        } else if (origin != json.value("origin").toString()) {
+            // Otherwise if already set, it must match
             resp = {{"result", "invalid_argument"}};
             write(resp, json.value("nonce").toString());
             return exit(EXIT_FAILURE);
@@ -120,14 +132,10 @@ void QtHost::processMessage(const QJsonObject &json)
             Labels::l10n.setLanguage(json.value("lang").toString().toStdString());
         }
 
+        // Command dispatch
         QString type = json.value("type").toString();
         if (type == "VERSION") {
             resp = {{"version", VERSION}};
-        } else if (!json.value("origin").toString().startsWith("https:")) {
-            // FIXME: http://localhost and file:// as well
-            resp = {{"result", "not_allowed"}};
-            write(resp, json.value("nonce").toString());
-            return exit(EXIT_FAILURE);
         } else if (type == "SIGN") {
             resp = Sign::sign(this, json);
         } else if (type == "CERT") {

@@ -67,8 +67,8 @@ class TestHostPipe(ChromeTest):
 #      self.assertEqual(self.p.wait(), 1)
 
   def test_inconsistent_origin(self):
-      cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "http://example.com/"}
-      cmd2 = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "http://badexample.com/"}
+      cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "https://example.com/"}
+      cmd2 = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "https://badexample.com/"}
       resp1 = self.transceive(json.dumps(cmd))
       self.assertEqual(resp1["result"], "ok")
       resp2 = self.transceive(json.dumps(cmd2))
@@ -88,8 +88,7 @@ class TestHostPipe(ChromeTest):
   def test_version_invalid_origin(self):
       cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "foobar in da house"}
       resp = self.transceive(json.dumps(cmd))
-      self.assertEqual(resp["result"], "ok")
-      self.assertTrue(re.compile(version_re).match(resp["version"]))
+      self.assertEqual(resp["result"], "not_allowed")
 
   def test_version_file_origin(self):
       cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "file:///tmp/index.html"}
@@ -99,6 +98,11 @@ class TestHostPipe(ChromeTest):
 
   def test_version_http_origin(self):
       cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "http://example.com/"}
+      resp = self.transceive(json.dumps(cmd))
+      self.assertEqual(resp["result"], "not_allowed")
+
+  def test_version_http_localhost(self):
+      cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "http://localhost:8080/?nada"}
       resp = self.transceive(json.dumps(cmd))
       self.assertEqual(resp["result"], "ok")
       self.assertTrue(re.compile(version_re).match(resp["version"]))

@@ -23,7 +23,7 @@ public:
     PKCS11Module pkcs11;
 
     // Thus the origin can not change, once set
-    std::string origin;
+    QString origin;
 
     // And the chosen signing certificate can not change either
     // Only with a new cert message
