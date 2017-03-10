@@ -19,6 +19,7 @@
 #pragma once
 
 #include <vector>
+#include <Windows.h>
 
 enum CertificatePurpose {
 	Authentication,
@@ -27,5 +28,5 @@ enum CertificatePurpose {
 
 class WinCertSelect {
  public:
-  static std::vector<unsigned char> getCert(CertificatePurpose p = Authentication);
+  static std::vector<unsigned char> getCert(CertificatePurpose p = Authentication, LPCWSTR message = L"");
 };

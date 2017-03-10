@@ -23,8 +23,8 @@
 
 #include <QSslCertificate>
 
-class Authenticate
-{
+class Authenticate {
+	Q_DECLARE_TR_FUNCTIONS(Authenticate)
 public:
     static QVariantMap authenticate(QtHost *h, const QJsonObject &msg);
     static QByteArray authenticate_dtbs(const QSslCertificate &cert, const QString &origin, const QString &nonce);

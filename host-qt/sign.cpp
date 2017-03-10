@@ -58,7 +58,7 @@ QVariantMap Sign::select(QtHost *h, const QJsonObject &json) {
 #ifdef _WIN32
         // No PKCS#11 modules detected for any of the connected cards.
         // Check if we can find a cert from certstore
-        cert = WinCertSelect::getCert(CertificatePurpose::Signing);
+        cert = WinCertSelect::getCert(CertificatePurpose::Signing, LPWSTR(tr("Signing on %1, please select certificate").arg(h->friendly_origin).utf16()));
         if (!cert.empty()) {
             h->signcert = cert;
             return {{"cert", v2ba(cert).toBase64()}};

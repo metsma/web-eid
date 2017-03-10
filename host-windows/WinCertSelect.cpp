@@ -150,7 +150,7 @@ BOOL WINAPI filter_sign(PCCERT_CONTEXT certContext, BOOL *pfInitialSelectedCert,
 }
 
 
-std::vector<unsigned char> WinCertSelect::getCert(CertificatePurpose p) {
+std::vector<unsigned char> WinCertSelect::getCert(CertificatePurpose p, LPCWSTR message) {
 
 	std::vector<unsigned char> cert;
 
@@ -182,12 +182,11 @@ std::vector<unsigned char> WinCertSelect::getCert(CertificatePurpose p) {
 	// Show selection dialog
 	CRYPTUI_SELECTCERTIFICATE_STRUCT pcsc = { sizeof(pcsc) };
 	if (p == Authentication) {
-		pcsc.szDisplayString = L"Hello, please select a certificate for Authentication on ... origin"; // FIXME: fill in
 		pcsc.pFilterCallback = filter_auth;
 	} else if (p == Signing) {
-		pcsc.szDisplayString = L"Hello, please select a certificate for signing on ... origin"; // FIXME: fill in
 		pcsc.pFilterCallback = filter_sign;
 	}
+	pcsc.szDisplayString = message;
 	pcsc.pvCallbackData = nullptr; // TODO: use a single callback with arguments instead ?
 	pcsc.cDisplayStores = 1;
 	pcsc.rghDisplayStores = &store;

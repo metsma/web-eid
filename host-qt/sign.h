@@ -21,8 +21,8 @@
 #include "pkcs11module.h"
 #include "qt_host.h"
 
-class Sign
-{
+class Sign {
+	Q_DECLARE_TR_FUNCTIONS(Sign)
 public:
     static QVariantMap sign(QtHost *h, const QJsonObject &msg);
     static QVariantMap select(QtHost *h, const QJsonObject &msg);

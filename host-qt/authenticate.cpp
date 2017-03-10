@@ -47,9 +47,10 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
             // No modules. On Windows we will see if windows knows any
 #ifdef _WIN32
             _log("No PKCS#11 modules defined, checking windows store");
-            std::vector<unsigned char> ac = WinCertSelect::getCert();
+            std::vector<unsigned char> ac = WinCertSelect::getCert(CertificatePurpose::Authentication, LPWSTR(tr("Authenticating on %1, please select certificate").arg(h->friendly_origin).utf16()));
             if (!ac.empty()) {
                 QSslCertificate x509 = v2cert(ac);
+                // FIXME: check length
                 _log("Found certificate: %s", x509.subjectInfo(QSslCertificate::CommonName).at(0).toStdString().c_str());
 
                 // Get the first part of the token
