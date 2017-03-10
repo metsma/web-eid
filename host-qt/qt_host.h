@@ -19,6 +19,7 @@
 #pragma once
 
 #include "pkcs11module.h"
+#include "qt_input.h"
 
 #include <QApplication>
 #include <QTranslator>
@@ -61,7 +62,9 @@ public slots:
 
 private:
     QFile out;
-    void write(QVariantMap &resp, const QString &nonce = QString()) const;
+    void write(QVariantMap &resp, const QString &nonce = QString());
+    void shutdown(int exitcode);
+    InputChecker input;
 
     QTranslator translator;
 #ifdef _WIN32

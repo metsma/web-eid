@@ -5,7 +5,7 @@ isEmpty(VERSION) {
     isEmpty(BUILD_NUMBER) BUILD_NUMBER = 0
     VERSION=$$VERSION"."$$BUILD_NUMBER
 }
-CONFIG += console c++11 release
+CONFIG += console c++11
 QT += widgets network
 RC_ICONS = ../artwork/win_icon.ico
 macx {

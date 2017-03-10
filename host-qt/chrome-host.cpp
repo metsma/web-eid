@@ -17,7 +17,6 @@
  */
 
 #include "qt_host.h"
-#include "qt_input.h"
 
 #include "authenticate.h"
 #include "sign.h"
@@ -56,7 +55,7 @@
 // Every message must have an origin and the origin must not change
 // during the lifecycle of the program.
 
-QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv) {
+QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), input(this) {
         _log("Starting native host %s args %s", VERSION, arguments().join(" ").toStdString().c_str());
         // Parse the window handle
         QCommandLineParser parser;
@@ -76,16 +75,20 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv) {
         setWindowIcon(QIcon(":/hwcrypto-native.png"));
         setQuitOnLastWindowClosed(false);
 
-        // This runs a blocking input reading loop and signals the main
+        // InputChecker runs a blocking input reading loop and signals the main
         // Qt appliction when a message gas been read.
-        InputChecker *np = new InputChecker(this);
-
         // Trigger processMessage with every successfully read JSON message
-        connect(np, &InputChecker::messageReceived, this, &QtHost::processMessage, Qt::QueuedConnection);
+        connect(&input, &InputChecker::messageReceived, this, &QtHost::processMessage, Qt::QueuedConnection);
 
         // Start input reading thread with inherited priority
-        np->start();
+        input.start();
     }
+
+void QtHost::shutdown(int exitcode) {
+    _log("Exiting with %d", exitcode);
+    input.terminate();
+    exit(exitcode);
+}
 
 // Called whenever a message is read from browser for processing
 void QtHost::processMessage(const QJsonObject &json)
@@ -99,13 +102,13 @@ void QtHost::processMessage(const QJsonObject &json)
         if (json.isEmpty()) {
             resp = {{"result", "invalid_argument"}, {"version", VERSION}};
             write(resp, json.value("nonce").toString());
-            return exit(EXIT_FAILURE);
+            return shutdown(EXIT_FAILURE);
         }
 
         if(!json.contains("type") || !json.contains("nonce") || !json.contains("origin")) {
             resp = {{"result", "invalid_argument"}};
             write(resp, json.value("nonce").toString());
-            return exit(EXIT_FAILURE);
+            return shutdown(EXIT_FAILURE);
         }
         msgnonce = json.value("nonce").toString();
 
@@ -126,7 +129,7 @@ void QtHost::processMessage(const QJsonObject &json)
             } else {
                 resp = {{"result", "not_allowed"}};
                 write(resp, json.value("nonce").toString());
-                return exit(EXIT_FAILURE);
+                return shutdown(EXIT_FAILURE);
             }
             // Setting the language is also a onetime operation, thus do it here.
             QLocale locale = json.contains("lang") ? QLocale(json.value("lang").toString()) : QLocale::system();
@@ -145,7 +148,7 @@ void QtHost::processMessage(const QJsonObject &json)
             // Otherwise if already set, it must match
             resp = {{"result", "invalid_argument"}};
             write(resp, json.value("nonce").toString());
-            return exit(EXIT_FAILURE);
+            return shutdown(EXIT_FAILURE);
         }
 
         // Command dispatch
@@ -175,7 +178,7 @@ void QtHost::processMessage(const QJsonObject &json)
     write(resp, msgnonce);
 }
 
-void QtHost::write(QVariantMap &resp, const QString &nonce) const
+void QtHost::write(QVariantMap &resp, const QString &nonce)
 {
     if (!nonce.isEmpty())
         resp["nonce"] = nonce;
@@ -186,10 +189,9 @@ void QtHost::write(QVariantMap &resp, const QString &nonce) const
     QByteArray response =  QJsonDocument::fromVariant(resp).toJson();
     quint32 responseLength = response.size();
     _log("Response(%u) %s", responseLength, response.constData());
-    QFile out;
-    out.open(stdout, QFile::WriteOnly);
     out.write((const char*)&responseLength, sizeof(responseLength));
     out.write(response);
+    out.flush();
 }
 
 int main(int argc, char *argv[])

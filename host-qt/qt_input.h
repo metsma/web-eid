@@ -33,6 +33,7 @@ public:
     InputChecker(QObject *parent): QThread(parent) {}
 
     void run() {
+        setTerminationEnabled(true);
         quint32 messageLength = 0;
         _log("Waiting for messages");
         // Here we do busy-sleep
