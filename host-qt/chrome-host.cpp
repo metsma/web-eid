@@ -86,7 +86,14 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), input(this) 
 
 void QtHost::shutdown(int exitcode) {
     _log("Exiting with %d", exitcode);
-    input.terminate();
+    // This makes the input thread close nicely.
+#ifdef _WIN32
+    close(_fileno(stdin));
+#else
+    close(0);
+#endif
+    _log("input closed");
+    input.wait();
     exit(exitcode);
 }
 
