@@ -75,9 +75,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
             <!-- Register native component for Chrome -->
             <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.json'
                 Key='SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native'/>
-            <RegistryValue Root='HKLM' Type='string' Name="update_url"
-                Key='SOFTWARE\Google\Chrome\Extensions\fmpfihjoladdfajbnkdfocnbcehjpogi'
-                Value='https://clients2.google.com/service/update2/crx'/>
           </Component>
         </Directory>
       </Directory>
@@ -94,11 +91,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
         <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.firefox.json'
             Key='SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native' />
       </Component>
+    <!-- Register Chrome extension external installation, only once -->
+      <Component Id="ChromeExternalInstall" Guid="fe267e9e-49d3-4bd3-8eb9-5cc96ca48ba9" Permanent="yes" NeverOverwrite="yes">
+        <RegistryValue Root='HKLM' Type='string' Name="update_url"
+                Key='SOFTWARE\Google\Chrome\Extensions\fmpfihjoladdfajbnkdfocnbcehjpogi'
+                Value='https://clients2.google.com/service/update2/crx'/>
+      </Component>
     </Directory>
 
     <Feature Id="Install" Level="1" Title="Web eID" Display="expand" ConfigurableDirectory="APPLICATIONFOLDER">
       <ComponentRef Id="Application"/>
       <ComponentRef Id="Firefox"/>
+      <ComponentRef Id="ChromeExternalInstall"/>
 <!--
 <?if $(var.Platform) = "x64" ?>
       <ComponentRef Id="Firefox_X64"/>
