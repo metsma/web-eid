@@ -19,7 +19,7 @@
 # This is the Makefile for Windows NMake. See GNUmakefile for OSX/Linux.
 
 !IF !DEFINED(BUILD_NUMBER)
-BUILD_NUMBER=0
+BUILD_NUMBER=1
 !ENDIF
 !include VERSION.mk
 SIGN = signtool sign /v /n "$(SIGNER)" /fd SHA256 /tr http://timestamp.comodoca.com/?td=sha256 /td sha256
@@ -29,14 +29,22 @@ DISTNAME = Web-eID
 $(EXE): host-windows\*.cpp host-windows\*.h
 	cd host-qt & make & cd ..
 
-pkg: $(EXE)
+x64: $(DISTNAME)_$(VERSIONEX).x64.msi
+$(DISTNAME)_$(VERSIONEX).x64.msi: $(EXE)
+	IF DEFINED SIGNER ($(SIGN) $(EXE))
+	"$(WIX)\bin\candle.exe" -nologo windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
+	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSIONEX).x64.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x64
+	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSIONEX).x64.msi)
+
+x86: $(DISTNAME)_$(VERSIONEX).x86.msi
+$(DISTNAME)_$(VERSIONEX).x86.msi: $(EXE)
 	IF DEFINED SIGNER ($(SIGN) $(EXE))
 	"$(WIX)\bin\candle.exe" -nologo windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
 	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSIONEX).x86.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x86
-	"$(WIX)\bin\candle.exe" -nologo windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
-	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSIONEX).x64.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x64
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSIONEX).x86.msi)
-	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSIONEX).x64.msi)
 
-test: build
-	python tests\pipe-test.py -v
+pkg: x86 x64
+
+test: $(EXE)
+	set EXE=$(EXE)
+	C:\Python27\python.exe tests\pipe-test.py -v

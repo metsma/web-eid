@@ -76,6 +76,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
             <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.json'
                 Key='SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native'/>
           </Component>
+          <!-- XXX: this should be abve-->
+          <Directory Id="platforms" Name="platforms" FileSource="$(var.qt_path)\plugins\platforms">
+            <Component Id="qwindows.dll">
+              <File Name="qwindows.dll"/>
+            </Component>
+          </Directory>
         </Directory>
       </Directory>
 <!--
@@ -103,6 +109,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
       <ComponentRef Id="Application"/>
       <ComponentRef Id="Firefox"/>
       <ComponentRef Id="ChromeExternalInstall"/>
+      <ComponentRef Id="qwindows.dll" />
 <!--
 <?if $(var.Platform) = "x64" ?>
       <ComponentRef Id="Firefox_X64"/>
