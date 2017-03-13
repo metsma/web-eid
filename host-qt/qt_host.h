@@ -64,7 +64,7 @@ private:
     QFile out;
     void write(QVariantMap &resp, const QString &nonce = QString());
     void shutdown(int exitcode);
-    InputChecker input;
+    InputChecker *input;
 
     QTranslator translator;
 #ifdef _WIN32

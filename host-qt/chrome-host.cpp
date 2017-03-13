@@ -55,7 +55,7 @@
 // Every message must have an origin and the origin must not change
 // during the lifecycle of the program.
 
-QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), input(this) {
+QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv) {
         _log("Starting native host %s args %s", VERSION, arguments().join(" ").toStdString().c_str());
         // Parse the window handle
         QCommandLineParser parser;
@@ -77,23 +77,24 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), input(this) 
 
         // InputChecker runs a blocking input reading loop and signals the main
         // Qt appliction when a message gas been read.
+        input = new InputChecker(this);
         // Trigger processMessage with every successfully read JSON message
-        connect(&input, &InputChecker::messageReceived, this, &QtHost::processMessage, Qt::QueuedConnection);
+        connect(input, &InputChecker::messageReceived, this, &QtHost::processMessage, Qt::QueuedConnection);
 
         // Start input reading thread with inherited priority
-        input.start();
+        input->start();
     }
 
 void QtHost::shutdown(int exitcode) {
     _log("Exiting with %d", exitcode);
-    // This makes the input thread close nicely.
+    // This should make the input thread close nicely.
 #ifdef _WIN32
-    close(_fileno(stdin));
+    //close(_fileno(stdin));
+    input->terminate();
 #else
     close(0);
 #endif
     _log("input closed");
-    input.wait();
     exit(exitcode);
 }
 
