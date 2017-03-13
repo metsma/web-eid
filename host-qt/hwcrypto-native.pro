@@ -2,7 +2,7 @@ TEMPLATE = app
 isEmpty(VERSION) {
     include(../VERSION.mk)
     BUILD_NUMBER = $$(BUILD_NUMBER)
-    isEmpty(BUILD_NUMBER) BUILD_NUMBER = 0
+    isEmpty(BUILD_NUMBER) BUILD_NUMBER = 1
     VERSION=$$VERSION"."$$BUILD_NUMBER
 }
 CONFIG += console c++11
