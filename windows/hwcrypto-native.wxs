@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 <?endif ?>
 
 <?define qt_path = "C:\Qt\5.8\msvc2015" ?>
-<?define ssl_path = "C:\OpenSSL-Win32" ?>
+<?define ssl_path = "C:\OpenSSL-Win32" ?> <!-- Assumes slproweb.com installer -->
 
 <?if $(var.Platform) = x64 ?>
   <?define Win64 = "yes" ?>
@@ -51,13 +51,17 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
       <Directory Id='ProgramFilesFolder'>
         <Directory Id="APPLICATIONFOLDER" Name="Web eID">
           <Component Id="Application" Guid="79730a31-61d7-4395-b91e-191279b08798" Win64="no">
-            <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\msvcp140.dll"/>
-            <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\vcruntime140.dll"/>
-            <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\vccorlib140.dll"/>
-            <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.MFC\mfc140u.dll"/>
+            <!-- Our payload -->
             <File Source="host-qt/release/hwcrypto-native.exe"/>
             <File Source="windows/org.hwcrypto.native.json"/>
             <File Source="windows/org.hwcrypto.native.firefox.json"/>
+            <!-- Register native component for Chrome -->
+            <RegistryValue Root='HKLM' Key='SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native'
+                           Value='[APPLICATIONFOLDER]org.hwcrypto.native.json' Type='string'/>
+            <!-- VS 2015 runtime -->
+            <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\msvcp140.dll"/>
+            <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\vcruntime140.dll"/>
+            <File Source="$(env.VCINSTALLDIR)\redist\x86\Microsoft.VC140.CRT\vccorlib140.dll"/>
             <!-- Qt dependencies -->
             <File Source="$(var.qt_path)\bin\Qt5Core.dll"/>
             <File Source="$(var.qt_path)\bin\Qt5Gui.dll"/>
@@ -72,9 +76,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
             <!-- OpenSSL dependencies -->
             <File Source="$(var.ssl_path)\bin\libeay32.dll"/>
             <File Source="$(var.ssl_path)\bin\ssleay32.dll" />
-            <!-- Register native component for Chrome -->
-            <RegistryValue Root='HKLM' Type='string' Value='[APPLICATIONFOLDER]org.hwcrypto.native.json'
-                Key='SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native'/>
+            <!-- XXX: slproweb OpenSSL-Win32 is compiled with VS2013 -->
+            <File Source="C:\Windows\System32\msvcr120.dll" />
           </Component>
           <!-- XXX: this should be abve-->
           <Directory Id="platforms" Name="platforms" FileSource="$(var.qt_path)\plugins\platforms">
@@ -122,7 +125,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
     </UI>
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1"/>
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Learn more about this software" />
-    <Property Id="WixShellExecTarget" Value="https://web-eid.com/?installer=windows-$(var.Platform)"/>
+    <Property Id="WixShellExecTarget" Value="https://web-eid.com/?installer=windows-$(var.Platform)&amp;version=$(var.VERSION)"/>
     <CustomAction Id="OpenHello" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="yes" Return="ignore" />
   </Product>
 </Wix>
