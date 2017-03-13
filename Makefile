@@ -29,19 +29,19 @@ DISTNAME = Web-eID
 $(EXE): host-windows\*.cpp host-windows\*.h
 	cd host-qt & make & cd ..
 
-x64: $(DISTNAME)_$(VERSIONEX).x64.msi
-$(DISTNAME)_$(VERSIONEX).x64.msi: $(EXE)
+x64: $(DISTNAME)_$(VERSION).x64.msi
+$(DISTNAME)_$(VERSION).x64.msi: $(EXE)
 	IF DEFINED SIGNER ($(SIGN) $(EXE))
 	"$(WIX)\bin\candle.exe" -nologo windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
-	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSIONEX)-unsigned.x64.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x64
+	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSION)-unsigned.x64.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x64
 	IF DEFINED SIGNER (copy $(DISTNAME)_$(VERSION)-unsigned.x64.msi $(DISTNAME)_$(VERSION).x64.msi)
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION).x64.msi)
 
-x86: $(DISTNAME)_$(VERSIONEX).x86.msi
-$(DISTNAME)_$(VERSIONEX).x86.msi: $(EXE)
+x86: $(DISTNAME)_$(VERSION).x86.msi
+$(DISTNAME)_$(VERSION).x86.msi: $(EXE)
 	IF DEFINED SIGNER ($(SIGN) $(EXE))
 	"$(WIX)\bin\candle.exe" -nologo windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
-	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSIONEX)-unsigned.x86.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x86
+	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSION)-unsigned.x86.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x86
 	IF DEFINED SIGNER (copy $(DISTNAME)_$(VERSION)-unsigned.x86.msi $(DISTNAME)_$(VERSION).x86.msi)
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION).x86.msi)
 
