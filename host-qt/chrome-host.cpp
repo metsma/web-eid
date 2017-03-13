@@ -109,16 +109,16 @@ void QtHost::processMessage(const QJsonObject &json)
     try {
         if (json.isEmpty()) {
             resp = {{"result", "invalid_argument"}, {"version", VERSION}};
-            write(resp, json.value("nonce").toString());
+            write(resp, json.value("id").toString());
             return shutdown(EXIT_FAILURE);
         }
 
-        if(!json.contains("type") || !json.contains("nonce") || !json.contains("origin")) {
+        if(!json.contains("type") || !json.contains("id") || !json.contains("origin")) {
             resp = {{"result", "invalid_argument"}};
-            write(resp, json.value("nonce").toString());
+            write(resp, json.value("id").toString());
             return shutdown(EXIT_FAILURE);
         }
-        msgnonce = json.value("nonce").toString();
+        msgnonce = json.value("id").toString();
 
         // Origin. If unset for instance, set
         if (origin.isEmpty()) {
@@ -136,7 +136,7 @@ void QtHost::processMessage(const QJsonObject &json)
                 }
             } else {
                 resp = {{"result", "not_allowed"}};
-                write(resp, json.value("nonce").toString());
+                write(resp, json.value("id").toString());
                 return shutdown(EXIT_FAILURE);
             }
             // Setting the language is also a onetime operation, thus do it here.
@@ -155,7 +155,7 @@ void QtHost::processMessage(const QJsonObject &json)
         } else if (origin != json.value("origin").toString()) {
             // Otherwise if already set, it must match
             resp = {{"result", "invalid_argument"}};
-            write(resp, json.value("nonce").toString());
+            write(resp, json.value("id").toString());
             return shutdown(EXIT_FAILURE);
         }
 
@@ -189,7 +189,7 @@ void QtHost::processMessage(const QJsonObject &json)
 void QtHost::write(QVariantMap &resp, const QString &nonce)
 {
     if (!nonce.isEmpty())
-        resp["nonce"] = nonce;
+        resp["id"] = nonce;
 
     if (!resp.contains("result"))
         resp["result"] = "ok";

@@ -36,7 +36,7 @@
 
 QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
     // Check for mandatory parameters
-    if (!msg.contains("auth_nonce")) {
+    if (!msg.contains("nonce")) {
         return {{"result", "invalid_argument"}};
     } else {
         // Get the list of connected cards
@@ -54,7 +54,7 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
                 _log("Found certificate: %s", x509.subjectInfo(QSslCertificate::CommonName).at(0).toStdString().c_str());
 
                 // Get the first part of the token
-                QByteArray dtbs = authenticate_dtbs(x509, msg.value("origin").toString(), msg.value("auth_nonce").toString());
+                QByteArray dtbs = authenticate_dtbs(x509, msg.value("origin").toString(), msg.value("nonce").toString());
                 // Calculate the hash to be signed
                 QByteArray hash = QCryptographicHash::hash(dtbs, QCryptographicHash::Sha256);
                 // 2. Sign the token hash with the selected certificate
@@ -62,7 +62,7 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
                 // 3. Construct the JWT token to be returned
                 QByteArray jwt = dtbs + "." + signature.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
                 // 4. profit
-                return {{"auth_token", jwt.data()}};
+                return {{"token", jwt.data()}};
             } else {
                 return {{"result", "no_certificates"}};
             }
@@ -95,7 +95,7 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
                 _log("Found certificate: %s", x509.subjectInfo(QSslCertificate::CommonName).at(0).toStdString().c_str());
 
                 // Get the first part of the token
-                QByteArray dtbs = authenticate_dtbs(x509, msg.value("origin").toString(), msg.value("auth_nonce").toString());
+                QByteArray dtbs = authenticate_dtbs(x509, msg.value("origin").toString(), msg.value("nonce").toString());
                 // Calculate the hash to be signed
                 QByteArray hash = QCryptographicHash::hash(dtbs, QCryptographicHash::Sha256);
                 // 2. Sign the token hash with the selected certificate
@@ -103,7 +103,7 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
                 // 3. Construct the JWT token to be returned
                 QByteArray jwt = dtbs + "." + signature.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
                 // 4. profit
-                return {{"auth_token", jwt.data()}};
+                return {{"token", jwt.data()}};
             } else {
                 // No PKCS#11 successfully loaded
                 return {{"result", "no_certificates"}};
