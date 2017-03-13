@@ -8,15 +8,15 @@ before_install:
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install qt5; fi
 
 script:
-- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then make pkg; fi
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH=/usr/local/opt/qt5/bin:$PATH; make pkg; fi
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export PATH=/opt/qt56/bin:$PATH; make pkg; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export QTPATH=/usr/local/opt/qt5; make pkg; fi
 
 os:
 - linux
 - osx
 env:
   global:
-  - secure: "eQphLF0NVr0L9ZBF0GhLfVo1qOAVfmewIMt8a+/AZTryUvP86fx5YvbykNmO1wJszvJiMW82hQaLhVS9Acw90v7Gm54plM7+5maqIHatD/cO3cz0DmlzItP+RqRv8VdNNSlsPtBsmA1nlIQOajFYJt1TCCT0P/fHk9l/19uBn/cYUy4QaHJIDzNSyWykZfQBj4KJj+ebVH1soGSwOBMiaEn5qAAYMiSgL1ZRBGNQYd1/J++0NufOLcLXEqL0sVGb6an+yfu4ydMPFigmZRrDBUMq0oUr5lp6cL0P2TS9rZDSQ0oF7bBY0M2Zi/UmtpVC6ahJzuJcl3ethnuiYl/QDZJNwMdaws07Km6wIFgxSnDu9nId2kbLq5jGp3VrEaZV8CDy2ABbsbnsxOCPieOOwHLePpk/lIA7tnP+aBwNpB40hSdF5yzW3+HO1AFQXtJHTefdhn++OlR2mXG8EDVW6F33lTGp/3Mh9xo1Q09vnDpA87c7R7ERUn+Ga2WYogbphDuRCxsqo+Y17SJVLIqdhwd1HMRbDZmXv6xgNuLQv5v426cCc1LKpNFzlSre3r+pcveDOi3IPcp+w0vcwpSgF9kS8bZnLPKZhpyMJHpvG+a/uJ0S4hr+E4hHl+K3VLmigrxv5QRxHXATBv+Xg3g0SAKD0r9vLt0wWzJp6f/W57w="
+  - secure: eQphLF0NVr0L9ZBF0GhLfVo1qOAVfmewIMt8a+/AZTryUvP86fx5YvbykNmO1wJszvJiMW82hQaLhVS9Acw90v7Gm54plM7+5maqIHatD/cO3cz0DmlzItP+RqRv8VdNNSlsPtBsmA1nlIQOajFYJt1TCCT0P/fHk9l/19uBn/cYUy4QaHJIDzNSyWykZfQBj4KJj+ebVH1soGSwOBMiaEn5qAAYMiSgL1ZRBGNQYd1/J++0NufOLcLXEqL0sVGb6an+yfu4ydMPFigmZRrDBUMq0oUr5lp6cL0P2TS9rZDSQ0oF7bBY0M2Zi/UmtpVC6ahJzuJcl3ethnuiYl/QDZJNwMdaws07Km6wIFgxSnDu9nId2kbLq5jGp3VrEaZV8CDy2ABbsbnsxOCPieOOwHLePpk/lIA7tnP+aBwNpB40hSdF5yzW3+HO1AFQXtJHTefdhn++OlR2mXG8EDVW6F33lTGp/3Mh9xo1Q09vnDpA87c7R7ERUn+Ga2WYogbphDuRCxsqo+Y17SJVLIqdhwd1HMRbDZmXv6xgNuLQv5v426cCc1LKpNFzlSre3r+pcveDOi3IPcp+w0vcwpSgF9kS8bZnLPKZhpyMJHpvG+a/uJ0S4hr+E4hHl+K3VLmigrxv5QRxHXATBv+Xg3g0SAKD0r9vLt0wWzJp6f/W57w=
 addons:
   apt:
     packages:
@@ -33,3 +33,14 @@ addons:
     build_command_prepend: 
     build_command: make
     branch_pattern: coverity_scan
+deploy:
+  provider: releases
+  api-key:
+    secure: btSrL3fhWeSfVsYiaDR2WJQPD8FGjJyQ5TrK8m0mOhUEAgY6nXYggJ8JbR4xnZPxVbrFNOWhAyViNMRd7R2LalaiTsCBYDhpN4ntUKqzEg/58gXWT2JjjhauhrcYuQxszqha4Vc3QvCNGFBozZO8whtqLzZ5h+nHzrSZMlvItg6erL0eGl6hIwSUqfJKTj3wm5EiESYiz6nS+WSJWurPjTx3j5I36p5M9e62wqT2o1QdBfcNVkyaqMeE2dwHwHSTuMA63qcikqdNR1zihl2lDgAdl7iBdCCR+cdt9AKbrjpcOCnOo7DkWtQxO/tRsa6WXAu5Rv0AW78LkRRiBxysTXp1qdFvmczen98TE18hfWRT+59a7Fw/M9TutITTF2MyQIPC0TbKG8+MzvpuzXzk4EaK7X0DtH+azNvyw6yAc3hb4+Gh7pKo1JjiLx6k77YNM6lmqS9Ay50zLSTfo5xkauOyD+GYeaTlcekJVLuMSt5miO4+whwDRx05lgDlwMeXiWFI3wnfxEfXHF/cqmDcUwn+V2CfaS0s97ylRdr/WyShaNoyRqlXqQksBl8fAGKaKGAE/4K5t5gtkAviwLemejd/TkeqS2p5CxfeAhVJzf+XE2+GuR9KtkDgq4kRn7kBZ4v6+baTBTQbb06xU/gpMst1Ojpsj6Xt7+Rn/f0BcQw=
+  file_glob: true
+  file:
+    - Web-eID*.pkg
+    - ../hwcrypto-native_*.deb
+  skip_cleanup: true
+  on:
+    tags: true
