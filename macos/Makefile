@@ -44,6 +44,9 @@ hwcrypto-native.pkg: $(APP)
 	pkgbuild --analyze  --root $(TMPROOT) hwcrypto-native.plist
 	/usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" hwcrypto-native.plist
 
+	# Store version in a convenient .plist
+	/usr/libexec/PlistBuddy -c "Add Version string $(VERSION)" $(TARGETFOLDER)/version.plist
+
 	pkgbuild --version $(VERSION) \
 	--root $(TMPROOT) \
 	--identifier org.hwcrypto.native \
@@ -54,8 +57,8 @@ hwcrypto-native.pkg: $(APP)
 scripts.pkg: installer-scripts/*
 	pkgbuild --nopayload --scripts installer-scripts --id org.hwcrypto.scripts --version $(VERSION) $@
 
-pkg: Web-eID-unsigned.pkg
-Web-eID-unsigned.pkg: hwcrypto-native.pkg scripts.pkg
+pkg: Web-eID-$(VERSION)-unsigned.pkg
+Web-eID-$(VERSION)-unsigned.pkg: hwcrypto-native.pkg scripts.pkg
 	productbuild --distribution hwcrypto-native.dist.xml \
 	--package-path . \
 	--resources . \
@@ -69,7 +72,7 @@ Web-eID.pkg:
 	rm -f ../*.pkg *.pkg
 	$(MAKE) codesign
 	$(MAKE) pkg
-	productsign --sign "Developer ID Installer: $(SIGNER)" ../Web-eID-unsigned.pkg ../$@
+	productsign --sign "Developer ID Installer: $(SIGNER)" ../Web-eID-$(VERSION)-unsigned.pkg ../$@
 
 dmg: Web-eID.dmg
 Web-eID.dmg: Web-eID.pkg
