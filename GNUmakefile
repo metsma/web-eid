@@ -41,7 +41,7 @@ release:
 	# Tag version
 	git tag $(VERSION) -as -m "Release version $(VERSION)"
 	# Push to Github
-	git push origin $(VERSION)
+	git push origin master
 
 # Make the targzip for the native components
 dist:
