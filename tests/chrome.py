@@ -23,6 +23,7 @@ import sys
 import os
 import unittest
 import testconf
+import uuid
 
 class ChromeTest(unittest.TestCase):
 
@@ -43,7 +44,11 @@ class ChromeTest(unittest.TestCase):
       return json.loads(response)
 
   def transceive(self, msg):
-      # send like described in
+      if not "id" in msg: msg["id"] = str(uuid.uuid4())
+      return self.transceive_dumb(json.dumps(msg))
+
+  def transceive_dumb(self, msg):
+      # send like described in ...
       print("SEND: %s" % msg)
       self.p.stdin.write(struct.pack("=I", len(msg)))
       self.p.stdin.write(bytearray(msg, 'utf-8'))

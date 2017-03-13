@@ -34,7 +34,7 @@ class TestHostPipe(ChromeTest):
 
   def test_random_string(self):
       cmd = "BLAH"
-      resp = self.transceive(cmd)
+      resp = self.transceive_dumb(cmd)
       self.assertEquals(resp["result"], "invalid_argument")
       self.assertEqual(self.p.wait(), 1)
 
@@ -46,7 +46,7 @@ class TestHostPipe(ChromeTest):
 
   def test_empty_json(self):
       cmd = {}
-      resp = self.transceive(json.dumps(cmd))
+      resp = self.transceive_dumb(json.dumps(cmd))
       self.assertEqual(resp["result"], "invalid_argument")
       self.assertEqual(self.p.wait(), 1)
 
@@ -67,49 +67,49 @@ class TestHostPipe(ChromeTest):
 #      self.assertEqual(self.p.wait(), 1)
 
   def test_inconsistent_origin(self):
-      cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "https://example.com/"}
-      cmd2 = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "https://badexample.com/"}
-      resp1 = self.transceive(json.dumps(cmd))
+      cmd = {"type": "VERSION", "origin": "https://example.com/"}
+      cmd2 = {"type": "VERSION", "origin": "https://badexample.com/"}
+      resp1 = self.transceive(cmd)
       self.assertEqual(resp1["result"], "ok")
-      resp2 = self.transceive(json.dumps(cmd2))
+      resp2 = self.transceive(cmd2)
       self.assertEqual(resp2["result"], "invalid_argument")
 
   # other headless tests
   def test_version_no_nonce(self):
       cmd = {"type": "VERSION", "origin": "https://example.com/"}
-      resp = self.transceive(json.dumps(cmd))
+      resp = self.transceive_dumb(json.dumps(cmd))
       self.assertEqual(resp["result"], "invalid_argument")
 
   def test_version_no_origin(self):
-      cmd = {"type": "VERSION", "nonce": str(uuid.uuid4())}
-      resp = self.transceive(json.dumps(cmd))
+      cmd = {"type": "VERSION"}
+      resp = self.transceive(cmd)
       self.assertEqual(resp["result"], "invalid_argument")
 
   def test_version_invalid_origin(self):
-      cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "foobar in da house"}
-      resp = self.transceive(json.dumps(cmd))
+      cmd = {"type": "VERSION", "origin": "foobar in da house"}
+      resp = self.transceive(cmd)
       self.assertEqual(resp["result"], "not_allowed")
 
   def test_version_file_origin(self):
-      cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "file:///tmp/index.html"}
-      resp = self.transceive(json.dumps(cmd))
+      cmd = {"type": "VERSION", "origin": "file:///tmp/index.html"}
+      resp = self.transceive(cmd)
       self.assertEqual(resp["result"], "ok")
       self.assertTrue(re.compile(version_re).match(resp["version"]))
 
   def test_version_http_origin(self):
-      cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "http://example.com/"}
-      resp = self.transceive(json.dumps(cmd))
+      cmd = {"type": "VERSION", "origin": "http://example.com/"}
+      resp = self.transceive(cmd)
       self.assertEqual(resp["result"], "not_allowed")
 
   def test_version_http_localhost(self):
-      cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "http://localhost:8080/?nada"}
-      resp = self.transceive(json.dumps(cmd))
+      cmd = {"type": "VERSION", "origin": "http://localhost:8080/?nada"}
+      resp = self.transceive(cmd)
       self.assertEqual(resp["result"], "ok")
       self.assertTrue(re.compile(version_re).match(resp["version"]))
 
   def test_version_https(self):
-      cmd = {"type": "VERSION", "nonce": str(uuid.uuid4()), "origin": "https://example.com/"}
-      resp = self.transceive(json.dumps(cmd))
+      cmd = {"type": "VERSION", "origin": "https://example.com/"}
+      resp = self.transceive(cmd)
       self.assertEqual(resp["result"], "ok")
       self.assertTrue(re.compile(version_re).match(resp["version"]))
 
