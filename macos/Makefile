@@ -1,11 +1,9 @@
-# Construct version information
-BUILD_NUMBER ?= 0
+# Get version information
 include ../VERSION.mk
 
 # We need Qt
 QTPATH ?= $(HOME)/Qt/5.8/clang_64
 PATH := $(QTPATH)/bin:$(PATH)
-QTLIB = $(QTPATH)/lib
 
 # Where to place files
 EXTERNAL_PATH = /Library/Application\ Support/Google/Chrome/External\ Extensions
@@ -66,9 +64,9 @@ Web-eID-$(VERSION)-unsigned.pkg: hwcrypto-native.pkg scripts.pkg
 	../$@
 
 
-signed: Web-eID.pkg
-.PHONY: Web-eID.pkg
-Web-eID.pkg:
+signed: Web-eID-$(VERSION).pkg
+.PHONY: Web-eID-$(VERSION).pkg
+Web-eID-$(VERSION).pkg:
 	rm -f ../*.pkg *.pkg
 	$(MAKE) codesign
 	$(MAKE) pkg
@@ -77,21 +75,3 @@ Web-eID.pkg:
 dmg: Web-eID.dmg
 Web-eID.dmg: Web-eID.pkg
 	hdiutil create ../$@ -ov -volname "Web eID installer" -srcfolder ../$<
-
-# helpers
-
-install:
-	mkdir -p $(CHROME_HOSTS) $(FIREFOX_HOSTS) $(FFEXTENSION_PATH) $(EXTERNAL_PATH)
-	cp -rv build/Release/hwcrypto-native.app $(CHROME_HOSTS)
-	cp -v org.hwcrypto.native.json $(CHROME_HOSTS)
-	cp -v org.hwcrypto.native.firefox.json $(FIREFOX_HOSTS)/org.hwcrypto.native.json
-	cp -v ../fmpfihjoladdfajbnkdfocnbcehjpogi.json $(EXTERNAL_PATH)
-
-uninstall:
-	rm -f $(EXTERNAL_PATH)/fmpfihjoladdfajbnkdfocnbcehjpogi.json
-	rm -f $(CHROME_HOSTS)/org.hwcrypto.native.json
-	rm -f $(FIREFOX_HOSTS)/org.hwcrypto.native.json
-	rm -rf $(CHROME_HOSTS)/hwcrypto-native.app
-
-test:
-	python ../tests/stateless-test.py $(APP)/Contents/MacOS/hwcrypto-native
