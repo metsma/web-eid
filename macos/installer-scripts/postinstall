@@ -3,9 +3,12 @@
 # Install Google Chrome policy, which installs the extension silently
 /usr/libexec/PlistBuddy -c "Merge chrome-policy.plist" /Library/Preferences/com.google.Chrome.plist
 
+# Read the installed version from plist
+VER=$(/usr/libexec/PlistBuddy -c "Print Version" /Library/Web\ eID/version.plist)
+
 # Without sudo the script would open the default brwoser of the
-# root user (which would probably be safary). 
+# root user (which would probably be safari).
 # Use sudo to switch to the context of the user running the installer
 
-sudo -u $USER open 'https://web-eid.com/?installer=macos' || echo "Could not open browser"
+sudo -u $USER open "https://web-eid.com/?installer=macos&version=$VER" || echo "Could not open browser"
 exit 0
