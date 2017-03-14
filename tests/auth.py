@@ -22,7 +22,7 @@ from chrome import ChromeTest
 
 class TestAuth(ChromeTest):
   def test_simple_auth(self):
-      cmd = {"type": "AUTH", "nonce": str(uuid.uuid4()), "origin": "https://example.com/", "nonce": str(uuid.uuid4())}
+      cmd = {"type": "AUTH", "nonce": str(uuid.uuid4()), "origin": "https://example.com/"}
       resp = self.transceive(cmd)
       self.assertEqual(resp["result"], "ok")
       self.assertEqual("token" in resp, True)

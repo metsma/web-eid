@@ -21,7 +21,6 @@ import subprocess
 import struct
 import sys
 import unittest
-import uuid
 import re
 import testconf
 from chrome import ChromeTest
