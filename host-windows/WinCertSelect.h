@@ -19,12 +19,10 @@
 #pragma once
 
 #include <vector>
-#include <Windows.h>
 
-enum CertificatePurpose {
-	Authentication,
-	Signing
-};
+#include "Common.h"
+
+typedef const wchar_t *LPCWSTR;
 
 class WinCertSelect {
  public:

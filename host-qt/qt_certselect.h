@@ -20,18 +20,15 @@
 
 #include <QDialog>
 
+#include "Common.h"
+
 #include <vector>
 
-class QTreeWidget;
-
-class QtCertSelect {
-public:
-    static std::vector<unsigned char> getCert(const std::vector<std::vector<unsigned char>> &certs, const QString &origin, bool signing);
-};
-
-class QtCertSelectDialog: public QDialog {
+class QtCertSelect: public QDialog {
     Q_OBJECT
 public:
-    QtCertSelectDialog(const QList<QStringList> &certs, const QString &origin, bool signing); // FIXME bool->enum
-    QTreeWidget *table;
+
+    QtCertSelect(const QString &origin, CertificatePurpose type);
+
+    static std::vector<unsigned char> getCert(const std::vector<std::vector<unsigned char>> &certs, const QString &origin, CertificatePurpose type);
 };

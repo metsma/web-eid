@@ -82,9 +82,10 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
                     // FIXME: to prevent remote probing, return always user cancel?
                     return {{"result", "no_certificates"}};
                 } else if (certs.size() == 1) {
+                    //FIXME: QtCertSelect::getCert validates that cert is valid, here not
                     cert = certs.at(0);
                 } else {
-                    cert = QtCertSelect::getCert(certs, h->friendly_origin, false);
+                    cert = QtCertSelect::getCert(certs, h->friendly_origin, Authentication);
                 }
                 if (cert.empty()) {
                     // user pressed cancel

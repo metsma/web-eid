@@ -27,6 +27,10 @@
 #define BINARY_SHA384_LENGTH 48
 #define BINARY_SHA512_LENGTH 64
 
+enum CertificatePurpose {
+    Authentication,
+    Signing
+};
 
 // Exceptions
 class UserCanceledError : public std::runtime_error {

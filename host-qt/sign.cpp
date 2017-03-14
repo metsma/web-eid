@@ -72,7 +72,7 @@ QVariantMap Sign::select(QtHost *h, const QJsonObject &json) {
         if (certs.empty()) {
             return {{"result", "no_certificates"}};
         } else  {
-            cert = QtCertSelect::getCert(certs, h->friendly_origin, true);
+            cert = QtCertSelect::getCert(certs, h->friendly_origin, Signing);
             h->signcert = cert;
             return {{"result", "ok"}, {"cert", v2ba(cert).toBase64() }};
         }
