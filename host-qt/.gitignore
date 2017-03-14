@@ -2,5 +2,6 @@
 /Makefile
 /hwcrypto-native.app
 /hwcrypto-native
-/qrc_hwcrypto-native.cpp
+/qrc_*
 /moc_*
+*.qm
