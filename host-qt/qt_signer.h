@@ -19,6 +19,7 @@
 #pragma once
 
 #include "pkcs11module.h"
+#include "Common.h"
 
 #include <QDialog>
 
@@ -28,13 +29,13 @@ class QLineEdit;
 class QtSigner: QObject {
    Q_OBJECT
 public:
-   static std::vector<unsigned char> sign(const PKCS11Module &m, const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert, const QString &origin, bool signing); // FIXME: bool->enum
+   static std::vector<unsigned char> sign(const PKCS11Module &m, const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert, const QString &origin, CertificatePurpose type);
 };
 
 class QtSignerDialog : public QDialog {
    Q_OBJECT
 public:
-   QtSignerDialog(P11Token &token, const QString &origin, bool signing);
+   QtSignerDialog(P11Token &token, const QString &origin, CertificatePurpose type);
    QLineEdit *pin = nullptr;
    QLabel *nameLabel, *pinLabel, *errorLabel;
 };

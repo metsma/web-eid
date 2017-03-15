@@ -27,6 +27,7 @@
 
 #ifdef _WIN32
 #include "WinCertSelect.h"
+#include "WinSigner.h"
 #endif
 
 
@@ -39,7 +40,14 @@ QVariantMap Sign::sign(QtHost *h, const QJsonObject &json) {
 
     std::vector<unsigned char> hash = ba2v(QByteArray::fromBase64(json.value("hash").toString().toLatin1()));
     _log("Signing: %s", toHex(hash).c_str());
-    std::vector<unsigned char> signature = QtSigner::sign(h->pkcs11, hash, h->signcert, h->friendly_origin, true);
+    std::vector<unsigned char> signature;
+#ifdef _WIN32
+    if (h->winsign) {
+        signature = WinSigner::sign(hash, h->signcert);
+    }
+#endif
+    if (signature.empty())
+        signature = QtSigner::sign(h->pkcs11, hash, h->signcert, h->friendly_origin, Signing);
     return {{"signature", v2ba(signature).toBase64()}};
 }
 
@@ -61,6 +69,7 @@ QVariantMap Sign::select(QtHost *h, const QJsonObject &json) {
         cert = WinCertSelect::getCert(CertificatePurpose::Signing, LPWSTR(tr("Signing on %1, please select certificate").arg(h->friendly_origin).utf16()));
         if (!cert.empty()) {
             h->signcert = cert;
+            h->winsign = true;
             return {{"cert", v2ba(cert).toBase64()}};
         }
 #endif

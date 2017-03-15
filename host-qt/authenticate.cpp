@@ -100,7 +100,7 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
                 // Calculate the hash to be signed
                 QByteArray hash = QCryptographicHash::hash(dtbs, QCryptographicHash::Sha256);
                 // 2. Sign the token hash with the selected certificate
-                QByteArray signature = v2ba(QtSigner::sign(h->pkcs11, ba2v(hash), cert, h->friendly_origin, false));
+                QByteArray signature = v2ba(QtSigner::sign(h->pkcs11, ba2v(hash), cert, h->friendly_origin, Authentication));
                 // 3. Construct the JWT token to be returned
                 QByteArray jwt = dtbs + "." + signature.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
                 // 4. profit

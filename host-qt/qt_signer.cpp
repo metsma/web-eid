@@ -42,7 +42,7 @@ enum {
     AuthError = -2,
 };
 
-std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert, const QString &origin, bool signing) {
+std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert, const QString &origin, CertificatePurpose type) {
         switch(hash.size())
         {
         case BINARY_SHA1_LENGTH:
@@ -59,7 +59,7 @@ std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vect
         bool isInitialCheck = true;
         for (int retriesLeft = m.getPINRetryCount(cert); retriesLeft > 0; ) {
             P11Token token(m.getP11Token(cert));
-            QtSignerDialog dialog(token, origin, signing);
+            QtSignerDialog dialog(token, origin, type);
             if (retriesLeft < 3) {
                 dialog.errorLabel->show();
                 dialog.errorLabel->setText(QString("<font color='red'><b>%1%2 %3</b></font>")
@@ -121,7 +121,7 @@ std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vect
     }
 
 
-    QtSignerDialog::QtSignerDialog(P11Token &p11token, const QString &origin, bool signing)
+    QtSignerDialog::QtSignerDialog(P11Token &p11token, const QString &origin, CertificatePurpose type)
         : nameLabel(new QLabel(this))
         , pinLabel(new QLabel(this))
         , errorLabel(new QLabel(this))
@@ -137,7 +137,7 @@ std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vect
         // Remove minimize and maximize buttons from window chrome
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) & ~(Qt::WindowMaximizeButtonHint|Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint));
 
-        if (signing) {
+        if (type == Signing) {
             setWindowTitle(tr("Signing at %1").arg(origin));
         } else {
             setWindowTitle(tr("Authenticating to %1").arg(origin));
@@ -166,7 +166,7 @@ std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vect
             connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
             connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
             buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
-            QPushButton *ok = buttons->addButton(signing ? tr("Sign") : tr("Authenticate"), QDialogButtonBox::AcceptRole); // FiXME
+            QPushButton *ok = buttons->addButton(type == Signing ? tr("Sign") : tr("Authenticate"), QDialogButtonBox::AcceptRole); // FIXME
             ok->setEnabled(false);
 
             pin = new QLineEdit(this);
