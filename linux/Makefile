@@ -7,7 +7,7 @@ hwcrypto-native:
 
 pkg: hwcrypto-native
 	rm -f ../debian/changelog
-	(cd .. && dch --create -M --package hwcrypto-native --distribution unstable --newversion $(VERSION)-$(BUILD_NUMBER)  "Release version $(VERSION)" && fakeroot debian/rules binary)
+	(cd .. && dch --create -M --package hwcrypto-native --force-distribution --distribution `lsb_release -cs` --newversion $(VERSION)-$(BUILD_NUMBER)`lsb_release -cs`  "Publish $(VERSION) from Git `git describe --tags --always`" && fakeroot debian/rules binary)
 
 clean:
 	git clean -dfx ..
