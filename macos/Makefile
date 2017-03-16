@@ -55,8 +55,8 @@ hwcrypto-native.pkg: $(APP)
 scripts.pkg: installer-scripts/*
 	pkgbuild --nopayload --scripts installer-scripts --id org.hwcrypto.scripts --version $(VERSION) $@
 
-pkg: Web-eID-$(VERSION)-unsigned.pkg
-Web-eID-$(VERSION)-unsigned.pkg: hwcrypto-native.pkg scripts.pkg
+pkg: Web-eID_$(VERSION)-unsigned.pkg
+Web-eID_$(VERSION)-unsigned.pkg: hwcrypto-native.pkg scripts.pkg
 	productbuild --distribution hwcrypto-native.dist.xml \
 	--package-path . \
 	--resources . \
@@ -64,13 +64,13 @@ Web-eID-$(VERSION)-unsigned.pkg: hwcrypto-native.pkg scripts.pkg
 	../$@
 
 
-signed: Web-eID-$(VERSION).pkg
-.PHONY: Web-eID-$(VERSION).pkg
-Web-eID-$(VERSION).pkg:
+signed: Web-eID_$(VERSION).pkg
+.PHONY: Web-eID_$(VERSION).pkg
+Web-eID_$(VERSION).pkg:
 	rm -f ../*.pkg *.pkg
 	$(MAKE) codesign
 	$(MAKE) pkg
-	productsign --sign "Developer ID Installer: $(SIGNER)" ../Web-eID-$(VERSION)-unsigned.pkg ../$@
+	productsign --sign "Developer ID Installer: $(SIGNER)" ../Web-eID_$(VERSION)-unsigned.pkg ../$@
 
 dmg: Web-eID.dmg
 Web-eID.dmg: Web-eID.pkg
