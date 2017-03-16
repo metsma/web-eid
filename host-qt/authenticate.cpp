@@ -75,7 +75,7 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
             _log("Looking for authentication certificates");
             h->pkcs11.load(modules[0]);
             if (h->pkcs11.isLoaded()) {
-                auto certs = h->pkcs11.getAuthCerts();
+                auto certs = h->pkcs11.getCerts(Authentication);
                 std::vector<unsigned char> cert;
                 if (certs.empty()) {
                     _log("Did not find any possible authentication certificates from PKCS#11");

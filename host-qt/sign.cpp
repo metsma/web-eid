@@ -77,7 +77,7 @@ QVariantMap Sign::select(QtHost *h, const QJsonObject &json) {
         return {{"result", "no_certificates"}};
     } else {
         h->pkcs11.load(modules[0]);
-        std::vector<std::vector<unsigned char>> certs = h->pkcs11.getSignCerts();
+        std::vector<std::vector<unsigned char>> certs = h->pkcs11.getCerts(Signing);
         if (certs.empty()) {
             return {{"result", "no_certificates"}};
         } else  {

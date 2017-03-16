@@ -23,6 +23,7 @@
 #include <map>
 
 #include "pkcs11.h"
+#include "Common.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -44,11 +45,9 @@ public:
     std::vector<unsigned char> sign(const std::vector<unsigned char> &cert, const std::vector<unsigned char> &hash, const char *pin) const;
 
     bool isLoaded() {return !certs.empty();}
-    std::vector<std::vector <unsigned char>> getCerts();
-    std::vector<std::vector <unsigned char>> getSignCerts();
-    std::vector<std::vector <unsigned char>> getAuthCerts();
+    std::vector<std::vector <unsigned char>> getCerts(CertificatePurpose type = CertificatePurpose(Authentication|Signing));
 
-    P11Token getP11Token(std::vector<unsigned char> cert) const;
+    P11Token getP11Token(const std::vector<unsigned char> &cert) const;
 
     bool isPinpad(const std::vector<unsigned char> &cert) const;
     int getPINRetryCount(const std::vector<unsigned char> &cert) const;

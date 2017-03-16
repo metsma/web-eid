@@ -28,8 +28,8 @@
 #define BINARY_SHA512_LENGTH 64
 
 enum CertificatePurpose {
-    Authentication,
-    Signing
+    Authentication = 1 << 1,
+    Signing = 1 << 2
 };
 
 // Exceptions

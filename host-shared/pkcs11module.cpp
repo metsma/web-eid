@@ -51,22 +51,22 @@
 template <typename Func, typename... Args>
 void Call(const char *file, int line, const char *function, Func func, Args... args)
 {
-        CK_RV rv = func(args...);
-        Logger::writeLog(function, file, line, "return value 0x%08x", rv);
-        switch (rv) {
-        // FIXME: make it return the rv and do not throw anything here.
-        case CKR_CRYPTOKI_ALREADY_INITIALIZED:
-        case CKR_OK:
-            break;
-        case CKR_FUNCTION_CANCELED:
-            throw UserCanceledError();
-        case CKR_PIN_INCORRECT:
-            throw AuthenticationError();
-        case CKR_PIN_LEN_RANGE:
-            throw AuthenticationBadInput();
-        default:
-            throw std::runtime_error("PKCS11 method failed.");
-        }
+    CK_RV rv = func(args...);
+    Logger::writeLog(function, file, line, "return value 0x%08x", rv);
+    switch (rv) {
+    // FIXME: make it return the rv and do not throw anything here.
+    case CKR_CRYPTOKI_ALREADY_INITIALIZED:
+    case CKR_OK:
+        break;
+    case CKR_FUNCTION_CANCELED:
+        throw UserCanceledError();
+    case CKR_PIN_INCORRECT:
+        throw AuthenticationError();
+    case CKR_PIN_LEN_RANGE:
+        throw AuthenticationBadInput();
+    default:
+        throw std::runtime_error("PKCS11 method failed.");
+    }
 }
 
 std::vector<unsigned char> PKCS11Module::attribute(CK_ATTRIBUTE_TYPE type, CK_SESSION_HANDLE sid, CK_OBJECT_HANDLE obj) const
@@ -105,57 +105,53 @@ std::vector<CK_OBJECT_HANDLE> PKCS11Module::getKey(CK_SESSION_HANDLE session, co
 }
 
 
-static bool usage_matches(const std::vector<unsigned char> &certificateCandidate, bool auth) {
-        QSslCertificate cert = v2cert(certificateCandidate);
-        bool isCa = true;
-        bool isSSLClient = false;
-        bool isNonRepudiation = false;
+static bool usage_matches(const std::vector<unsigned char> &certificateCandidate, CertificatePurpose type)
+{
+    QSslCertificate cert = v2cert(certificateCandidate);
+    bool isCa = true;
+    bool isSSLClient = false;
+    bool isNonRepudiation = false;
 
-        QList<QSslCertificateExtension> exts = cert.extensions();
-
-		for (const QSslCertificateExtension &ext: cert.extensions()) {
-			QVariant v = ext.value();
-//            _log("ext: %s", ext.name().toStdString().c_str());
-			if (ext.name() == "basicConstraints") {
-				QVariantMap m = ext.value().toMap();
-                isCa = m.value("ca").toBool();
-			} else if (ext.oid() == "2.5.29.37") {
-                // 2.5.29.37 - extendedKeyUsage
-                // XXX: these are not declared stable by Qt.
-                // Linux returns parsed map (OpenSSL?) OSX 5.8 returns QByteArrays, 5.5 works
-                if (v.canConvert<QByteArray>()) {
-                    // XXX: this is 06082b06010505070302 what is 1.3.6.1.5.5.7.3.2 what is "TLS Client"
-                    if (v.toByteArray().toHex().contains("06082b06010505070302")) {
-                        isSSLClient = true;
-                    }
-                } else if (v.canConvert<QList<QVariant>>()) {
-                    // Linux
-                    if (v.toList().contains("TLS Web Client Authentication")) {
-                        isSSLClient = true;
-                    }
+    for (const QSslCertificateExtension &ext: cert.extensions()) {
+        QVariant v = ext.value();
+//      _log("ext: %s", ext.name().toStdString().c_str());
+        if (ext.name() == "basicConstraints") {
+            QVariantMap m = ext.value().toMap();
+            isCa = m.value("ca").toBool();
+        } else if (ext.oid() == "2.5.29.37") {
+            // 2.5.29.37 - extendedKeyUsage
+            // XXX: these are not declared stable by Qt.
+            // Linux returns parsed map (OpenSSL?) OSX 5.8 returns QByteArrays, 5.5 works
+            if (v.canConvert<QByteArray>()) {
+                // XXX: this is 06082b06010505070302 what is 1.3.6.1.5.5.7.3.2 what is "TLS Client"
+                if (v.toByteArray().toHex().contains("06082b06010505070302")) {
+                    isSSLClient = true;
                 }
-			} else if (ext.name() == "keyUsage") {
-                if (v.canConvert<QList<QVariant>>()) {
-                    // Linux
-                    if (v.toList().contains("Non Repudiation")) {
-                        isNonRepudiation = true;
-                    }
+            } else if (v.canConvert<QList<QVariant>>()) {
+                // Linux
+                if (v.toList().contains("TLS Web Client Authentication")) {
+                    isSSLClient = true;
                 }
-                // FIXME: detect NR from byte array
-                // Do a ugly trick for esteid only
-                QList<QString> ou = cert.subjectInfo(QSslCertificate::OrganizationalUnitName);
-                if (!isNonRepudiation && ou.size() > 0 && ou.at(0) == "digital signature") {
+            }
+        } else if (ext.name() == "keyUsage") {
+            if (v.canConvert<QList<QVariant>>()) {
+                // Linux
+                if (v.toList().contains("Non Repudiation")) {
                     isNonRepudiation = true;
                 }
-                _log("keyusage: %s", v.toByteArray().toHex().toStdString().c_str());
             }
+            // FIXME: detect NR from byte array
+            // Do a ugly trick for esteid only
+            QList<QString> ou = cert.subjectInfo(QSslCertificate::OrganizationalUnitName);
+            if (!isNonRepudiation && ou.size() > 0 && ou.at(0) == "digital signature") {
+                isNonRepudiation = true;
+            }
+            _log("keyusage: %s", v.toByteArray().toHex().toStdString().c_str());
         }
-        _log("Certificate flags: ca=%d auth=%d nonrepu=%d", isCa , isSSLClient, isNonRepudiation);
-        if (auth) {
-            return isSSLClient && !isCa;
-        } else {
-            return isNonRepudiation && !isCa;
-        }
+    }
+    _log("Certificate flags: ca=%d auth=%d nonrepu=%d", isCa , isSSLClient, isNonRepudiation);
+    return !isCa &&
+        ((type & Authentication && isSSLClient) || (type & Signing && isNonRepudiation));
 }
 
 
@@ -220,37 +216,14 @@ void PKCS11Module::load(const std::string &module) {
         }
 }
 
-std::vector<std::vector <unsigned char>> PKCS11Module::getSignCerts() {
-        std::vector<std::vector<unsigned char>> res;
-          for(auto const &crts: certs) {
-             if (usage_matches(crts.first, false)) {
-                 _log("certificate: %s", x509subject(crts.first).c_str());
-                 res.push_back(crts.first);
-             }
-        }
-        return res;
-}
-
-std::vector<std::vector <unsigned char>> PKCS11Module::getAuthCerts() {
-        std::vector<std::vector<unsigned char>> res;
-          for(auto const &crts: certs) {
-             if (usage_matches(crts.first, true)) {
-                 _log("certificate: %s", x509subject(crts.first).c_str());
-                 res.push_back(crts.first);
-             }
-        }
-        return res;
-}
-
-
-// return the certificates found from this module.
-std::vector<std::vector <unsigned char>> PKCS11Module::getCerts() {
-        std::vector<std::vector<unsigned char>> res;
-          for(auto const &crts: certs) {
-             _log("certificate: %s", toHex(crts.first).c_str());
-             res.push_back(crts.first);
-        }
-        return res;
+std::vector<std::vector <unsigned char>> PKCS11Module::getCerts(CertificatePurpose type) {
+    std::vector<std::vector<unsigned char>> res;
+    for(auto const &crts: certs) {
+        _log("certificate: %s", toHex(crts.first).c_str());
+        if(usage_matches(crts.first, type))
+            res.push_back(crts.first);
+    }
+    return res;
 }
 
 
@@ -332,41 +305,27 @@ std::vector<unsigned char> PKCS11Module::sign(const std::vector<unsigned char> &
     }
 
 std::pair<int, int> PKCS11Module::getPINLengths(const std::vector<unsigned char> &cert) {
-    // TODO: put into helper
-    auto slotinfo = certs.find(cert);
-    if (slotinfo == certs.end()) {
-        throw std::runtime_error("Certificate not found in module");
-    }
-    auto slot = slotinfo->second;
-    return std::make_pair(slot.first.pin_min, slot.first.pin_max);
+    P11Token token = getP11Token(cert);
+    return std::make_pair(token.pin_min, token.pin_max);
 }
 
 bool PKCS11Module::isPinpad(const std::vector<unsigned char> &cert) const {
-    auto slotinfo = certs.find(cert);
-    if (slotinfo == certs.end()) {
-        throw std::runtime_error("Certificate not found in module");
-    }
-    auto slot = slotinfo->second;
-    return slot.first.has_pinpad;
+    return getP11Token(cert).has_pinpad;
 }
 
 // FIXME: assumes 3 tries for a PIN
 int PKCS11Module::getPINRetryCount(const std::vector<unsigned char> &cert) const {
-    auto slotinfo = certs.find(cert);
-    if (slotinfo == certs.end()) {
-        throw std::runtime_error("Certificate not found in module");
-    }
-    auto slot = slotinfo->second;
-    if (slot.first.flags & CKF_USER_PIN_LOCKED)
+    P11Token token = getP11Token(cert);
+    if (token.flags & CKF_USER_PIN_LOCKED)
         return 0;
-    if (slot.first.flags & CKF_USER_PIN_FINAL_TRY)
+    if (token.flags & CKF_USER_PIN_FINAL_TRY)
         return 1;
-    if (slot.first.flags & CKF_USER_PIN_COUNT_LOW)
+    if (token.flags & CKF_USER_PIN_COUNT_LOW)
         return 2;
     return 3;
 }
 
-P11Token PKCS11Module::getP11Token(std::vector<unsigned char> cert) const {
+P11Token PKCS11Module::getP11Token(const std::vector<unsigned char> &cert) const {
     auto slotinfo = certs.find(cert);
     if (slotinfo == certs.end()) {
         throw std::runtime_error("Certificate not found in module");
