@@ -20,6 +20,7 @@
 
 #include "Logger.h"
 
+#include <QCoreApplication>
 #include <QThread>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -52,6 +53,8 @@ public:
             }
         }
         _log("Input reading thread is done.");
+        // If input is closed, we quit
+        QCoreApplication::exit(0);
     }
 
 signals:
