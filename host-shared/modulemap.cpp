@@ -21,113 +21,145 @@
 #include "pcsc.h"
 #include "util.h"
 
+#include <sstream>
+
 #include <stdio.h>
 #include <stdlib.h>
+
 #ifndef _WIN32
 #include <unistd.h>
+#include <dlfcn.h>
 #else
+#include <windows.h>
 #include <io.h>
-#endif
-
-#ifdef _WIN32
 #define F_OK 02
 #define access _access
 #endif
 
+
+// We have a list of named lists
 struct ModuleATR {
-    std::string atr;
-    std::string path;
+    std::string name;
+    std::vector<std::string> atrs;
+    std::vector<std::string> paths;
 };
 
 static std::vector<ModuleATR> createMap() {
     // First add specific ATR-s
-#ifdef __APPLE__
-    // FIXME: Estonian PKCS#11 driver is buggy
-    const std::string openscPath("/Library/OpenSC/lib/opensc-pkcs11.so");
-    const std::string etokenPath("/Library/Frameworks/eToken.framework/Versions/Current/libeToken.dylib");
-    const std::string estPath("/Library/EstonianIDCard/lib/esteid-pkcs11.so");
-    const std::string latPath("/Library/latvia-eid/lib/otlv-pkcs11.so");
-    const std::string finPath("/Library/mPolluxDigiSign/libcryptoki.dylib");
-    const std::string litPath("/System/Library/Security/tokend/CCSuite.tokend/Contents/Frameworks/libccpkip11.dylib");
-#else
-    const std::string estPath("/usr/lib/pkcs11/opensc-pkcs11.so");
-    const std::string latPath("otlv-pkcs11.so");
-    const std::string finPath("opensc-pkcs11.so");
-    const std::string litPath("/usr/lib/ccs/libccpkip11.so");
-#endif
-
-
     std::vector<ModuleATR> m{
-#ifdef __APPLE__
-        {"3BD518008131FE7D8073C82110F4", etokenPath},
-#endif
-        {"3BFE9400FF80B1FA451F034573744549442076657220312E3043", estPath},
-        {"3BDE18FFC080B1FE451F034573744549442076657220312E302B", estPath},
-        {"3B5E11FF4573744549442076657220312E30", estPath},
-        {"3B6E00004573744549442076657220312E30", estPath},
-
-        {"3BFE1800008031FE454573744549442076657220312E30A8", estPath},
-        {"3BFE1800008031FE45803180664090A4561B168301900086", estPath},
-        {"3BFE1800008031FE45803180664090A4162A0083019000E1", estPath},
-        {"3BFE1800008031FE45803180664090A4162A00830F9000EF", estPath},
-
-        {"3BF9180000C00A31FE4553462D3443432D303181", estPath},
-        {"3BF81300008131FE454A434F5076323431B7", estPath},
-        {"3BFA1800008031FE45FE654944202F20504B4903", estPath},
-
-        {"3BDD18008131FE45904C41545649412D65494490008C", latPath},
-
-        {"3B7B940000806212515646696E454944", finPath},
-
-        {"3BF81300008131FE45536D617274417070F8", litPath},
-        {"3B7D94000080318065B08311C0A983009000", litPath},
-
-        // Then add wildcards
+        {"e-token",
+         {"3BD518008131FE7D8073C82110F4"},
+         {"/Library/Frameworks/eToken.framework/Versions/Current/libeToken.dylib"}
+        },
+        {"Estonian ID-card",
+         {"3BFE9400FF80B1FA451F034573744549442076657220312E3043",
+          "3BDE18FFC080B1FE451F034573744549442076657220312E302B",
+          "3B5E11FF4573744549442076657220312E30",
+          "3B6E00004573744549442076657220312E30",
+          "3BFE1800008031FE454573744549442076657220312E30A8",
+          "3BFE1800008031FE45803180664090A4561B168301900086",
+          "3BFE1800008031FE45803180664090A4162A0083019000E1",
+          "3BFE1800008031FE45803180664090A4162A00830F9000EF",
+          "3BF9180000C00A31FE4553462D3443432D303181",
+          "3BF81300008131FE454A434F5076323431B7",
+          "3BFA1800008031FE45FE654944202F20504B4903"},
+         {"/Library/EstonianIDCard/lib/esteid-pkcs11.so", "/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so"}
+        },
+        {"Latvian ID-card",
+         {"3BDD18008131FE45904C41545649412D65494490008C"},
+         {"/Library/latvia-eid/lib/otlv-pkcs11.so", "otlv-pkcs11.so"}
+        },
+        {"Finnish ID-card",
+         {"3B7B940000806212515646696E454944"},
+         {"/Library/mPolluxDigiSign/libcryptoki.dylib", "opensc-pkcs11.so"}
+        },
+        {"Lithuanian ID-card",
+         {"3BF81300008131FE45536D617274417070F8",
+          "3B7D94000080318065B08311C0A983009000"},
+         {"/System/Library/Security/tokend/CCSuite.tokend/Contents/Frameworks/libccpkip11.dylib", "/usr/lib/ccs/libccpkip11.so"}
+        },
+        // Then add some last resort wildcards
+        {"OpenSC fallback", {"*"}, {"/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so"}},
 #ifdef __linux__
-        {"*", "/usr/lib/pkcs11/opensc-pkcs11.so"},
-        {"*", "p11-kit-proxy.so"},
-#elif defined __APPLE__
-        {"*", "/Library/OpenSC/lib/opensc-pkcs11.so"},
+        {"p11-kit fallback", {"*"}, {"p11-kit-proxy.so"}},
 #endif
     };
 
-    // Convert all ATR strings to upper case
-    for (auto e: m) {
-        std::transform(e.atr.begin(), e.atr.end(), e.atr.begin(), ::toupper);
+    // In each configuration list element
+    for (auto &e: m) {
+        // convert the ATR list element contents to upper case
+        for (auto &ae: e.atrs) {
+            std::transform(ae.begin(), ae.end(), ae.begin(), ::toupper);
+        }
     }
-    for (auto e: m) {
-        _log("%s -> %s", e.atr.c_str(), e.path.c_str());
+
+    // Log
+    for (auto &e: m) {
+        std::stringstream msg;
+        msg << e.name << " is handled by ";
+        for (auto &me: e.paths) {
+            msg << me << " ";
+        }
+        _log("%s", msg.str().c_str());
     }
     return m;
 }
 
-// Given a list of ATR-s, return a list of PKCS#11 module paths.
-// Note that the size of the returned list can be longer than the size
-// of atr list. Order is not in any preferred order.
+// Given a list of ATR-s, return a list of PKCS#11 modules.
+// We do not know which ATR is of the card that is supposed to be used
+// nor do we know for sure which card is handled by which driver.
 
 std::vector<std::string> P11Modules::getPaths(const std::vector<std::vector<unsigned char>> &atrs) {
     static const std::vector<ModuleATR> atrToDriverList = createMap();
     std::vector<std::string> result;
 
+    // For every ATR ...
     for (const auto &atrbytes: atrs) {
+        // convert ATR byte array to upper case HEX
         std::string key = toHex(atrbytes);
         std::transform(key.begin(), key.end(), key.begin(), ::toupper);
         _log("Looking for %s", key.c_str());
         for (const auto &conf: atrToDriverList) {
-            // The order up there is important
-            // Check that the file actually exists
-            // FIXME: check is only valid iv path contains /
-            // try to dlopen if not slash
-            if (access(conf.path.c_str(), F_OK ) != -1) {
-                // TODO: only first driver is used now
-                if (conf.atr == "*" || conf.atr == key) {
-                    result.push_back(conf.path);
-                    _log("selected PKCS#11 module %s for ATR %s", conf.path.c_str(), conf.atr.c_str());
-                    break; // found a "valid" module, take next ATR
+            // Checking if ATR matches one in the list
+            bool atr_match = std::any_of(conf.atrs.cbegin(), conf.atrs.cend(), [&](const std::string &atr) {
+                if (atr == "*" || atr == key) {
+                    _log("ATR matches %s: %s", conf.name.c_str(), atr.c_str());
+                    return true;
                 }
-                // Given ATR does not match
-            } else {
-                _log("ignoring missing PKCS#11 module %s", conf.path.c_str());
+                return false;
+            });
+            // ATR matched config entry.
+            if (!atr_match)
+                continue;
+            // Check if any of the modules is usable/available
+            for (const auto &path: conf.paths) {
+                // 1. If module contains path separators, check if file exists
+                if (path.find_first_of("/\\") != std::string::npos) {
+                    if (access(path.c_str(), F_OK ) == -1) {
+                        _log("ignoring missing PKCS#11 module %s", path.c_str());
+                        continue;
+                    }
+                }
+                // try to open XXX: wrap in some common header
+                // TODO: maybe check if function list present ?
+#ifdef _WIN32
+                HINSTANCE handle = LoadLibraryA(path.c_str());
+#else
+                void *handle = dlopen(path.c_str(), RTLD_LOCAL | RTLD_NOW);
+#endif                  
+                if (!handle) {
+                    _log("ignoring PKCS#11 module that did not load: %s", path.c_str());
+                    continue;
+                }
+#ifdef _WIN32
+                FreeLibrary(handle);
+#else                  
+                dlclose(handle);
+#endif                      
+                // Assume usable module if dlopen is successful
+                result.push_back(path);
+                _log("%s found usable as %s via %s", key.c_str(), conf.name.c_str(), path.c_str());
+                break;
             }
         }
     }
