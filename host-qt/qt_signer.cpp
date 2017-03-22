@@ -45,7 +45,6 @@ enum {
 std::vector<unsigned char> QtSigner::sign(const PKCS11Module &m, const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert, const QString &origin, CertificatePurpose type) {
         switch(hash.size())
         {
-        case BINARY_SHA1_LENGTH:
         case BINARY_SHA224_LENGTH:
         case BINARY_SHA256_LENGTH:
         case BINARY_SHA384_LENGTH:

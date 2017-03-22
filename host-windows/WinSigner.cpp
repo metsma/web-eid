@@ -37,10 +37,6 @@ std::vector<unsigned char> WinSigner::sign(const std::vector<unsigned char> &has
 
 	switch (hash.size())
 	{
-	case BINARY_SHA1_LENGTH:
-		padInfo.pszAlgId = NCRYPT_SHA1_ALGORITHM;
-		alg = CALG_SHA1;
-		break;
 	case BINARY_SHA224_LENGTH:
 		padInfo.pszAlgId = L"SHA224";
 		obtainKeyStrategy = CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG;

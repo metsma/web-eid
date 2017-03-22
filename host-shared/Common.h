@@ -21,7 +21,6 @@
 #include <stdexcept>
 
 // TODO: move to signer interface
-#define BINARY_SHA1_LENGTH 20
 #define BINARY_SHA224_LENGTH 28
 #define BINARY_SHA256_LENGTH 32
 #define BINARY_SHA384_LENGTH 48
