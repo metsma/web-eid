@@ -47,6 +47,9 @@ $(DISTNAME)_$(VERSION)_x86.msi: $(EXE)
 
 pkg: x86 x64
 
+nsis:
+	"C:\Program Files (x86)\NSIS\makensis.exe" /nocd /DVERSION=$(VERSION) windows\hwcrypto-native.nsi
+	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION)-local.exe)
 test: $(EXE)
 	set EXE=$(EXE)
 	C:\Python27\python.exe tests\pipe-test.py -v
