@@ -38,79 +38,72 @@ QVariantMap Authenticate::authenticate(QtHost *h, const QJsonObject &msg) {
     // Check for mandatory parameters
     if (!msg.contains("nonce")) {
         return {{"result", "invalid_argument"}};
-    } else {
-        // Get the list of connected cards
-        std::vector<std::vector<unsigned char>> atrs = PCSC::atrList(false);
-        // Check if we have a known PKCS#11 module for any of the cards
-        std::vector<std::string> modules = P11Modules::getPaths(atrs);
-        if (modules.empty()) {
-            // No modules. On Windows we will see if windows knows any
-#ifdef _WIN32
-            _log("No PKCS#11 modules defined, checking windows store");
-            std::vector<unsigned char> ac = WinCertSelect::getCert(CertificatePurpose::Authentication, LPWSTR(tr("Authenticating on %1, please select certificate").arg(h->friendly_origin).utf16()));
-            if (!ac.empty()) {
-                QSslCertificate x509 = v2cert(ac);
-                // FIXME: check length
-                _log("Found certificate: %s", x509.subjectInfo(QSslCertificate::CommonName).at(0).toStdString().c_str());
+    }
 
-                // Get the first part of the token
-                QByteArray dtbs = authenticate_dtbs(x509, msg.value("origin").toString(), msg.value("nonce").toString());
-                // Calculate the hash to be signed
-                QByteArray hash = QCryptographicHash::hash(dtbs, QCryptographicHash::Sha256);
-                // 2. Sign the token hash with the selected certificate
-                QByteArray signature = v2ba(WinSigner::sign(ba2v(hash), ac));
-                // 3. Construct the JWT token to be returned
-                QByteArray jwt = dtbs + "." + signature.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-                // 4. profit
-                return {{"token", jwt.data()}};
-            } else {
-                return {{"result", "no_certificates"}};
-            }
-#else
-            // On Unix, a PKCS#11 module must be present
-            return {{"result", "no_certificates"}};
-#endif
-        } else {
-            // PKCS#11 module
-            _log("Looking for authentication certificates");
-            h->pkcs11.load(modules[0]);
-            if (h->pkcs11.isLoaded()) {
-                auto certs = h->pkcs11.getCerts(Authentication);
-                std::vector<unsigned char> cert;
-                if (certs.empty()) {
-                    _log("Did not find any possible authentication certificates from PKCS#11");
-                    // FIXME: to prevent remote probing, return always user cancel?
-                    return {{"result", "no_certificates"}};
-                } else if (certs.size() == 1) {
-                    //FIXME: QtCertSelect::getCert validates that cert is valid, here not
-                    cert = certs.at(0);
-                } else {
-                    cert = QtCertSelect::getCert(certs, h->friendly_origin, Authentication);
-                }
-                if (cert.empty()) {
-                    // user pressed cancel
-                    return {{"result", "user_cancel"}};
-                }
-                // We are silent if only one certificate is present
-                QSslCertificate x509 = v2cert(cert);
-                _log("Found certificate: %s", x509.subjectInfo(QSslCertificate::CommonName).at(0).toStdString().c_str());
+    // Get the list of connected cards
+    std::vector<std::vector<unsigned char>> atrs = PCSC::atrList(false);
 
-                // Get the first part of the token
-                QByteArray dtbs = authenticate_dtbs(x509, msg.value("origin").toString(), msg.value("nonce").toString());
-                // Calculate the hash to be signed
-                QByteArray hash = QCryptographicHash::hash(dtbs, QCryptographicHash::Sha256);
-                // 2. Sign the token hash with the selected certificate
-                QByteArray signature = v2ba(QtSigner::sign(h->pkcs11, ba2v(hash), cert, h->friendly_origin, Authentication));
-                // 3. Construct the JWT token to be returned
-                QByteArray jwt = dtbs + "." + signature.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-                // 4. profit
-                return {{"token", jwt.data()}};
-            } else {
-                // No PKCS#11 successfully loaded
-                return {{"result", "no_certificates"}};
-            }
+    // Check if we have a known PKCS#11 module for any of the cards
+    std::vector<std::string> modules = P11Modules::getPaths(atrs);
+
+    // Try to locate a usable certificate
+    std::vector<unsigned char> cert;
+
+    // If a PKCS#11 module was found for the card(s), we use it
+    if (!modules.empty()) {
+        h->pkcs11.load(modules[0]); // FIXME: multiple modules/module handler
+        if (!h->pkcs11.isLoaded()) {
+            return {{"result", "technical_error"}}; // FIXME: TBS
+        }
+        // Get authentication certificates in the module
+        auto certs = h->pkcs11.getCerts(Authentication);
+        if (certs.size() == 1) {
+            // XXX: QtCertSelect::getCert validates that cert is valid, here not
+            cert = certs.at(0);
+        } else if (certs.size() > 1) {
+            // Show a certificate selection window.
+            cert = QtCertSelect::getCert(certs, h->friendly_origin, Authentication);
         }
     }
+    bool wincert = false;
+#ifdef _WIN32
+    // On Windows, if PKCS1#11 did not provide a certificate, we try certstore
+    if (cert.empty()) {
+        // XXX: wording
+        cert = WinCertSelect::getCert(CertificatePurpose::Authentication, LPWSTR(tr("Authenticating on %1, please select certificate").arg(h->friendly_origin).utf16()));
+        if (!cert.empty()) {
+            wincert = true;
+        } else {
+            // XXX: breaks unified flow
+            return {{"result", "user_cancel"}}; // FIXME: exception? or a constant/enum
+        }
+    }
+#endif
+    // If no certificate, return the information
+    if (cert.empty()) {
+        return {{"result", "no_certificates"}}; // XXX: see 6 lines above
+    }
+    QSslCertificate x509 = v2cert(cert);
+    // FIXME: check length
+    _log("Found certificate: %s", x509.subjectInfo(QSslCertificate::CommonName).at(0).toStdString().c_str());
+    // Get the first part of the token
+    QByteArray dtbs = authenticate_dtbs(x509, msg.value("origin").toString(), msg.value("nonce").toString());
+    // Calculate the hash to be signed
+    QByteArray hash = QCryptographicHash::hash(dtbs, QCryptographicHash::Sha256);
+    // 2. Sign the token hash with the selected certificate
+    QByteArray signature;
+    if (wincert) {
+        // XXX: never true on non-win32
+#ifdef _WIN32
+        signature = v2ba(WinSigner::sign(ba2v(hash), cert));
+#endif
+    } else {
+        signature = v2ba(QtSigner::sign(h->pkcs11, ba2v(hash), cert, h->friendly_origin, Authentication));
+    }
+    // 3. Construct the JWT token to be returned
+    QByteArray jwt = dtbs + "." + signature.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
+    // 4. profit
+    return {{"token", jwt.data()}};
 }
 
 QByteArray Authenticate::authenticate_dtbs(const QSslCertificate &cert, const QString &origin, const QString &nonce) {
