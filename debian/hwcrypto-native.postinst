@@ -4,8 +4,15 @@ mkdir -p /etc/opt/chrome/native-messaging-hosts
 ln -sf /usr/share/hwcrypto-native/org.hwcrypto.native.json /etc/opt/chrome/native-messaging-hosts/org.hwcrypto.native.json
 
 # Nice trick to open the browser of the installing user
+# XXX: might be reasonable to do this only on the first install
+
 set +e
 exec >/dev/null 2>&1
-if [ -n "${SUDO_USER-$USERNAME}" ]; then
-    su - ${SUDO_USER-$USERNAME} sh -c "which xdg-open && xdg-open https://web-eid.com/?installer=debian-amd64; exit 0"
+# Extract version from changelog
+# http://stackoverflow.com/questions/715313/how-to-get-the-newly-installed-version-within-a-debian-postinst-script
+VERSION=$(zcat /usr/share/doc/$DPKG_MAINTSCRIPT_PACKAGE/changelog*.gz | head -1 | perl -ne '$_=~ /.*\((.*)\).*/; print $1;')
+if [ -n "${DISPLAY}" ]; then
+  if [ -n "${SUDO_USER-$USERNAME}" ]; then
+    su - ${SUDO_USER-$USERNAME} sh -c "which xdg-open && xdg-open https://web-eid.com/?installer=`lsb_release -cs`-`dpkg --print-architecture`&version=${VERSION}; exit 0"
+  fi
 fi
