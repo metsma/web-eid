@@ -1,31 +1,36 @@
-osx_image: xcode8.2
-sudo: true
+language: c++
+sudo: required
 dist: trusty
-language: c
+services:
+- docker
+osx_image: xcode8.2
+
+matrix:
+  include:
+  - os: linux
+    env: IMAGE=hwcrypto-debian-testing-builder
+  - os: linux
+    env: IMAGE=hwcrypto-ubuntu-16.04-builder
+  - os: linux
+    env: IMAGE=hwcrypto-ubuntu-16.10-builder
+  - os: linux
+    env: IMAGE=hwcrypto-ubuntu-17.04-builder
+  - os: linux
+    env: IMAGE=hwcrypto-fedora-25-builder
+  - os: osx
 
 before_install:
-- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo add-apt-repository ppa:beineri/opt-qt562-trusty -y; sudo apt-get update; sudo apt-get install -y qt56base qt56tools devscripts; fi
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker pull martinpaljak/${IMAGE}:17.3.26; fi
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install qt5; fi
 
 script:
-- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export PATH=/opt/qt56/bin:$PATH; make pkg; fi
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker run -v ${PWD}:/artifacts martinpaljak/${IMAGE}:17.3.26; fi
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export QTPATH=/usr/local/opt/qt5; make pkg; fi
 
-os:
-- linux
-- osx
 env:
   global:
   - secure: eQphLF0NVr0L9ZBF0GhLfVo1qOAVfmewIMt8a+/AZTryUvP86fx5YvbykNmO1wJszvJiMW82hQaLhVS9Acw90v7Gm54plM7+5maqIHatD/cO3cz0DmlzItP+RqRv8VdNNSlsPtBsmA1nlIQOajFYJt1TCCT0P/fHk9l/19uBn/cYUy4QaHJIDzNSyWykZfQBj4KJj+ebVH1soGSwOBMiaEn5qAAYMiSgL1ZRBGNQYd1/J++0NufOLcLXEqL0sVGb6an+yfu4ydMPFigmZRrDBUMq0oUr5lp6cL0P2TS9rZDSQ0oF7bBY0M2Zi/UmtpVC6ahJzuJcl3ethnuiYl/QDZJNwMdaws07Km6wIFgxSnDu9nId2kbLq5jGp3VrEaZV8CDy2ABbsbnsxOCPieOOwHLePpk/lIA7tnP+aBwNpB40hSdF5yzW3+HO1AFQXtJHTefdhn++OlR2mXG8EDVW6F33lTGp/3Mh9xo1Q09vnDpA87c7R7ERUn+Ga2WYogbphDuRCxsqo+Y17SJVLIqdhwd1HMRbDZmXv6xgNuLQv5v426cCc1LKpNFzlSre3r+pcveDOi3IPcp+w0vcwpSgF9kS8bZnLPKZhpyMJHpvG+a/uJ0S4hr+E4hHl+K3VLmigrxv5QRxHXATBv+Xg3g0SAKD0r9vLt0wWzJp6f/W57w=
 addons:
-  apt:
-    packages:
-    - debhelper
-    - libdistro-info-perl
-    - libparse-debcontrol-perl
-    - devscripts
-    - libssl-dev
-    - libpcsclite-dev
   coverity_scan:
     project:
       name: hwcrypto/hwcrypto-native
@@ -40,7 +45,8 @@ deploy:
   file_glob: true
   file:
     - Web-eID*.pkg
-    - ../hwcrypto-native_*.deb
+    - hwcrypto-native_*.deb
+    - hwcrypto-native*.rpm
   skip_cleanup: true
   on:
     tags: true
