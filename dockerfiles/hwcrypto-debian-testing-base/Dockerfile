@@ -1,6 +1,7 @@
 FROM debian:stretch
+LABEL maintainer "martin@martinpaljak.net"
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get -y update && apt-get install -y \
+RUN apt-get -y update && apt-get install --no-install-recommends -y \
   git \
   make \
   qt5-qmake \
@@ -11,4 +12,10 @@ RUN apt-get -y update && apt-get install -y \
   devscripts \
   pkg-config \
   xvfb \
+  ca-certificates \
+  g++ \
+  fakeroot \
+  lsb-release \
+  xauth \
+  python \
  && rm -rf /var/lib/apt/lists/*

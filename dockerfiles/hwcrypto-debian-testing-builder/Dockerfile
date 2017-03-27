@@ -1,5 +1,5 @@
-FROM hwcrypto-debian-testing-base
-MAINTAINER Martin Paljak
+FROM hwcrypto-debian-testing-base:latest
+LABEL maintainer "martin@martinpaljak.net"
 ENV QT_SELECT 5
 VOLUME /artifacts
 RUN adduser --disabled-password --gecos "" --home /build build

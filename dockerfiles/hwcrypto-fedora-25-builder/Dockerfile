@@ -1,5 +1,5 @@
-FROM hwcrypto-fedora-25-base
-MAINTAINER Martin Paljak
+FROM hwcrypto-fedora-25-base:latest
+LABEL maintainer "martin@martinpaljak.net"
 ENV QMAKE qmake-qt5
 VOLUME /artifacts
 RUN adduser --home /build build

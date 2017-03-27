@@ -1,5 +1,5 @@
-FROM hwcrypto-ubuntu-17.04-base
-MAINTAINER Martin Paljak
+FROM hwcrypto-ubuntu-17.04-base:latest
+LABEL maintainer "martin@martinpaljak.net"
 ENV QT_SELECT 5
 VOLUME /artifacts
 RUN adduser --disabled-password --gecos "" --home /build build
