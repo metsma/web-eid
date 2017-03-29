@@ -20,11 +20,16 @@
 include VERSION.mk
 UNAME :=$(shell uname)
 
-default: $(DEFAULT) pkg
+# Default target
+default: pkg
 
-# map uname output to subfolder and run make there.
-.DEFAULT:
-	$(MAKE) -C $(subst Darwin,macos,$(subst Linux,linux,$(UNAME))) $@
+# include platform-specific makefile
+
+ifeq ($(UNAME),Linux)
+include linux/Makefile
+else ifeq ($(UNAME),Darwin)
+include macos/Makefile
+endif
 
 test:
 	# wildcard will resolve to an empty string with a missing file
@@ -42,6 +47,9 @@ release:
 	git tag $(VERSION) -as -m "Release version $(VERSION)"
 	# Push to Github
 	git push --tags origin master
+
+clean:
+	git clean -dfx
 
 # Make the targzip for the native components
 dist:

@@ -1,4 +1,4 @@
-./linux/hwcrypto-native /usr/lib
+./host-qt/hwcrypto-native /usr/lib
 ./linux/org.hwcrypto.native.json /usr/share/hwcrypto-native
 ./linux/firefox/org.hwcrypto.native.json /usr/lib/mozilla/native-messaging-hosts
 ./fmpfihjoladdfajbnkdfocnbcehjpogi.json /usr/share/hwcrypto-native

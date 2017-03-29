@@ -17,3 +17,5 @@
 /host-osx/hwcrypto-native.xcodeproj/project.xcworkspace/
 /host-osx/hwcrypto-native.xcodeproj/xcuserdata/
 *.pkg
+/tmp
+/hwcrypto-native.plist

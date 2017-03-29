@@ -1,6 +1,4 @@
-# Get version information
-include ../VERSION.mk
-
+# This file is included by the master Makefile in ..
 # We need Qt
 QTPATH ?= $(HOME)/Qt/5.8/clang_64
 PATH := $(QTPATH)/bin:$(PATH)
@@ -16,27 +14,24 @@ TARGETFOLDER = $(TMPROOT)/Library/Web\ eID
 APP = $(TARGETFOLDER)/hwcrypto-native.app
 
 $(APP):
-	$(MAKE) -C ../host-qt
+	$(MAKE) -C host-qt
 	mkdir -p $(TARGETFOLDER)
-	cp -R ../host-qt/hwcrypto-native.app $(TARGETFOLDER)
+	cp -R host-qt/hwcrypto-native.app $(TARGETFOLDER)
 	$(QTPATH)/bin/macdeployqt $(APP) -always-overwrite
 
 codesign: $(APP)
 	codesign -f --deep -s "Developer ID Application: $(SIGNER)" $(APP)
 
-clean:
-	git clean -dfx
-
 hwcrypto-native.pkg: $(APP)
 	# Copy necessary files
 	mkdir -p $(TMPROOT)$(CHROME_HOSTS) $(TMPROOT)$(FIREFOX_HOSTS) $(TMPROOT)$(EXTERNAL_PATH)
-	cp -v org.hwcrypto.native.json $(TMPROOT)$(CHROME_HOSTS)
-	cp -v org.hwcrypto.native.firefox.json $(TMPROOT)$(FIREFOX_HOSTS)/org.hwcrypto.native.json
-	cp -v ../fmpfihjoladdfajbnkdfocnbcehjpogi.json $(TMPROOT)$(EXTERNAL_PATH)
+	cp -v macos/org.hwcrypto.native.json $(TMPROOT)$(CHROME_HOSTS)
+	cp -v macos/org.hwcrypto.native.firefox.json $(TMPROOT)$(FIREFOX_HOSTS)/org.hwcrypto.native.json
+	cp -v fmpfihjoladdfajbnkdfocnbcehjpogi.json $(TMPROOT)$(EXTERNAL_PATH)
 
 	# Create the uninstaller
-	cp uninstall.sh $(TARGETFOLDER)/uninstall.sh
-	osacompile -o $(TARGETFOLDER)/Web\ eID\ Uninstaller.app uninstaller.applescript
+	cp macos/uninstall.sh $(TARGETFOLDER)/uninstall.sh
+	osacompile -o $(TARGETFOLDER)/Web\ eID\ Uninstaller.app macos/uninstaller.applescript
 
 	# Remove relocate flag from app bundle
 	pkgbuild --analyze  --root $(TMPROOT) hwcrypto-native.plist
@@ -52,26 +47,26 @@ hwcrypto-native.pkg: $(APP)
         --install-location / \
 	$@
 
-scripts.pkg: installer-scripts/*
-	pkgbuild --nopayload --scripts installer-scripts --id org.hwcrypto.scripts --version $(VERSION) $@
+scripts.pkg: macos/installer-scripts/*
+	pkgbuild --nopayload --scripts macos/installer-scripts --id org.hwcrypto.scripts --version $(VERSION) $@
 
 pkg: Web-eID_$(VERSION)-unsigned.pkg
 Web-eID_$(VERSION)-unsigned.pkg: hwcrypto-native.pkg scripts.pkg
-	productbuild --distribution hwcrypto-native.dist.xml \
+	productbuild --distribution macos/hwcrypto-native.dist.xml \
 	--package-path . \
-	--resources . \
-	--scripts installer-scripts \
-	../$@
+	--resources macos \
+	--scripts macos/installer-scripts \
+	$@
 
 
 signed: Web-eID_$(VERSION).pkg
 .PHONY: Web-eID_$(VERSION).pkg
 Web-eID_$(VERSION).pkg:
-	rm -f ../*.pkg *.pkg
+	rm -f *.pkg
 	$(MAKE) codesign
 	$(MAKE) pkg
-	productsign --sign "Developer ID Installer: $(SIGNER)" ../Web-eID_$(VERSION)-unsigned.pkg ../$@
+	productsign --sign "Developer ID Installer: $(SIGNER)" Web-eID_$(VERSION)-unsigned.pkg $@
 
 dmg: Web-eID.dmg
 Web-eID.dmg: Web-eID.pkg
-	hdiutil create ../$@ -ov -volname "Web eID installer" -srcfolder ../$<
+	hdiutil create $@ -ov -volname "Web eID installer" -srcfolder $<
