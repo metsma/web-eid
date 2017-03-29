@@ -13,5 +13,3 @@ REM (installer picks them up from source)
 c:\Qt\5.8\msvc2015\bin\windeployqt release\hwcrypto-native.exe
 copy c:\OpenSSL-Win32\bin\libeay32.dll release\
 copy c:\OpenSSL-Win32\bin\ssleay32.dll release\
-
-

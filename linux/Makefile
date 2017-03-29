@@ -1,10 +1,10 @@
 # This file is included by the parent Makefile in ..
 
-host-qt/hwcrypto-native:
-	$(MAKE) -C host-qt
+src/hwcrypto-native:
+	$(MAKE) -C src
 
 .PHONY: pkg
-pkg: host-qt/hwcrypto-native
+pkg: src/hwcrypto-native
 	test -f /etc/debian_version && $(MAKE) pkg-deb; exit 0
 	test -f /etc/redhat-release && $(MAKE) pkg-rpm; exit 0
 

@@ -53,7 +53,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
         <Directory Id="APPLICATIONFOLDER" Name="Web eID">
           <Component Id="Application" Guid="79730a31-61d7-4395-b91e-191279b08798" Win64="no">
             <!-- Our payload -->
-            <File Source="host-qt/release/hwcrypto-native.exe"/>
+            <File Source="src/release/hwcrypto-native.exe"/>
             <File Source="windows/org.hwcrypto.native.json"/>
             <File Source="windows/org.hwcrypto.native.firefox.json"/>
             <!-- Register native component for Chrome -->

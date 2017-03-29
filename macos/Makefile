@@ -14,9 +14,9 @@ TARGETFOLDER = $(TMPROOT)/Library/Web\ eID
 APP = $(TARGETFOLDER)/hwcrypto-native.app
 
 $(APP):
-	$(MAKE) -C host-qt
+	$(MAKE) -C src
 	mkdir -p $(TARGETFOLDER)
-	cp -R host-qt/hwcrypto-native.app $(TARGETFOLDER)
+	cp -R src/hwcrypto-native.app $(TARGETFOLDER)
 	$(QTPATH)/bin/macdeployqt $(APP) -always-overwrite
 
 codesign: $(APP)

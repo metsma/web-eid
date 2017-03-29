@@ -23,15 +23,15 @@ BUILD_NUMBER=1
 !ENDIF
 !include VERSION.mk
 SIGN = signtool sign /v /n "$(SIGNER)" /fd SHA256 /tr http://timestamp.comodoca.com/?td=sha256 /td sha256
-EXE = host-qt/release/hwcrypto-native.exe
+EXE = src/release/hwcrypto-native.exe
 DISTNAME = Web-eID
 
-$(EXE): host-windows\*.cpp host-windows\*.h
-	cd host-qt & make & cd ..
+$(EXE): src\*.h src\*.cpp src\win\*.cpp src\win\*.h src\qt\*.h src\qt\*.cpp
+	cd src & make & cd ..
+	IF DEFINED SIGNER ($(SIGN) $(EXE))
 
 x64: $(DISTNAME)_$(VERSION)_x64.msi
 $(DISTNAME)_$(VERSION)_x64.msi: $(EXE)
-	IF DEFINED SIGNER ($(SIGN) $(EXE))
 	"$(WIX)\bin\candle.exe" -nologo windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
 	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSION)-unsigned_x64.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x64
 	IF DEFINED SIGNER (copy $(DISTNAME)_$(VERSION)-unsigned_x64.msi $(DISTNAME)_$(VERSION)_x64.msi)
@@ -39,7 +39,6 @@ $(DISTNAME)_$(VERSION)_x64.msi: $(EXE)
 
 x86: $(DISTNAME)_$(VERSION)_x86.msi
 $(DISTNAME)_$(VERSION)_x86.msi: $(EXE)
-	IF DEFINED SIGNER ($(SIGN) $(EXE))
 	"$(WIX)\bin\candle.exe" -nologo windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
 	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSION)-unsigned_x86.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x86
 	IF DEFINED SIGNER (copy $(DISTNAME)_$(VERSION)-unsigned_x86.msi $(DISTNAME)_$(VERSION)_x86.msi)
@@ -50,6 +49,9 @@ pkg: x86 x64
 nsis:
 	"C:\Program Files (x86)\NSIS\makensis.exe" /nocd /DVERSION=$(VERSION) windows\hwcrypto-native.nsi
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION)-local.exe)
+
+clean:
+	del /f $(EXE)
+
 test: $(EXE)
-	set EXE=$(EXE)
 	C:\Python27\python.exe tests\pipe-test.py -v

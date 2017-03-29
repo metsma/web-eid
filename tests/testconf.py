@@ -24,14 +24,14 @@ def get_exe():
     if "EXE" in os.environ:
         return os.environ["EXE"]
     if sys.platform == 'darwin':
-        return "host-qt/hwcrypto-native.app/Contents/MacOS/hwcrypto-native"
+        return "src/hwcrypto-native.app/Contents/MacOS/hwcrypto-native"
     elif sys.platform == "linux2":
-        return "host-qt/hwcrypto-native"
+        return "src/hwcrypto-native"
     elif sys.platform == 'win32':
-        if os.path.isfile("host-qt\\debug\\hwcrypto-native.exe"):
-            return "host-qt\\debug\\hwcrypto-native.exe"
+        if os.path.isfile("src\\debug\\hwcrypto-native.exe"):
+            return "src\\debug\\hwcrypto-native.exe"
         else:
-            return "host-qt\\release\\hwcrypto-native.exe"
+            return "src\\release\\hwcrypto-native.exe"
     else:
         print("Unsupported platform: %s" % sys.platform)
         sys.exit(1)

@@ -24,27 +24,26 @@ unix {
 win32 {
     DEFINES += WIN32_LEAN_AND_MEAN
     LIBS += winscard.lib ncrypt.lib crypt32.lib cryptui.lib Advapi32.lib
-    SOURCES += ../host-windows/WinCertSelect.cpp ../host-windows/WinSigner.cpp
-    HEADERS += ../host-windows/WinCertSelect.h ../host-windows/WinSigner.h
-    INCLUDEPATH += ../host-windows
+    SOURCES += win/WinCertSelect.cpp win/WinSigner.cpp
+    HEADERS += win/WinCertSelect.h win/WinSigner.h
+    INCLUDEPATH += win
     QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
 }
-INCLUDEPATH += ../host-shared
 DEFINES += VERSION=\\\"$$VERSION\\\"
 SOURCES += \
-    ../host-shared/Logger.cpp \
-    ../host-shared/modulemap.cpp \
-    ../host-shared/pcsc.cpp \
-    ../host-shared/pkcs11module.cpp \
-    chrome-host.cpp \
-    authenticate.cpp \
-    sign.cpp \
-    qt_signer.cpp \
-    qt_certselect.cpp \
-    qt_pcsc.cpp
-HEADERS += *.h ../host-shared/*.h
-RESOURCES += hwcrypto-native.qrc translations/strings.qrc
-TRANSLATIONS = translations/strings_et.ts translations/strings_ru.ts
+    Logger.cpp \
+    modulemap.cpp \
+    pcsc.cpp \
+    pkcs11module.cpp \
+    qt/chrome-host.cpp \
+    qt/authenticate.cpp \
+    qt/sign.cpp \
+    qt/qt_signer.cpp \
+    qt/qt_certselect.cpp \
+    qt/qt_pcsc.cpp
+HEADERS += *.h qt/*.h
+RESOURCES += qt/hwcrypto-native.qrc qt/translations/strings.qrc
+TRANSLATIONS = qt/translations/strings_et.ts qt/translations/strings_ru.ts
 
 isEmpty(QMAKE_LRELEASE) {
     win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
