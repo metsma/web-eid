@@ -1,5 +1,5 @@
 Name:           hwcrypto-native
-Version:        17.3.15
+Version:        VERSION
 Release:        1%{?dist}
 Summary:        Use your eID card on the Web
 
@@ -7,7 +7,7 @@ License:        LGPLv2+
 URL:            https://web-eid.com
 
 BuildRequires:  qt5-qtbase-devel qt5-linguist pcsc-lite-devel
-Requires:       pcsc-lite
+Requires:       pcsc-lite opensc
 
 %description
 Use your eID card on the Web
