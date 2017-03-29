@@ -6,7 +6,7 @@ QMAKE ?= qmake
 # We don't NEED to have a four point version on unixes, so don't use it.
 all:
 	$(QMAKE) VERSION=$(VERSION) -config release
-	make -f Makefile
+	$(MAKE) -f Makefile
 
 clean:
-	make -f Makefile distclean
+	$(MAKE) -f Makefile distclean
