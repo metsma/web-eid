@@ -40,7 +40,8 @@ SOURCES += \
     authenticate.cpp \
     sign.cpp \
     qt_signer.cpp \
-    qt_certselect.cpp
+    qt_certselect.cpp \
+    qt_pcsc.cpp
 HEADERS += *.h ../host-shared/*.h
 RESOURCES += hwcrypto-native.qrc translations/strings.qrc
 TRANSLATIONS = translations/strings_et.ts translations/strings_ru.ts

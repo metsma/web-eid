@@ -16,9 +16,47 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+#pragma once
+
+#ifdef __APPLE__
+#include <PCSC/winscard.h>
+#include <PCSC/wintypes.h>
+#else
+#undef UNICODE
+#include <winscard.h>
+#endif
+
 #include <vector>
+#include <string>
+
+struct PCSCReader {
+    std::string name;
+    std::vector<unsigned char> atr;
+    bool inuse;
+    bool exclusive;
+    SCARD_READERSTATE state;
+};
 
 class PCSC {
 public:
     static std::vector<std::vector<unsigned char>> atrList(bool all);
+    static std::vector<PCSCReader> readerList(SCARDCONTEXT ctx = 0);
+    static LONG cancel(SCARDCONTEXT ctx);
+
+    LONG connect(const std::string &reader, const std::string &protocol = "*");
+    LONG wait(const std::string &reader, const std::string &protocol = "*");
+    LONG transmit(const std::vector<unsigned char> &apdu, std::vector<unsigned char> &response);
+    void disconnect();
+
+    PCSCReader getStatus(); // XXX
+    SCARDCONTEXT getContext(); // XXX
+    ~PCSC();
+    static const char *errorName(LONG err);
+    DWORD protocol = SCARD_PROTOCOL_UNDEFINED; // XXX: maybe not public
+private:
+    bool established = false;
+    bool connected = false;
+    SCARDCONTEXT context;
+    SCARDHANDLE card;
+    PCSCReader status;
 };

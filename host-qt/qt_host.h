@@ -20,6 +20,7 @@
 
 #include "pkcs11module.h"
 #include "qt_input.h"
+#include "qt_pcsc.h"
 
 #include <QApplication>
 #include <QTranslator>
@@ -31,6 +32,9 @@
 #include <qt_windows.h>
 #endif
 
+Q_DECLARE_METATYPE(std::string)
+Q_DECLARE_METATYPE(std::vector<unsigned char>)
+
 class QtHost: public QApplication
 {
     Q_OBJECT
@@ -38,7 +42,7 @@ class QtHost: public QApplication
 public:
     QtHost(int &argc, char *argv[]);
 
-    // It is assumed that all invocations from one origin
+    // TODO: It is currently assumed that all invocations from one origin
     // go to the same PKCS#11 module
     PKCS11Module pkcs11;
 
@@ -55,14 +59,37 @@ public:
     // We keep a flag around that show if the selected cert is from CAPI
     bool winsign = false;
 
+    // PCSC subsystem, in a separate thread
+    QtPCSC PCSC;
+    QThread *pcsc_thread;
+
 public slots:
     // Called when a message has been received from the
     // browser, using the Qt signaling mechanism
-    void processMessage(const QJsonObject &json);
+    void incoming(const QJsonObject &json);
+
+    // Called when a message is to be sent back to the browser
+    void outgoing(const QVariantMap &resp);
+
+    void reader_connected(LONG status, std::string reader, std::string protocol, std::vector<unsigned char> atr);
+    void apdu_sent(LONG status, std::vector<unsigned char> response);
+    void reader_disconnected();
+
+    void show_insert_card(bool show, std::string name, SCARDCONTEXT ctx);
+    void cancel_insert(SCARDCONTEXT ctx);
+
+signals:
+    void connect_reader(std::string reader, std::string protocol);
+    void send_apdu(std::vector<unsigned char> apdu);
+    void disconnect_reader();
 
 private:
+    QString msgid; // If a message is being processed, set to ID
+
+    SCARDCONTEXT cancel_ctx = 0; // If we need to cancel the "insert card" process, we need this context
+
     QFile out;
-    void write(QVariantMap &resp, const QString &nonce = QString());
+    void write(QVariantMap &resp);
     void shutdown(int exitcode);
     InputChecker *input;
 
