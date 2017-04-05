@@ -25,7 +25,7 @@ before_install:
 - if [[ "$TRAVIS_BRANCH" == "coverity_scan" ]]; then sudo add-apt-repository ppa:beineri/opt-qt562-trusty -y; sudo apt-get update; sudo apt-get install -y qt56base qt56tools devscripts debhelper libdistro-info-perl libparse-debcontrol-perl libpcsclite-dev; export PATH=/opt/qt56/bin:${PATH}; fi
 
 script:
-- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker run -v ${PWD}:/artifacts martinpaljak/${IMAGE}; fi
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker run -e TRAVIS_COMMIT=${TRAVIS_COMMIT} -v ${PWD}:/artifacts martinpaljak/${IMAGE}; fi
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export QTPATH=/usr/local/opt/qt5; make pkg; fi
 
 env:
