@@ -23,5 +23,5 @@
 
 class WinSigner {
 public:
-	static CK_RV sign(const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert, std::vector<unsigned char> &result);
+    static CK_RV sign(const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert, std::vector<unsigned char> &result);
 };

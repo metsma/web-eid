@@ -47,36 +47,38 @@ struct ModuleATR {
 static std::vector<ModuleATR> createMap() {
     // First add specific ATR-s
     std::vector<ModuleATR> m{
-        {"e-token",
-         {"3BD518008131FE7D8073C82110F4"},
-         {"/Library/Frameworks/eToken.framework/Versions/Current/libeToken.dylib"}
+        {   "e-token",
+            {"3BD518008131FE7D8073C82110F4"},
+            {"/Library/Frameworks/eToken.framework/Versions/Current/libeToken.dylib"}
         },
-        {"Estonian ID-card",
-         {"3BFE9400FF80B1FA451F034573744549442076657220312E3043",
-          "3BDE18FFC080B1FE451F034573744549442076657220312E302B",
-          "3B5E11FF4573744549442076657220312E30",
-          "3B6E00004573744549442076657220312E30",
-          "3BFE1800008031FE454573744549442076657220312E30A8",
-          "3BFE1800008031FE45803180664090A4561B168301900086",
-          "3BFE1800008031FE45803180664090A4162A0083019000E1",
-          "3BFE1800008031FE45803180664090A4162A00830F9000EF",
-          "3BF9180000C00A31FE4553462D3443432D303181",
-          "3BF81300008131FE454A434F5076323431B7",
-          "3BFA1800008031FE45FE654944202F20504B4903"},
-         {"/Library/EstonianIDCard/lib/esteid-pkcs11.so", "/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so"}
+        {   "Estonian ID-card",
+            {   "3BFE9400FF80B1FA451F034573744549442076657220312E3043",
+                "3BDE18FFC080B1FE451F034573744549442076657220312E302B",
+                "3B5E11FF4573744549442076657220312E30",
+                "3B6E00004573744549442076657220312E30",
+                "3BFE1800008031FE454573744549442076657220312E30A8",
+                "3BFE1800008031FE45803180664090A4561B168301900086",
+                "3BFE1800008031FE45803180664090A4162A0083019000E1",
+                "3BFE1800008031FE45803180664090A4162A00830F9000EF",
+                "3BF9180000C00A31FE4553462D3443432D303181",
+                "3BF81300008131FE454A434F5076323431B7",
+                "3BFA1800008031FE45FE654944202F20504B4903"
+            },
+            {"/Library/EstonianIDCard/lib/esteid-pkcs11.so", "/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so"}
         },
-        {"Latvian ID-card",
-         {"3BDD18008131FE45904C41545649412D65494490008C"},
-         {"/Library/latvia-eid/lib/otlv-pkcs11.so", "otlv-pkcs11.so"}
+        {   "Latvian ID-card",
+            {"3BDD18008131FE45904C41545649412D65494490008C"},
+            {"/Library/latvia-eid/lib/otlv-pkcs11.so", "otlv-pkcs11.so"}
         },
-        {"Finnish ID-card",
-         {"3B7B940000806212515646696E454944"},
-         {"/Library/mPolluxDigiSign/libcryptoki.dylib", "opensc-pkcs11.so"}
+        {   "Finnish ID-card",
+            {"3B7B940000806212515646696E454944"},
+            {"/Library/mPolluxDigiSign/libcryptoki.dylib", "opensc-pkcs11.so"}
         },
-        {"Lithuanian ID-card",
-         {"3BF81300008131FE45536D617274417070F8",
-          "3B7D94000080318065B08311C0A983009000"},
-         {"/System/Library/Security/tokend/CCSuite.tokend/Contents/Frameworks/libccpkip11.dylib", "/usr/lib/ccs/libccpkip11.so"}
+        {   "Lithuanian ID-card",
+            {   "3BF81300008131FE45536D617274417070F8",
+                "3B7D94000080318065B08311C0A983009000"
+            },
+            {"/System/Library/Security/tokend/CCSuite.tokend/Contents/Frameworks/libccpkip11.dylib", "/usr/lib/ccs/libccpkip11.so"}
         },
         // Then add some last resort wildcards
         {"OpenSC fallback", {"*"}, {"/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so"}},
@@ -146,16 +148,16 @@ std::vector<std::string> P11Modules::getPaths(const std::vector<std::vector<unsi
                 HINSTANCE handle = LoadLibraryA(path.c_str());
 #else
                 void *handle = dlopen(path.c_str(), RTLD_LOCAL | RTLD_NOW);
-#endif                  
+#endif
                 if (!handle) {
                     _log("ignoring PKCS#11 module that did not load: %s", path.c_str());
                     continue;
                 }
 #ifdef _WIN32
                 FreeLibrary(handle);
-#else                  
+#else
                 dlclose(handle);
-#endif                      
+#endif
                 // Assume usable module if dlopen is successful
                 result.push_back(path);
                 _log("%s found usable as %s via %s", key.c_str(), conf.name.c_str(), path.c_str());

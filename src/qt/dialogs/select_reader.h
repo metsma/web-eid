@@ -40,7 +40,7 @@ public:
         buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-        connect(table, &QTreeWidget::clicked, [=]{
+        connect(table, &QTreeWidget::clicked, [=] {
             // TODO: only if reader can be used
             ok->setEnabled(true);
         });

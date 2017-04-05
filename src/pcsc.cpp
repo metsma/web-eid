@@ -45,11 +45,11 @@ const PCSCReader *from_name(const std::string &name, const std::vector<PCSCReade
 // XXX
 PCSCReader PCSC::getStatus()
 {
-  return status;
+    return status;
 }
 
 SCARDCONTEXT PCSC::getContext() {
-  return context;
+    return context;
 }
 
 LONG PCSC::connect(const std::string &reader, const std::string &protocol) {
@@ -152,7 +152,7 @@ LONG PCSC::wait(const std::string &reader, const std::string &protocol) {
             state.dwEventState = SCARD_STATE_UNAWARE;
             err = SCard(GetStatusChange, context, 10 * 1000, &state, DWORD(1));
             if (err != SCARD_S_SUCCESS) {
-                 return err;
+                return err;
             }
             state.dwCurrentState = state.dwEventState;
             // TODO: visual feedback in reader selection UI that the card is mute
@@ -295,87 +295,87 @@ std::vector<PCSCReader> PCSC::readerList(SCARDCONTEXT ctx) {
 
 // List taken from pcsc-lite source
 const char *PCSC::errorName(LONG err) {
-      switch (err)
-      {
-      case LONG(SCARD_S_SUCCESS):
-            return "SCARD_S_SUCCESS";
-      case LONG(SCARD_E_CANCELLED):
-            return "SCARD_E_CANCELLED";
-      case LONG(SCARD_E_CANT_DISPOSE):
-            return "SCARD_E_CANT_DISPOSE";
-      case LONG(SCARD_E_INSUFFICIENT_BUFFER):
-            return "SCARD_E_INSUFFICIENT_BUFFER";
-      case LONG(SCARD_E_INVALID_ATR):
-            return "SCARD_E_INVALID_ATR";
-      case LONG(SCARD_E_INVALID_HANDLE):
-            return "SCARD_E_INVALID_HANDLE";
-      case LONG(SCARD_E_INVALID_PARAMETER):
-            return "SCARD_E_INVALID_PARAMETER";
-      case LONG(SCARD_E_INVALID_TARGET):
-            return "SCARD_E_INVALID_TARGET";
-      case LONG(SCARD_E_INVALID_VALUE):
-            return "SCARD_E_INVALID_VALUE";
-      case LONG(SCARD_E_NO_MEMORY):
-            return "SCARD_E_NO_MEMORY";
-      case LONG(SCARD_F_COMM_ERROR):
-            return "SCARD_F_COMM_ERROR";
-      case LONG(SCARD_F_INTERNAL_ERROR):
-            return "SCARD_F_INTERNAL_ERROR";
-      case LONG(SCARD_F_UNKNOWN_ERROR):
-            return "SCARD_F_UNKNOWN_ERROR";
-      case LONG(SCARD_F_WAITED_TOO_LONG):
-            return "SCARD_F_WAITED_TOO_LONG";
-      case LONG(SCARD_E_UNKNOWN_READER):
-            return "SCARD_E_UNKNOWN_READER";
-      case LONG(SCARD_E_TIMEOUT):
-            return "SCARD_E_TIMEOUT";
-      case LONG(SCARD_E_SHARING_VIOLATION):
-            return "SCARD_E_SHARING_VIOLATION";
-      case LONG(SCARD_E_NO_SMARTCARD):
-            return "SCARD_E_NO_SMARTCARD";
-      case LONG(SCARD_E_UNKNOWN_CARD):
-            return "SCARD_E_UNKNOWN_CARD";
-      case LONG(SCARD_E_PROTO_MISMATCH):
-            return "SCARD_E_PROTO_MISMATCH";
-      case LONG(SCARD_E_NOT_READY):
-            return "SCARD_E_NOT_READY";
-      case LONG(SCARD_E_SYSTEM_CANCELLED):
-            return "SCARD_E_SYSTEM_CANCELLED";
-      case LONG(SCARD_E_NOT_TRANSACTED):
-            return "SCARD_E_NOT_TRANSACTED";
-      case LONG(SCARD_E_READER_UNAVAILABLE):
-            return "SCARD_E_READER_UNAVAILABLE";
-      case LONG(SCARD_W_UNSUPPORTED_CARD):
-            return "SCARD_W_UNSUPPORTED_CARD";
-      case LONG(SCARD_W_UNRESPONSIVE_CARD):
-            return "SCARD_W_UNRESPONSIVE_CARD";
-      case LONG(SCARD_W_UNPOWERED_CARD):
-            return "SCARD_W_UNPOWERED_CARD";
-      case LONG(SCARD_W_RESET_CARD):
-            return "SCARD_W_RESET_CARD";
-      case LONG(SCARD_W_REMOVED_CARD):
-            return "SCARD_W_REMOVED_CARD";
+    switch (err)
+    {
+    case LONG(SCARD_S_SUCCESS):
+        return "SCARD_S_SUCCESS";
+    case LONG(SCARD_E_CANCELLED):
+        return "SCARD_E_CANCELLED";
+    case LONG(SCARD_E_CANT_DISPOSE):
+        return "SCARD_E_CANT_DISPOSE";
+    case LONG(SCARD_E_INSUFFICIENT_BUFFER):
+        return "SCARD_E_INSUFFICIENT_BUFFER";
+    case LONG(SCARD_E_INVALID_ATR):
+        return "SCARD_E_INVALID_ATR";
+    case LONG(SCARD_E_INVALID_HANDLE):
+        return "SCARD_E_INVALID_HANDLE";
+    case LONG(SCARD_E_INVALID_PARAMETER):
+        return "SCARD_E_INVALID_PARAMETER";
+    case LONG(SCARD_E_INVALID_TARGET):
+        return "SCARD_E_INVALID_TARGET";
+    case LONG(SCARD_E_INVALID_VALUE):
+        return "SCARD_E_INVALID_VALUE";
+    case LONG(SCARD_E_NO_MEMORY):
+        return "SCARD_E_NO_MEMORY";
+    case LONG(SCARD_F_COMM_ERROR):
+        return "SCARD_F_COMM_ERROR";
+    case LONG(SCARD_F_INTERNAL_ERROR):
+        return "SCARD_F_INTERNAL_ERROR";
+    case LONG(SCARD_F_UNKNOWN_ERROR):
+        return "SCARD_F_UNKNOWN_ERROR";
+    case LONG(SCARD_F_WAITED_TOO_LONG):
+        return "SCARD_F_WAITED_TOO_LONG";
+    case LONG(SCARD_E_UNKNOWN_READER):
+        return "SCARD_E_UNKNOWN_READER";
+    case LONG(SCARD_E_TIMEOUT):
+        return "SCARD_E_TIMEOUT";
+    case LONG(SCARD_E_SHARING_VIOLATION):
+        return "SCARD_E_SHARING_VIOLATION";
+    case LONG(SCARD_E_NO_SMARTCARD):
+        return "SCARD_E_NO_SMARTCARD";
+    case LONG(SCARD_E_UNKNOWN_CARD):
+        return "SCARD_E_UNKNOWN_CARD";
+    case LONG(SCARD_E_PROTO_MISMATCH):
+        return "SCARD_E_PROTO_MISMATCH";
+    case LONG(SCARD_E_NOT_READY):
+        return "SCARD_E_NOT_READY";
+    case LONG(SCARD_E_SYSTEM_CANCELLED):
+        return "SCARD_E_SYSTEM_CANCELLED";
+    case LONG(SCARD_E_NOT_TRANSACTED):
+        return "SCARD_E_NOT_TRANSACTED";
+    case LONG(SCARD_E_READER_UNAVAILABLE):
+        return "SCARD_E_READER_UNAVAILABLE";
+    case LONG(SCARD_W_UNSUPPORTED_CARD):
+        return "SCARD_W_UNSUPPORTED_CARD";
+    case LONG(SCARD_W_UNRESPONSIVE_CARD):
+        return "SCARD_W_UNRESPONSIVE_CARD";
+    case LONG(SCARD_W_UNPOWERED_CARD):
+        return "SCARD_W_UNPOWERED_CARD";
+    case LONG(SCARD_W_RESET_CARD):
+        return "SCARD_W_RESET_CARD";
+    case LONG(SCARD_W_REMOVED_CARD):
+        return "SCARD_W_REMOVED_CARD";
 #ifdef SCARD_W_INSERTED_CARD
-      case LONG(SCARD_W_INSERTED_CARD):
-            return "SCARD_W_INSERTED_CARD";
+    case LONG(SCARD_W_INSERTED_CARD):
+        return "SCARD_W_INSERTED_CARD";
 #endif
-      case LONG(SCARD_E_UNSUPPORTED_FEATURE):
-            return "SCARD_E_UNSUPPORTED_FEATURE";
-      case LONG(SCARD_E_PCI_TOO_SMALL):
-            return "SCARD_E_PCI_TOO_SMALL";
-      case LONG(SCARD_E_READER_UNSUPPORTED):
-            return "SCARD_E_READER_UNSUPPORTED";
-      case LONG(SCARD_E_DUPLICATE_READER):
-            return "SCARD_E_DUPLICATE_READER";
-      case LONG(SCARD_E_CARD_UNSUPPORTED):
-            return "SCARD_E_CARD_UNSUPPORTED";
-      case LONG(SCARD_E_NO_SERVICE):
-            return "SCARD_E_NO_SERVICE";
-      case LONG(SCARD_E_SERVICE_STOPPED):
-            return "SCARD_E_SERVICE_STOPPED";
-      case LONG(SCARD_E_NO_READERS_AVAILABLE):
-            return "SCARD_E_NO_READERS_AVAILABLE";
-      default:
-            return "UNKNOWN";
-      };
+    case LONG(SCARD_E_UNSUPPORTED_FEATURE):
+        return "SCARD_E_UNSUPPORTED_FEATURE";
+    case LONG(SCARD_E_PCI_TOO_SMALL):
+        return "SCARD_E_PCI_TOO_SMALL";
+    case LONG(SCARD_E_READER_UNSUPPORTED):
+        return "SCARD_E_READER_UNSUPPORTED";
+    case LONG(SCARD_E_DUPLICATE_READER):
+        return "SCARD_E_DUPLICATE_READER";
+    case LONG(SCARD_E_CARD_UNSUPPORTED):
+        return "SCARD_E_CARD_UNSUPPORTED";
+    case LONG(SCARD_E_NO_SERVICE):
+        return "SCARD_E_NO_SERVICE";
+    case LONG(SCARD_E_SERVICE_STOPPED):
+        return "SCARD_E_SERVICE_STOPPED";
+    case LONG(SCARD_E_NO_READERS_AVAILABLE):
+        return "SCARD_E_NO_READERS_AVAILABLE";
+    default:
+        return "UNKNOWN";
+    };
 }

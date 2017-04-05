@@ -25,6 +25,6 @@
 typedef const wchar_t *LPCWSTR;
 
 class WinCertSelect {
- public:
-  static CK_RV getCert(CertificatePurpose p, LPCWSTR message, std::vector<unsigned char> &result);
+public:
+    static CK_RV getCert(CertificatePurpose p, LPCWSTR message, std::vector<unsigned char> &result);
 };

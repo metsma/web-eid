@@ -64,28 +64,28 @@ CK_RV Call(const char *fun, const char *file, int line, const char *function, Fu
 
 std::vector<unsigned char> PKCS11Module::attribute(CK_ATTRIBUTE_TYPE type, CK_SESSION_HANDLE sid, CK_OBJECT_HANDLE obj) const
 {
-	CK_ATTRIBUTE attr = {type, nullptr, 0};
+    CK_ATTRIBUTE attr = {type, nullptr, 0};
     C(GetAttributeValue, sid, obj, &attr, 1UL);
-	std::vector<unsigned char> data(attr.ulValueLen, 0);
-	attr.pValue = data.data();
+    std::vector<unsigned char> data(attr.ulValueLen, 0);
+    attr.pValue = data.data();
     C(GetAttributeValue, sid, obj, &attr, 1UL);
-	return data;
+    return data;
 }
 
 std::vector<CK_OBJECT_HANDLE> PKCS11Module::objects(CK_OBJECT_CLASS objectClass, CK_SESSION_HANDLE session, CK_ULONG count) const
 {
-	return objects({ {CKA_CLASS, &objectClass, sizeof(objectClass)} }, session, count);
+    return objects({ {CKA_CLASS, &objectClass, sizeof(objectClass)} }, session, count);
 }
 
 std::vector<CK_OBJECT_HANDLE> PKCS11Module::objects(const std::vector<CK_ATTRIBUTE> &attr, CK_SESSION_HANDLE session, CK_ULONG count) const
 {
-	C(FindObjectsInit, session, const_cast<CK_ATTRIBUTE*>(attr.data()), CK_ULONG(attr.size()));
-	CK_ULONG objectCount = count;
-	std::vector<CK_OBJECT_HANDLE> objects(objectCount);
-	C(FindObjects, session, objects.data(), objects.size(), &objectCount);
-	C(FindObjectsFinal, session);
-	objects.resize(objectCount);
-	return objects;
+    C(FindObjectsInit, session, const_cast<CK_ATTRIBUTE*>(attr.data()), CK_ULONG(attr.size()));
+    CK_ULONG objectCount = count;
+    std::vector<CK_OBJECT_HANDLE> objects(objectCount);
+    C(FindObjects, session, objects.data(), objects.size(), &objectCount);
+    C(FindObjectsFinal, session);
+    objects.resize(objectCount);
+    return objects;
 }
 
 std::vector<CK_OBJECT_HANDLE> PKCS11Module::getKey(CK_SESSION_HANDLE session, const std::vector<unsigned char> &id) const {
@@ -143,99 +143,99 @@ static bool usage_matches(const std::vector<unsigned char> &certificateCandidate
             _log("keyusage: %s", v.toByteArray().toHex().toStdString().c_str());
         }
     }
-    _log("Certificate flags: ca=%d auth=%d nonrepu=%d", isCa , isSSLClient, isNonRepudiation);
+    _log("Certificate flags: ca=%d auth=%d nonrepu=%d", isCa, isSSLClient, isNonRepudiation);
     return !isCa &&
-        ((type & Authentication && isSSLClient) || (type & Signing && isNonRepudiation));
+           ((type & Authentication && isSSLClient) || (type & Signing && isNonRepudiation));
 }
 
 
 CK_RV PKCS11Module::load(const std::string &module) {
-        // Clear any present modules
-        certs.clear();
-        CK_C_GetFunctionList C_GetFunctionList = nullptr;
+    // Clear any present modules
+    certs.clear();
+    CK_C_GetFunctionList C_GetFunctionList = nullptr;
 #ifdef _WIN32
-        library = LoadLibraryA(module.c_str());
-        if (library)
-            C_GetFunctionList = CK_C_GetFunctionList(GetProcAddress(library, "C_GetFunctionList"));
+    library = LoadLibraryA(module.c_str());
+    if (library)
+        C_GetFunctionList = CK_C_GetFunctionList(GetProcAddress(library, "C_GetFunctionList"));
 #else
-        library = dlopen(module.c_str(), RTLD_LOCAL | RTLD_NOW);
-        if (library) {
+    library = dlopen(module.c_str(), RTLD_LOCAL | RTLD_NOW);
+    if (library) {
 #ifdef __linux__
-            // Get path to library location, if just a name
-            if (path.find_first_of("/\\") == std::string::npos) {
-                std::vector<char> path(1024, 0);
-                if (dlinfo(library,  RTLD_DI_ORIGIN, path.data()) == 0) {
-                    std::string p(path.begin(), path.end());
-                    _log("Loaded %s from %s", module.c_str(), p.c_str());
-                } else {
-                    _log("Warning: could not get library load path");
-                }
+        // Get path to library location, if just a name
+        if (path.find_first_of("/\\") == std::string::npos) {
+            std::vector<char> path(1024, 0);
+            if (dlinfo(library,  RTLD_DI_ORIGIN, path.data()) == 0) {
+                std::string p(path.begin(), path.end());
+                _log("Loaded %s from %s", module.c_str(), p.c_str());
+            } else {
+                _log("Warning: could not get library load path");
             }
-#endif
-            C_GetFunctionList = CK_C_GetFunctionList(dlsym(library, "C_GetFunctionList"));
         }
 #endif
+        C_GetFunctionList = CK_C_GetFunctionList(dlsym(library, "C_GetFunctionList"));
+    }
+#endif
 
-        if (!C_GetFunctionList) {
-            _log("Module does not have C_GetFunctionList");
-            return CKR_LIBRARY_LOAD_FAILED; // XXX Not really what we had in mind according to spec spec, but usable.
-        }
-        Call(__FUNCTION__, __FILE__, __LINE__, "C_GetFunctionList", C_GetFunctionList, &fl);
-        CK_RV rv = C(Initialize, nullptr);
-        if (rv != CKR_OK && rv != CKR_CRYPTOKI_ALREADY_INITIALIZED) {
-            return rv;
-        } else {
-            initialized = rv != CKR_CRYPTOKI_ALREADY_INITIALIZED;
-        }
+    if (!C_GetFunctionList) {
+        _log("Module does not have C_GetFunctionList");
+        return CKR_LIBRARY_LOAD_FAILED; // XXX Not really what we had in mind according to spec spec, but usable.
+    }
+    Call(__FUNCTION__, __FILE__, __LINE__, "C_GetFunctionList", C_GetFunctionList, &fl);
+    CK_RV rv = C(Initialize, nullptr);
+    if (rv != CKR_OK && rv != CKR_CRYPTOKI_ALREADY_INITIALIZED) {
+        return rv;
+    } else {
+        initialized = rv != CKR_CRYPTOKI_ALREADY_INITIALIZED;
+    }
 
-        // Locate all slots with tokens
-        std::vector<CK_SLOT_ID> slots_with_tokens;
-        CK_ULONG slotCount = 0;
-        check_C(GetSlotList, CK_TRUE, nullptr, &slotCount);
-        _log("slotCount = %i", slotCount);
-        slots_with_tokens.resize(slotCount);
-        check_C(GetSlotList, CK_TRUE, slots_with_tokens.data(), &slotCount);
-        for (auto slot: slots_with_tokens) {
-            // Check the content of the slot
-            CK_TOKEN_INFO token;
-            CK_SESSION_HANDLE sid = 0;
-            _log("Checking slot %u", slot);
-            rv = C(GetTokenInfo, slot, &token);
-            if (rv != CKR_OK) {
-                _log("Could not get token info, skipping slot %u", slot);
-                continue;
-            }
-            std::string label = QString::fromUtf8((const char* )token.label, sizeof(token.label)).simplified().toStdString();
-            _log("Token has a label: \"%s\"", label.c_str());
-            C(OpenSession, slot, CKF_SERIAL_SESSION, nullptr, nullptr, &sid);
-            if (rv != CKR_OK) {
-                _log("Could not open session, skipping slot %u", slot);
-                continue;
-            }
-            _log("Opened session: %u", sid);
-            // CK_OBJECT_CLASS objectClass
-            std::vector<CK_OBJECT_HANDLE> objectHandle = objects(CKO_CERTIFICATE, sid, 2);
-            // We now have the certificate handles (valid for this session) in objectHandle
-            _log("Found %u certificates from slot %u", objectHandle.size(), slot);
-            for (CK_OBJECT_HANDLE handle: objectHandle) {
-                // Get DER
-                std::vector<unsigned char> certCandidate = attribute(CKA_VALUE, sid, handle);
-                // Get certificate ID
-                std::vector<unsigned char> certid = attribute(CKA_ID, sid, handle);
-                _log("Found certificate: %s %s", x509subject(certCandidate).c_str(), toHex(certid).c_str());
-                // add to map
-                certs[certCandidate] = std::make_pair(P11Token({(int)token.ulMinPinLen, (int)token.ulMaxPinLen, label, (bool)(token.flags & CKF_PROTECTED_AUTHENTICATION_PATH), slot, token.flags}), certid);
-            }
-            // Close session with this slot. We ignore errors here
-            C(CloseSession, sid);
+    // Locate all slots with tokens
+    std::vector<CK_SLOT_ID> slots_with_tokens;
+    CK_ULONG slotCount = 0;
+    check_C(GetSlotList, CK_TRUE, nullptr, &slotCount);
+    _log("slotCount = %i", slotCount);
+    slots_with_tokens.resize(slotCount);
+    check_C(GetSlotList, CK_TRUE, slots_with_tokens.data(), &slotCount);
+    for (auto slot: slots_with_tokens) {
+        // Check the content of the slot
+        CK_TOKEN_INFO token;
+        CK_SESSION_HANDLE sid = 0;
+        _log("Checking slot %u", slot);
+        rv = C(GetTokenInfo, slot, &token);
+        if (rv != CKR_OK) {
+            _log("Could not get token info, skipping slot %u", slot);
+            continue;
         }
-        // List all found certs
-        _log("found %d certificates", certs.size());
-        for(const auto &cpairs : certs) {
-            auto location = cpairs.second;
-            _log("certificate: %s in slot %d with id %s", x509subject(cpairs.first).c_str(), location.first.slot, toHex(location.second).c_str());
+        std::string label = QString::fromUtf8((const char* )token.label, sizeof(token.label)).simplified().toStdString();
+        _log("Token has a label: \"%s\"", label.c_str());
+        C(OpenSession, slot, CKF_SERIAL_SESSION, nullptr, nullptr, &sid);
+        if (rv != CKR_OK) {
+            _log("Could not open session, skipping slot %u", slot);
+            continue;
         }
-        return CKR_OK;
+        _log("Opened session: %u", sid);
+        // CK_OBJECT_CLASS objectClass
+        std::vector<CK_OBJECT_HANDLE> objectHandle = objects(CKO_CERTIFICATE, sid, 2);
+        // We now have the certificate handles (valid for this session) in objectHandle
+        _log("Found %u certificates from slot %u", objectHandle.size(), slot);
+        for (CK_OBJECT_HANDLE handle: objectHandle) {
+            // Get DER
+            std::vector<unsigned char> certCandidate = attribute(CKA_VALUE, sid, handle);
+            // Get certificate ID
+            std::vector<unsigned char> certid = attribute(CKA_ID, sid, handle);
+            _log("Found certificate: %s %s", x509subject(certCandidate).c_str(), toHex(certid).c_str());
+            // add to map
+            certs[certCandidate] = std::make_pair(P11Token({(int)token.ulMinPinLen, (int)token.ulMaxPinLen, label, (bool)(token.flags & CKF_PROTECTED_AUTHENTICATION_PATH), slot, token.flags}), certid);
+        }
+        // Close session with this slot. We ignore errors here
+        C(CloseSession, sid);
+    }
+    // List all found certs
+    _log("found %d certificates", certs.size());
+    for(const auto &cpairs : certs) {
+        auto location = cpairs.second;
+        _log("certificate: %s in slot %d with id %s", x509subject(cpairs.first).c_str(), location.first.slot, toHex(location.second).c_str());
+    }
+    return CKR_OK;
 }
 
 std::vector<std::vector <unsigned char>> PKCS11Module::getCerts(CertificatePurpose type) {
@@ -290,8 +290,8 @@ CK_RV PKCS11Module::sign(const std::vector<unsigned char> &cert, const std::vect
     // TODO: correct handling of CKA_ALWAYS_AUTHENTICATE and associated login procedures
     std::vector<CK_OBJECT_HANDLE> key = getKey(session, slot.second); // TODO: function signature and return code
     if (key.size() != 1) {
-            _log("Can not sign - no key or found multiple matches");
-            return CKR_OBJECT_HANDLE_INVALID;
+        _log("Can not sign - no key or found multiple matches");
+        return CKR_OBJECT_HANDLE_INVALID;
     }
 
     CK_MECHANISM mechanism = {CKM_RSA_PKCS, 0, 0};
@@ -323,7 +323,7 @@ CK_RV PKCS11Module::sign(const std::vector<unsigned char> &cert, const std::vect
     // Get actual signature
     check_C(Sign, session, hashWithPadding.data(), hashWithPadding.size(), result.data(), &signatureLength);
 
-     _log("Signature: %s", toHex(result).c_str());
+    _log("Signature: %s", toHex(result).c_str());
 
     // We require a new login for next signature
     // return code is ignored

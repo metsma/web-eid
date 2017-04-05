@@ -45,7 +45,9 @@ public:
     CK_RV login(const std::vector<unsigned char> &cert, const char *pin);
     CK_RV sign(const std::vector<unsigned char> &cert, const std::vector<unsigned char> &hash, std::vector<unsigned char> &result);
 
-    bool isLoaded() {return !certs.empty();}
+    bool isLoaded() {
+        return !certs.empty();
+    }
     std::vector<std::vector <unsigned char>> getCerts(CertificatePurpose type = CertificatePurpose(Authentication|Signing));
 
     const P11Token *getP11Token(const std::vector<unsigned char> &cert) const;

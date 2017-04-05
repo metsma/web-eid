@@ -63,7 +63,7 @@ signals:
     void hide_pin_dialog();
 
 public:
-	void clear() {
+    void clear() {
         cert.clear();
         hash.clear();
         hashalgo.clear();

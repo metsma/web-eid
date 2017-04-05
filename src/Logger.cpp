@@ -33,7 +33,7 @@ static void printCurrentDateTime(FILE *log) {
     time_t now = time(0);
     tm *ltm = localtime(&now);
     //Date format yyyy-MM-dd hh:mm:ss
-	fprintf(log, "%i-%.2i-%.2i %.2i:%.2i:%.2i ",
+    fprintf(log, "%i-%.2i-%.2i %.2i:%.2i:%.2i ",
             1900 + ltm->tm_year,
             ltm->tm_mon + 1,
             ltm->tm_mday,
@@ -51,18 +51,18 @@ static string getLogFilePath() {
 }
 
 static bool logFileExist() {
-	FILE *file = fopen(getLogFilePath().c_str(), "r");
-	if (!file) {
-		return false;
-	}
-	fclose(file);
-	return true;
+    FILE *file = fopen(getLogFilePath().c_str(), "r");
+    if (!file) {
+        return false;
+    }
+    fclose(file);
+    return true;
 }
 
 void Logger::writeLog(const char *functionName, const char *fileName, int lineNumber, const char *message, ...) {
-	if (!logFileExist()) {
-		return;
-	}
+    if (!logFileExist()) {
+        return;
+    }
     FILE *log = fopen(getLogFilePath().c_str(), "a");
     if (!log) {
         return;

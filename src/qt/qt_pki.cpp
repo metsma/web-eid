@@ -51,15 +51,15 @@ void QtPKI::sign(const QString &origin, const QByteArray &cert, const QByteArray
     this->purpose = Signing;
     // FIXME: remove origin from signature, available in UI thread, if not needed for windows.
     _log("PKI: Signing stuff");
-   start_signature(cert, hash, hashalgo, Signing);
+    start_signature(cert, hash, hashalgo, Signing);
 }
 
 // Called from the PIN dialog to do actual login on pkcs11
 void QtPKI::login(const CK_RV status, const QString &pin, CertificatePurpose purpose) {
-	CK_RV result = status;
+    CK_RV result = status;
     // If dialog was canceled, do not login
     if (result != CKR_FUNCTION_CANCELED) {
-    	_log("Calling C_Login with %s", pin.toStdString().c_str());
+        _log("Calling C_Login with %s", pin.toStdString().c_str());
 
         // This call blocks with a pinpad
         result = pkcs11.login(ba2v(cert), pin.toStdString().c_str());
@@ -81,11 +81,11 @@ void QtPKI::start_signature(const QByteArray &cert, const QByteArray &hash, cons
 
 #ifdef _WIN32
     if (!pkcs11.getP11Token(crt)) {
-       std::vector<unsigned char> signature;
+        std::vector<unsigned char> signature;
         // if not in PKCS#11, it must be  Windows cert. We make a blocking call to CryptoAPI
-       CK_RV status = WinSigner::sign(ba2v(hash), crt, signature);
-       QByteArray qsignature = v2ba(signature);
-       finish_signature(status, qsignature);
+        CK_RV status = WinSigner::sign(ba2v(hash), crt, signature);
+        QByteArray qsignature = v2ba(signature);
+        finish_signature(status, qsignature);
     }
 #endif
 
@@ -109,7 +109,7 @@ void QtPKI::pkcs11_sign(const CK_RV status) {
 
 void QtPKI::finish_signature(const CK_RV status, const QByteArray &signature) {
     if (purpose == Signing) {
-    	clear();
+        clear();
         // Nothing else to do
         emit sign_done(status, signature);
     } else if (purpose == Authentication) {
@@ -135,23 +135,23 @@ void QtPKI::authenticate_with(const CK_RV status, const QByteArray &cert) {
         return emit authentication_done(status, QString());
     }
 
-	// Construct dtbs
-	jwt_token = authenticate_dtbs(QSslCertificate(cert, QSsl::Der), origin, nonce);
+    // Construct dtbs
+    jwt_token = authenticate_dtbs(QSslCertificate(cert, QSsl::Der), origin, nonce);
 
-	// Calculate hash
-	hash = QCryptographicHash::hash(jwt_token, QCryptographicHash::Sha256);
+    // Calculate hash
+    hash = QCryptographicHash::hash(jwt_token, QCryptographicHash::Sha256);
 
-	// Sign the hash
-	start_signature(cert, hash, hashalgo, Authentication);
+    // Sign the hash
+    start_signature(cert, hash, hashalgo, Authentication);
 }
 
 // Selects a certificate for the PKI context.
 // Called from web or internally (for authenticate)
 void QtPKI::select_certificate(const QString &origin, CertificatePurpose purpose, bool silent) {
-	_log("PKI: selecting certificate");
+    _log("PKI: selecting certificate");
 
-	// FIXME: single place where this happens
-	std::vector<std::vector<unsigned char>> atrs = PCSC::atrList();
+    // FIXME: single place where this happens
+    std::vector<std::vector<unsigned char>> atrs = PCSC::atrList();
     std::vector<std::string> modules = P11Modules::getPaths(atrs);
 
     std::vector<unsigned char> cert;
@@ -166,43 +166,44 @@ void QtPKI::select_certificate(const QString &origin, CertificatePurpose purpose
 #endif
         cert_selected(CKR_KEY_NEEDED, 0, purpose);
     } else {
-    	// FIXME: only one module currently
+        // FIXME: only one module currently
         pkcs11.load(modules[0]);
         std::vector<std::vector<unsigned char>> certs = pkcs11.getCerts(purpose);
         if (certs.size() == 1 && silent) {
             return cert_selected(CKR_OK, v2ba(certs[0]), purpose);
         }
         if (certs.empty()) {
-        	// TODO: what return code to use ?
+            // TODO: what return code to use ?
             return cert_selected(CKR_KEY_NEEDED, 0, purpose);
         } else {
-        	// TODO: silent handling
+            // TODO: silent handling
             return emit show_cert_select(origin, certs, purpose); // FIXME: remove origin from signature, available from main
         }
     }
 }
 
 void QtPKI::cert_selected(const CK_RV status, const QByteArray &cert, CertificatePurpose purpose) {
-	_log("Certificate was selected %s", errorName(status));
-	this->cert = cert;
-	this->purpose = purpose;
+    _log("Certificate was selected %s", errorName(status));
+    this->cert = cert;
+    this->purpose = purpose;
     // FIXME: calling from sign()
-	if (purpose == Signing) {
-            return emit select_certificate_done(status, cert);
-	} if (purpose == Authentication) {
-    	// finish authentication with the certificate
-    	   return authenticate_with(status, cert);
-       }
+    if (purpose == Signing) {
+        return emit select_certificate_done(status, cert);
+    }
+    if (purpose == Authentication) {
+        // finish authentication with the certificate
+        return authenticate_with(status, cert);
+    }
 }
 
 // FIXME: move to pkcs11module.h
 const char *QtPKI::errorName(const CK_RV err) {
-	return PKCS11Module::errorName(err);
+    return PKCS11Module::errorName(err);
 }
 
 // static
 QByteArray QtPKI::authenticate_dtbs(const QSslCertificate &cert, const QString &origin, const QString &nonce) {
-	QByteArray dtbs;
+    QByteArray dtbs;
     // Construct the data to be signed
     auto subject = cert.subjectInfo(QSslCertificate::CommonName);
     auto issuer = cert.issuerInfo(QSslCertificate::CommonName);

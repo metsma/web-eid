@@ -21,7 +21,7 @@
 #include <cstdarg>
 
 namespace Logger {
-    void writeLog(const char *functionName, const char *fileName, int lineNumber, const char *message, ...);
+void writeLog(const char *functionName, const char *fileName, int lineNumber, const char *message, ...);
 }
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L

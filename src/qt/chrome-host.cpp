@@ -51,99 +51,99 @@
 // during the lifecycle of the program.
 QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, argv), tray(this) {
 
-        if (standalone) {
-            _log("Starting standalone app v%s", VERSION);
-            tray.setIcon(QIcon(":/hwcrypto-native.png"));
-            tray.show();
-            tray.setToolTip("Web eID is running on port XXXX. Click to quit.");
-            tray.showMessage("Web eID starts", "Click the icon to quit", QSystemTrayIcon::Warning);
-            connect(&tray, &QSystemTrayIcon::activated, [&] {
-                // TODO: Show window "do you want to start again"
-                exit(1);
-            });
-            // TODO: add HTTP listener
-        } else {
-            _log("Starting browser extension host %s args %s", VERSION, arguments().join("\" \"").toStdString().c_str());
-            // Parse the window handle
-            QCommandLineParser parser;
-            QCommandLineOption pwindow("parent-window");
-            pwindow.setValueName("handle");
-            parser.addOption(pwindow);
-            parser.process(arguments());
-            if (parser.isSet(pwindow)) {
-                // XXX: we can not actually utilize the window handle, as it is always 0
-                // See issue #12
-                _log("Parent window handle: %d", stoi(parser.value(pwindow).toStdString()));
-            }
-
-            // Open the output file
-            out.open(stdout, QFile::WriteOnly);
-
-            // InputChecker runs a blocking input reading loop and signals the main
-            // Qt appliction when a message gas been read.
-            input = new InputChecker(this);
-
-            // Start input reading thread with inherited priority
-            input->start();
-
-            // From input thread to host process
-            connect(input, &InputChecker::messageReceived, this, &QtHost::incoming, Qt::QueuedConnection);
-
+    if (standalone) {
+        _log("Starting standalone app v%s", VERSION);
+        tray.setIcon(QIcon(":/hwcrypto-native.png"));
+        tray.show();
+        tray.setToolTip("Web eID is running on port XXXX. Click to quit.");
+        tray.showMessage("Web eID starts", "Click the icon to quit", QSystemTrayIcon::Warning);
+        connect(&tray, &QSystemTrayIcon::activated, [&] {
+            // TODO: Show window "do you want to start again"
+            exit(1);
+        });
+        // TODO: add HTTP listener
+    } else {
+        _log("Starting browser extension host %s args %s", VERSION, arguments().join("\" \"").toStdString().c_str());
+        // Parse the window handle
+        QCommandLineParser parser;
+        QCommandLineOption pwindow("parent-window");
+        pwindow.setValueName("handle");
+        parser.addOption(pwindow);
+        parser.process(arguments());
+        if (parser.isSet(pwindow)) {
+            // XXX: we can not actually utilize the window handle, as it is always 0
+            // See issue #12
+            _log("Parent window handle: %d", stoi(parser.value(pwindow).toStdString()));
         }
 
+        // Open the output file
+        out.open(stdout, QFile::WriteOnly);
 
-        setWindowIcon(QIcon(":/hwcrypto-native.png"));
-        setQuitOnLastWindowClosed(false);
+        // InputChecker runs a blocking input reading loop and signals the main
+        // Qt appliction when a message gas been read.
+        input = new InputChecker(this);
 
-        // Register slots and signals
-        qRegisterMetaType<CertificatePurpose>();
-        qRegisterMetaType<P11Token>();
+        // Start input reading thread with inherited priority
+        input->start();
 
-        // From host process to PCSC and vice versa
-        connect(this, &QtHost::connect_reader, &PCSC, &QtPCSC::connect_reader, Qt::QueuedConnection);
-        connect(&PCSC, &QtPCSC::reader_connected, this, &QtHost::reader_connected, Qt::QueuedConnection);
+        // From input thread to host process
+        connect(input, &InputChecker::messageReceived, this, &QtHost::incoming, Qt::QueuedConnection);
 
-        connect(this, &QtHost::send_apdu, &PCSC, &QtPCSC::send_apdu, Qt::QueuedConnection);
-        connect(&PCSC, &QtPCSC::apdu_sent, this, &QtHost::apdu_sent, Qt::QueuedConnection);
-
-        connect(this, &QtHost::disconnect_reader, &PCSC, &QtPCSC::disconnect_reader, Qt::QueuedConnection);
-        connect(&PCSC, &QtPCSC::reader_disconnected, this, &QtHost::reader_disconnected, Qt::QueuedConnection);
-
-        // PCSC related dialogs
-        connect(&PCSC, &QtPCSC::show_insert_card, this, &QtHost::show_insert_card, Qt::QueuedConnection);
-
-        // Wire up signals for reader dialogs
-        connect(&PCSC.inuse_dialog, &QDialog::rejected, &PCSC, &QtPCSC::cancel_reader, Qt::QueuedConnection);
-        connect(&PCSC.insert_dialog, &QtInsertCard::cancel_insert, this, &QtHost::cancel_insert, Qt::QueuedConnection);
-
-        // From host to PKI and vice versa
-        connect(this, &QtHost::authenticate, &PKI, &QtPKI::authenticate, Qt::QueuedConnection);
-        connect(&PKI, &QtPKI::authentication_done, this, &QtHost::authentication_done, Qt::QueuedConnection);
-
-        connect(this, &QtHost::select_certificate, &PKI, &QtPKI::select_certificate, Qt::QueuedConnection);
-        connect(&PKI, &QtPKI::select_certificate_done, this, &QtHost::select_certificate_done, Qt::QueuedConnection);
-
-        connect(this, &QtHost::sign, &PKI, &QtPKI::sign, Qt::QueuedConnection);
-        connect(&PKI, &QtPKI::sign_done, this, &QtHost::sign_done, Qt::QueuedConnection);
-
-        // PKI related dialogs
-        connect(&PKI, &QtPKI::show_cert_select, this, &QtHost::show_cert_select, Qt::QueuedConnection);
-        connect(&PKI.select_dialog, &QtCertSelect::cert_selected, &PKI, &QtPKI::cert_selected, Qt::QueuedConnection);
-
-        // When PIN dialog needs to be shown for PKCS#11
-        connect(&PKI, &QtPKI::show_pin_dialog, this, &QtHost::show_pin_dialog, Qt::QueuedConnection);
-        connect(&PKI, &QtPKI::hide_pin_dialog, this, &QtHost::hide_pin_dialog, Qt::QueuedConnection);
-        connect(&PKI.pin_dialog, &QtPINDialog::login, &PKI, &QtPKI::login, Qt::QueuedConnection);
-
-        // Start PCSC thread
-        pki_thread = new QThread;
-        pcsc_thread = new QThread;
-        pki_thread->start();
-        pcsc_thread->start();
-
-        PCSC.moveToThread(pcsc_thread);
-        PKI.moveToThread(pki_thread);
     }
+
+
+    setWindowIcon(QIcon(":/hwcrypto-native.png"));
+    setQuitOnLastWindowClosed(false);
+
+    // Register slots and signals
+    qRegisterMetaType<CertificatePurpose>();
+    qRegisterMetaType<P11Token>();
+
+    // From host process to PCSC and vice versa
+    connect(this, &QtHost::connect_reader, &PCSC, &QtPCSC::connect_reader, Qt::QueuedConnection);
+    connect(&PCSC, &QtPCSC::reader_connected, this, &QtHost::reader_connected, Qt::QueuedConnection);
+
+    connect(this, &QtHost::send_apdu, &PCSC, &QtPCSC::send_apdu, Qt::QueuedConnection);
+    connect(&PCSC, &QtPCSC::apdu_sent, this, &QtHost::apdu_sent, Qt::QueuedConnection);
+
+    connect(this, &QtHost::disconnect_reader, &PCSC, &QtPCSC::disconnect_reader, Qt::QueuedConnection);
+    connect(&PCSC, &QtPCSC::reader_disconnected, this, &QtHost::reader_disconnected, Qt::QueuedConnection);
+
+    // PCSC related dialogs
+    connect(&PCSC, &QtPCSC::show_insert_card, this, &QtHost::show_insert_card, Qt::QueuedConnection);
+
+    // Wire up signals for reader dialogs
+    connect(&PCSC.inuse_dialog, &QDialog::rejected, &PCSC, &QtPCSC::cancel_reader, Qt::QueuedConnection);
+    connect(&PCSC.insert_dialog, &QtInsertCard::cancel_insert, this, &QtHost::cancel_insert, Qt::QueuedConnection);
+
+    // From host to PKI and vice versa
+    connect(this, &QtHost::authenticate, &PKI, &QtPKI::authenticate, Qt::QueuedConnection);
+    connect(&PKI, &QtPKI::authentication_done, this, &QtHost::authentication_done, Qt::QueuedConnection);
+
+    connect(this, &QtHost::select_certificate, &PKI, &QtPKI::select_certificate, Qt::QueuedConnection);
+    connect(&PKI, &QtPKI::select_certificate_done, this, &QtHost::select_certificate_done, Qt::QueuedConnection);
+
+    connect(this, &QtHost::sign, &PKI, &QtPKI::sign, Qt::QueuedConnection);
+    connect(&PKI, &QtPKI::sign_done, this, &QtHost::sign_done, Qt::QueuedConnection);
+
+    // PKI related dialogs
+    connect(&PKI, &QtPKI::show_cert_select, this, &QtHost::show_cert_select, Qt::QueuedConnection);
+    connect(&PKI.select_dialog, &QtCertSelect::cert_selected, &PKI, &QtPKI::cert_selected, Qt::QueuedConnection);
+
+    // When PIN dialog needs to be shown for PKCS#11
+    connect(&PKI, &QtPKI::show_pin_dialog, this, &QtHost::show_pin_dialog, Qt::QueuedConnection);
+    connect(&PKI, &QtPKI::hide_pin_dialog, this, &QtHost::hide_pin_dialog, Qt::QueuedConnection);
+    connect(&PKI.pin_dialog, &QtPINDialog::login, &PKI, &QtPKI::login, Qt::QueuedConnection);
+
+    // Start PCSC thread
+    pki_thread = new QThread;
+    pcsc_thread = new QThread;
+    pki_thread->start();
+    pcsc_thread->start();
+
+    PCSC.moveToThread(pcsc_thread);
+    PKI.moveToThread(pki_thread);
+}
 
 void QtHost::shutdown(int exitcode) {
     _log("Exiting with %d", exitcode);
@@ -318,12 +318,13 @@ void QtHost::reader_connected(LONG status, const QString &reader, const QString 
         _log("HOST: reader connected");
         PCSC.inuse_dialog.showit(friendly_origin, reader);
         outgoing({{"result", "ok"},
-                  {"reader", reader},
-                  {"atr", atr.toHex()},
-                  {"protocol", protocol}});
+            {"reader", reader},
+            {"atr", atr.toHex()},
+            {"protocol", protocol}
+        });
     } else {
         _log("HOST: reader NOT connected: %s", PCSC::errorName(status));
-         outgoing({{"result", PCSC::errorName(status)}}); // TODO
+        outgoing({{"result", PCSC::errorName(status)}}); // TODO
     }
 }
 

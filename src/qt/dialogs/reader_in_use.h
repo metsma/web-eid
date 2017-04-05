@@ -36,7 +36,7 @@ public:
         activateWindow();
     }
 private:
-        QVBoxLayout *layout;
-        QDialogButtonBox *buttons;
-        QLabel *message;
+    QVBoxLayout *layout;
+    QDialogButtonBox *buttons;
+    QLabel *message;
 };
