@@ -32,6 +32,15 @@ LONG SCCall(const char *fun, const char *file, int line, const char *function, F
 }
 #define SCard(API, ...) SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard"#API, SCard##API, __VA_ARGS__)
 
+// return the rv is not CKR_OK
+#define check_SCard(API, ...) do { \
+    LONG _ret = SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard"#API, SCard##API, __VA_ARGS__); \
+    if (_ret != SCARD_S_SUCCESS) { \
+       Logger::writeLog(__FUNCTION__, __FILE__, __LINE__, "returning %s", PCSC::errorName(_ret)); \
+       return _ret; \
+    } \
+} while(0)
+
 
 const PCSCReader *from_name(const std::string &name, const std::vector<PCSCReader> &readers) {
     for (const auto &reader: readers) {
@@ -58,10 +67,7 @@ LONG PCSC::connect(const std::string &reader, const std::string &protocol) {
 
     // Create context, if not yet connected
     if (!established) {
-        err = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
-        if (err != SCARD_S_SUCCESS) {
-            return err;
-        }
+        check_SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
         established = true;
     }
 
@@ -97,20 +103,14 @@ LONG PCSC::connect(const std::string &reader, const std::string &protocol) {
 #ifdef _WIN32
         return SCARD_E_SHARING_VIOLATION; // FIXME: lots of UX love here
 #endif
-        err = SCard(Connect, context, reader.c_str(), SCARD_SHARE_SHARED, proto, &card, &this->protocol);
-        if (err != SCARD_S_SUCCESS)
-            return err;
+        check_SCard(Connect, context, reader.c_str(), SCARD_SHARE_SHARED, proto, &card, &this->protocol);
     } else {
         _log("Reader is not in use, assuming exclusive access is possible");
         mode = SCARD_SHARE_EXCLUSIVE;
-        err = SCard(Connect, context, reader.c_str(), mode, proto, &card, &this->protocol);
-        if (err != SCARD_S_SUCCESS)
-            return err;
+        check_SCard(Connect, context, reader.c_str(), mode, proto, &card, &this->protocol);
     }
 #ifndef _WIN32
-    err = SCard(BeginTransaction, card);
-    if (err != SCARD_S_SUCCESS)
-        return err;
+    check_SCard(BeginTransaction, card);
 #endif
     _log("Connected to %s in %s mode, protocol %s", reader.c_str(), mode == SCARD_SHARE_EXCLUSIVE ? "exclusive" : "shared", this->protocol == SCARD_PROTOCOL_T0 ? "T=0" : "T=1");
     status = *wanted;
@@ -122,7 +122,6 @@ LONG PCSC::wait(const std::string &reader, const std::string &protocol) {
     // FIXME: copypaste
     // Quick query
     std::vector<PCSCReader> readers = readerList();
-    LONG err = SCARD_S_SUCCESS;
 
     const PCSCReader *wanted = from_name(reader, readers);
     if (!wanted) {
@@ -136,10 +135,7 @@ LONG PCSC::wait(const std::string &reader, const std::string &protocol) {
 
     // Create context, if not yet connected FIXME: copypaste
     if (!established) {
-        err = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
-        if (err != SCARD_S_SUCCESS) {
-            return err;
-        }
+        check_SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
         established = true;
     }
 
@@ -150,10 +146,7 @@ LONG PCSC::wait(const std::string &reader, const std::string &protocol) {
             // Wait for card insertion
             state.szReader = wanted->name.c_str();
             state.dwEventState = SCARD_STATE_UNAWARE;
-            err = SCard(GetStatusChange, context, 10 * 1000, &state, DWORD(1));
-            if (err != SCARD_S_SUCCESS) {
-                return err;
-            }
+            check_SCard(GetStatusChange, context, 10 * 1000, &state, DWORD(1));
             state.dwCurrentState = state.dwEventState;
             // TODO: visual feedback in reader selection UI that the card is mute
         } while (!(state.dwCurrentState & SCARD_STATE_PRESENT) || (state.dwCurrentState & SCARD_STATE_MUTE));
