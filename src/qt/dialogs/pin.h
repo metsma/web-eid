@@ -121,7 +121,7 @@ public:
         // for pinpad
         progress(new QProgressBar(this)),
         buttons(new QDialogButtonBox(this)),
-        pinlayout(new QHBoxLayout(this)),
+        pinlayout(new QHBoxLayout()),
         pin(new QLineEdit(this))
 
     {
