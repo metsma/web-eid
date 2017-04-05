@@ -18,11 +18,9 @@
 
 #include "WinCertSelect.h"
 
-#include "Common.h"
 #include "util.h"
 #include "Logger.h"
 
-#include <stdexcept>
 #include <Windows.h>
 #include <WinError.h>
 #include <ncrypt.h>
@@ -150,14 +148,12 @@ BOOL WINAPI filter_sign(PCCERT_CONTEXT certContext, BOOL *pfInitialSelectedCert,
 }
 
 
-std::vector<unsigned char> WinCertSelect::getCert(CertificatePurpose p, LPCWSTR message) {
-
-	std::vector<unsigned char> cert;
+CK_RV WinCertSelect::getCert(CertificatePurpose p, LPCWSTR message, std::vector<unsigned char> &result) {
 
 	HCERTSTORE store = CertOpenSystemStore(0, L"MY");
 	if (!store)	{
 		_log("Cold not open store: %d", GetLastError());
-		throw std::runtime_error("Could not open MY certificate store");
+		return CKR_GENERAL_ERROR;
 	}
 
 	// Enumerate certificates, so that no_certificates satus could be reported.
@@ -176,8 +172,7 @@ std::vector<unsigned char> WinCertSelect::getCert(CertificatePurpose p, LPCWSTR 
 
 	if (certificatesCount == 0) {
 		CertCloseStore(store, 0);
-		return cert;
-		throw NoCertificatesException(); // FIXME: exception
+		return CKR_KEY_NEEDED;
 	}
 	// Show selection dialog
 	CRYPTUI_SELECTCERTIFICATE_STRUCT pcsc = { sizeof(pcsc) };
@@ -196,14 +191,12 @@ std::vector<unsigned char> WinCertSelect::getCert(CertificatePurpose p, LPCWSTR 
 	{
 		CertCloseStore(store, 0);
 		_log("User pressed cancel");
-		return cert;
-        throw UserCanceledError(); // FIXME: exception
+		return CKR_FUNCTION_CANCELED;
 	}
-	//cert(cert_context->pbCertEncoded, cert_context->pbCertEncoded + cert_context->cbCertEncoded);
-	std::vector<unsigned char> data(cert_context->pbCertEncoded, cert_context->pbCertEncoded + cert_context->cbCertEncoded);
-	cert = data;
-	_log("Selected certificate with subject %s", x509subject(data).c_str()); // XXX: requires OpenSSL dll-s with Qt
+	std::vector<unsigned char> cert(cert_context->pbCertEncoded, cert_context->pbCertEncoded + cert_context->cbCertEncoded);
+	result = cert;
+	_log("Selected certificate with subject %s", x509subject(result).c_str()); // XXX: requires OpenSSL dll-s with Qt
 	CertFreeCertificateContext(cert_context);
 	CertCloseStore(store, 0);
-	return cert;
+	return CKR_OK;
 }

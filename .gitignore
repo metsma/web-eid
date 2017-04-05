@@ -13,9 +13,9 @@
 *~
 /tests/*.pyc
 /*.tar.gz
-/host-osx/build
-/host-osx/hwcrypto-native.xcodeproj/project.xcworkspace/
-/host-osx/hwcrypto-native.xcodeproj/xcuserdata/
 *.pkg
 /tmp
 /hwcrypto-native.plist
+moc_*.cpp
+moc_*.h
+qrc_*.cpp

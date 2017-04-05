@@ -19,12 +19,12 @@
 #pragma once
 
 #include <vector>
-
 #include "Common.h"
+#include "pkcs11.h"
 
 typedef const wchar_t *LPCWSTR;
 
 class WinCertSelect {
  public:
-  static std::vector<unsigned char> getCert(CertificatePurpose p = Authentication, LPCWSTR message = L"");
+  static CK_RV getCert(CertificatePurpose p, LPCWSTR message, std::vector<unsigned char> &result);
 };

@@ -21,8 +21,10 @@
 #include "pkcs11module.h"
 #include "qt_input.h"
 #include "qt_pcsc.h"
+#include "qt_pki.h"
 
 #include <QApplication>
+#include <QSystemTrayIcon>
 #include <QTranslator>
 #include <QFile>
 #include <QVariantMap>
@@ -32,15 +34,15 @@
 #include <qt_windows.h>
 #endif
 
-Q_DECLARE_METATYPE(std::string)
-Q_DECLARE_METATYPE(std::vector<unsigned char>)
+Q_DECLARE_METATYPE(CertificatePurpose)
+Q_DECLARE_METATYPE(P11Token)
 
 class QtHost: public QApplication
 {
     Q_OBJECT
 
 public:
-    QtHost(int &argc, char *argv[]);
+    QtHost(int &argc, char *argv[], bool standalone);
 
     // TODO: It is currently assumed that all invocations from one origin
     // go to the same PKCS#11 module
@@ -59,9 +61,13 @@ public:
     // We keep a flag around that show if the selected cert is from CAPI
     bool winsign = false;
 
-    // PCSC subsystem, in a separate thread
+    // PCSC and PKI subsystems
     QtPCSC PCSC;
+    QtPKI PKI;
+
+    // both in a separate thread
     QThread *pcsc_thread;
+    QThread *pki_thread;
 
 public slots:
     // Called when a message has been received from the
@@ -71,22 +77,37 @@ public slots:
     // Called when a message is to be sent back to the browser
     void outgoing(const QVariantMap &resp);
 
-    void reader_connected(LONG status, std::string reader, std::string protocol, std::vector<unsigned char> atr);
-    void apdu_sent(LONG status, std::vector<unsigned char> response);
+    // PKI
+    void sign_done(const CK_RV status, const QByteArray &signature);
+    void authentication_done(const CK_RV status, const QString &token);
+    void select_certificate_done(const CK_RV status, const QByteArray &certificate);
+
+    void show_cert_select(const QString origin, std::vector<std::vector<unsigned char>> certs, CertificatePurpose purpose);
+    void show_pin_dialog(const CK_RV last, P11Token token, QByteArray cert, CertificatePurpose purpose);
+    void hide_pin_dialog();
+
+    // PCSC
+    void reader_connected(LONG status, const QString &reader, const QString &protocol, const QByteArray &atr);
+    void apdu_sent(LONG status, const QByteArray &response);
     void reader_disconnected();
 
-    void show_insert_card(bool show, std::string name, SCARDCONTEXT ctx);
-    void cancel_insert(SCARDCONTEXT ctx);
+    void show_insert_card(bool show, const QString &name, const SCARDCONTEXT ctx);
+    void cancel_insert(const SCARDCONTEXT ctx); // TODO: move to PCSC and call directly from dialog
 
 signals:
-    void connect_reader(std::string reader, std::string protocol);
-    void send_apdu(std::vector<unsigned char> apdu);
+    void authenticate(const QString &origin, const QString &nonce);
+    void sign(const QString &origin, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
+    void select_certificate(const QString &origin, CertificatePurpose purpose, bool silent);
+
+    void login(const QString &pin, CertificatePurpose purpose);
+
+    void connect_reader(const QString &reader, const QString &protocol);
+    void send_apdu(const QByteArray &apdu);
     void disconnect_reader();
 
 private:
     QString msgid; // If a message is being processed, set to ID
-
-    SCARDCONTEXT cancel_ctx = 0; // If we need to cancel the "insert card" process, we need this context
+    QSystemTrayIcon tray;
 
     QFile out;
     void write(QVariantMap &resp);
@@ -94,7 +115,4 @@ private:
     InputChecker *input;
 
     QTranslator translator;
-#ifdef _WIN32
-    HWND parent_window;
-#endif
 };

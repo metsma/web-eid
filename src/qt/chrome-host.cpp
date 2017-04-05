@@ -18,13 +18,10 @@
 
 #include "qt_host.h"
 
-#include "authenticate.h"
-#include "sign.h"
 #include "qt_pcsc.h"
-#include "pcsc.h"
+#include "qt_pki.h"
 
 #include "util.h"
-#include "Common.h" // TODO: rename
 #include "Logger.h" // TODO: rename
 
 #include <QIcon>
@@ -34,6 +31,7 @@
 #include <QTranslator>
 #include <QUrl>
 #include <QString>
+#include <QMenu>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -51,35 +49,55 @@
 // The lifecycle of the native components is the lifecycle of a page.
 // Every message must have an origin and the origin must not change
 // during the lifecycle of the program.
+QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, argv), tray(this) {
 
-QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv) {
-        _log("Starting native host %s args %s", VERSION, arguments().join(" ").toStdString().c_str());
-        // Parse the window handle
-        QCommandLineParser parser;
-        QCommandLineOption pwindow("parent-window");
-        pwindow.setValueName("handle");
-        parser.addOption(pwindow);
-        parser.process(arguments());
-        if (parser.isSet(pwindow)) {
-            // XXX: we can not actually utilize the window handle, as it is always 0
-            // See issue #12
-            _log("Parent window handle: %d", stoi(parser.value(pwindow).toStdString()));
+        if (standalone) {
+            _log("Starting standalone app v%s", VERSION);
+            tray.setIcon(QIcon(":/hwcrypto-native.png"));
+            tray.show();
+            tray.setToolTip("Web eID is running on port XXXX. Click to quit.");
+            tray.showMessage("Web eID starts", "Click the icon to quit", QSystemTrayIcon::Warning);
+            connect(&tray, &QSystemTrayIcon::activated, [&] {
+                // TODO: Show window "do you want to start again"
+                exit(1);
+            });
+            // TODO: add HTTP listener
+        } else {
+            _log("Starting browser extension host %s args %s", VERSION, arguments().join("\" \"").toStdString().c_str());
+            // Parse the window handle
+            QCommandLineParser parser;
+            QCommandLineOption pwindow("parent-window");
+            pwindow.setValueName("handle");
+            parser.addOption(pwindow);
+            parser.process(arguments());
+            if (parser.isSet(pwindow)) {
+                // XXX: we can not actually utilize the window handle, as it is always 0
+                // See issue #12
+                _log("Parent window handle: %d", stoi(parser.value(pwindow).toStdString()));
+            }
+
+            // Open the output file
+            out.open(stdout, QFile::WriteOnly);
+
+            // InputChecker runs a blocking input reading loop and signals the main
+            // Qt appliction when a message gas been read.
+            input = new InputChecker(this);
+
+            // Start input reading thread with inherited priority
+            input->start();
+
+            // From input thread to host process
+            connect(input, &InputChecker::messageReceived, this, &QtHost::incoming, Qt::QueuedConnection);
+
         }
 
-        // Open the output file
-        out.open(stdout, QFile::WriteOnly);
 
-        // FIXME UX: Without the icon firefox launches the "exec terminal" icon.
         setWindowIcon(QIcon(":/hwcrypto-native.png"));
         setQuitOnLastWindowClosed(false);
 
-
-        // InputChecker runs a blocking input reading loop and signals the main
-        // Qt appliction when a message gas been read.
-        input = new InputChecker(this);
-
-        // From input thread to host process
-        connect(input, &InputChecker::messageReceived, this, &QtHost::incoming, Qt::QueuedConnection);
+        // Register slots and signals
+        qRegisterMetaType<CertificatePurpose>();
+        qRegisterMetaType<P11Token>();
 
         // From host process to PCSC and vice versa
         connect(this, &QtHost::connect_reader, &PCSC, &QtPCSC::connect_reader, Qt::QueuedConnection);
@@ -90,19 +108,41 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv) {
 
         connect(this, &QtHost::disconnect_reader, &PCSC, &QtPCSC::disconnect_reader, Qt::QueuedConnection);
         connect(&PCSC, &QtPCSC::reader_disconnected, this, &QtHost::reader_disconnected, Qt::QueuedConnection);
+
+        // PCSC related dialogs
         connect(&PCSC, &QtPCSC::show_insert_card, this, &QtHost::show_insert_card, Qt::QueuedConnection);
 
         // Wire up signals for reader dialogs
         connect(&PCSC.inuse_dialog, &QDialog::rejected, &PCSC, &QtPCSC::cancel_reader, Qt::QueuedConnection);
         connect(&PCSC.insert_dialog, &QtInsertCard::cancel_insert, this, &QtHost::cancel_insert, Qt::QueuedConnection);
 
-        // Start input reading thread with inherited priority
-        input->start();
+        // From host to PKI and vice versa
+        connect(this, &QtHost::authenticate, &PKI, &QtPKI::authenticate, Qt::QueuedConnection);
+        connect(&PKI, &QtPKI::authentication_done, this, &QtHost::authentication_done, Qt::QueuedConnection);
+
+        connect(this, &QtHost::select_certificate, &PKI, &QtPKI::select_certificate, Qt::QueuedConnection);
+        connect(&PKI, &QtPKI::select_certificate_done, this, &QtHost::select_certificate_done, Qt::QueuedConnection);
+
+        connect(this, &QtHost::sign, &PKI, &QtPKI::sign, Qt::QueuedConnection);
+        connect(&PKI, &QtPKI::sign_done, this, &QtHost::sign_done, Qt::QueuedConnection);
+
+        // PKI related dialogs
+        connect(&PKI, &QtPKI::show_cert_select, this, &QtHost::show_cert_select, Qt::QueuedConnection);
+        connect(&PKI.select_dialog, &QtCertSelect::cert_selected, &PKI, &QtPKI::cert_selected, Qt::QueuedConnection);
+
+        // When PIN dialog needs to be shown for PKCS#11
+        connect(&PKI, &QtPKI::show_pin_dialog, this, &QtHost::show_pin_dialog, Qt::QueuedConnection);
+        connect(&PKI, &QtPKI::hide_pin_dialog, this, &QtHost::hide_pin_dialog, Qt::QueuedConnection);
+        connect(&PKI.pin_dialog, &QtPINDialog::login, &PKI, &QtPKI::login, Qt::QueuedConnection);
 
         // Start PCSC thread
+        pki_thread = new QThread;
         pcsc_thread = new QThread;
+        pki_thread->start();
         pcsc_thread->start();
+
         PCSC.moveToThread(pcsc_thread);
+        PKI.moveToThread(pki_thread);
     }
 
 void QtHost::shutdown(int exitcode) {
@@ -116,7 +156,9 @@ void QtHost::shutdown(int exitcode) {
 #endif
     _log("input closed");
     pcsc_thread->exit(0);
+    pki_thread->exit(0);
     pcsc_thread->wait();
+    pki_thread->wait();
     exit(exitcode);
 }
 
@@ -125,7 +167,6 @@ void QtHost::incoming(const QJsonObject &json)
 {
     _log("Processing message");
     QVariantMap resp;
-
 
     // Serial access
     if (!msgid.isEmpty()) {
@@ -196,28 +237,22 @@ void QtHost::incoming(const QJsonObject &json)
             // Choose reader (in main thread)
             PCSCReader reader = QtPCSC::getReader(friendly_origin);
             // Open reader
-            emit connect_reader(reader.name, "*"); // TODO: incoming protocol ?
-            return;
+            emit connect_reader(QString::fromStdString(reader.name), "*"); // TODO: incoming protocol ?
         } else if (type == "DISCONNECT") {
             emit disconnect_reader();
-            return;
         } else if (type == "APDU") {
-            emit send_apdu(hex2v(json.value("bytes").toString().toStdString()));
-            return;
+            emit send_apdu(QByteArray::fromHex(json.value("bytes").toString().toLatin1()));
         } else if (type == "VERSION") {
             resp = {{"version", VERSION}};
         } else if (type == "SIGN") {
-            resp = Sign::sign(this, json);
+            emit sign(origin, QByteArray::fromBase64(json.value("cert").toString().toLatin1()), QByteArray::fromBase64(json.value("hash").toString().toLatin1()), json.value("hashalgo").toString());
         } else if (type == "CERT") {
-            resp = Sign::select(this, json);
+            emit select_certificate(origin, Signing, false);
         } else if (type == "AUTH") {
-            resp = Authenticate::authenticate(this, json);
+            emit authenticate(origin, json.value("nonce").toString());
         } else {
             resp = {{"result", "invalid_argument"}};
         }
-    } catch (const UserCanceledError &) {
-        _log("UserCanceledException");
-        resp = {{"result", "user_cancel"}};
     } catch (const std::runtime_error &e) {
         _log("Error technical error: %s", e.what());
         resp = {{"result", "technical_error"}};
@@ -230,62 +265,113 @@ void QtHost::incoming(const QJsonObject &json)
     }
 }
 
+
+// Callback from PKI
+void QtHost::authentication_done(const CK_RV status, const QString &token) {
+    _log("authentication done");
+    if (status == CKR_OK) {
+        outgoing({{"result", "ok"}, {"token", token}}); // FIXME: error api
+    } else {
+        outgoing({{"result", QtPKI::errorName(status)}}); // FIXME: messaging api error
+    }
+}
+
+void QtHost::sign_done(const CK_RV status, const QByteArray &signature) {
+    _log("sign done");
+    if (status == CKR_OK) {
+        outgoing({{"result", "ok"}, {"signature", signature.toBase64()}}); // FIXME: error api
+    } else {
+        outgoing({{"result", QtPKI::errorName(status)}}); // FIXME: messaging api error
+    }
+}
+
+void QtHost::select_certificate_done(const CK_RV status, const QByteArray &certificate) {
+    _log("select done: %s", certificate.toBase64().toStdString().c_str());
+    if (status != CKR_OK) {
+        outgoing({{"result", QtPKI::errorName(status)}}); // FIXME: messaging api error
+    } else {
+        outgoing({{"result", "ok"}, {"cert", certificate.toBase64()}});
+    }
+}
+
+// Show certificate selection dialog and emit the chosen dialog
+// TODO: emit straight from dialog, removing signal from this object
+void QtHost::show_cert_select(const QString origin, std::vector<std::vector<unsigned char>> certs, CertificatePurpose purpose) {
+    _log("Showign cert select dialog");
+    // Trigger dialog
+    PKI.select_dialog.getCert(certs, friendly_origin, purpose); // FIXME: signature (use Q)
+}
+
+void QtHost::show_pin_dialog(const CK_RV last, P11Token token, QByteArray cert, CertificatePurpose purpose) {
+    _log("Show pin dialog");
+    PKI.pin_dialog.showit(last, token, ba2v(cert), origin, purpose);
+}
+
+// Called after pinpad login has returned
+void QtHost::hide_pin_dialog() {
+    PKI.pin_dialog.hide();
+}
+
 // Callbacks from PCSC
-void QtHost::reader_connected(LONG status, std::string reader, std::string protocol, std::vector<unsigned char> atr) {
+void QtHost::reader_connected(LONG status, const QString &reader, const QString &protocol, const QByteArray &atr) {
     if (status == SCARD_S_SUCCESS) {
         _log("HOST: reader connected");
-        PCSC.inuse_dialog.showit(friendly_origin, QString::fromStdString(reader));
+        PCSC.inuse_dialog.showit(friendly_origin, reader);
         outgoing({{"result", "ok"},
-                  {"reader", QString::fromStdString(reader)},
-                  {"atr", QString::fromStdString(toHex(atr))},
-                  {"protocol", QString::fromStdString(protocol)}});
+                  {"reader", reader},
+                  {"atr", atr.toHex()},
+                  {"protocol", protocol}});
     } else {
         _log("HOST: reader NOT connected: %s", PCSC::errorName(status));
          outgoing({{"result", PCSC::errorName(status)}}); // TODO
     }
 }
 
-void QtHost::apdu_sent(LONG status, std::vector<unsigned char> response) {
+void QtHost::apdu_sent(LONG status, const QByteArray &response) {
     _log("HOST: APDU sent");
     if (status == SCARD_S_SUCCESS) {
-        outgoing({{"result", "ok"}, {"bytes", QString::fromStdString(toHex(response))}});
+        outgoing({{"result", "ok"}, {"bytes", response.toHex()}});
     } else {
         outgoing({{"result", PCSC::errorName(status)}});
     }
 }
 
-void QtHost::show_insert_card(bool show, std::string name, SCARDCONTEXT ctx) {
+void QtHost::show_insert_card(bool show, const QString &name, const SCARDCONTEXT ctx) {
     if (show) {
-        PCSC.insert_dialog.showit(friendly_origin, QString::fromStdString(name), ctx);
+        PCSC.insert_dialog.showit(friendly_origin, name, ctx);
     } else {
         PCSC.insert_dialog.hide();
     }
 }
 
-// Called from the "insert card" dialog
-void QtHost::cancel_insert(SCARDCONTEXT ctx) {
-    _log("Cancelling insert");
+// Called from the "insert card" dialog in the main thread to cancel
+// SCardGetStatusChange in the PC/SC thread
+void QtHost::cancel_insert(const SCARDCONTEXT ctx) {
+    _log("HOST: Canceling ongoing PC/SC calls");
     PCSC::cancel(ctx);
 }
+
+// Called from the PC/SC thread to close the "Reader in use" dialog
 void QtHost::reader_disconnected() {
     _log("HOST: reader disconnected");
     PCSC.inuse_dialog.hide();
-    outgoing({{"result", "ok"}});
+    outgoing({{"result", "ok"}}); // FIXME: relict
 }
 
 void QtHost::outgoing(const QVariantMap &resp) {
-
     QVariantMap map = resp;
     write(map);
 }
 
 void QtHost::write(QVariantMap &resp)
 {
+    // Without a valid message ID it is a "technical send"
     if (!msgid.isEmpty()) {
         resp["id"] = msgid;
         msgid.clear();
     }
 
+    // FIXME: remove.
     if (!resp.contains("result"))
         resp["result"] = "ok";
 
@@ -299,25 +385,38 @@ void QtHost::write(QVariantMap &resp)
 
 int main(int argc, char *argv[])
 {
-    // Check that input is a pipe (the app is not run from command line)
-    bool isPipe = false;
+    bool standalone = false;
+
+    // Check if run as a browser extension
+    if (argc > 1) {
+        std::string arg1(argv[1]);
+        if (arg1.find("chrome-extension://") == 0) {
+            // Chrome extension
+        } else if (QFile::exists(QString::fromStdString(arg1))) {
+            // printf("Probably Firefox\n");
+        }
+        // Check that input is a pipe (the app is not run from command line)
+        bool isPipe = false;
 #ifdef _WIN32
-    isPipe = GetFileType(GetStdHandle(STD_INPUT_HANDLE)) == FILE_TYPE_PIPE;
+        isPipe = GetFileType(GetStdHandle(STD_INPUT_HANDLE)) == FILE_TYPE_PIPE;
 #else
-    struct stat sb;
-    if (fstat(fileno(stdin), &sb) != 0) {
-        exit(1);
-    }
-    isPipe = S_ISFIFO(sb.st_mode);
+        struct stat sb;
+        if (fstat(fileno(stdin), &sb) != 0) {
+            exit(1);
+        }
+        isPipe = S_ISFIFO(sb.st_mode);
 #endif
-    if (!isPipe) {
-        printf("This is not a regular program, it is expected to be run from a browser.\n");
-        exit(1);
-    }
+        if (!isPipe) {
+            printf("This is not a regular program, it is expected to be run from a browser.\n");
+            exit(1);
+        }
 #ifdef _WIN32
-    // Set files to binary mode, to be able to read the uint32 msg size
-    _setmode(_fileno(stdin), O_BINARY);
-    _setmode(_fileno(stdout), O_BINARY);
+        // Set files to binary mode, to be able to read the uint32 msg size
+        _setmode(_fileno(stdin), O_BINARY);
+        _setmode(_fileno(stdout), O_BINARY);
 #endif
-    return QtHost(argc, argv).exec();
+    } else if (argc == 1) {
+        standalone = true;
+    }
+    return QtHost(argc, argv, standalone).exec();
 }

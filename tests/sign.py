@@ -32,7 +32,7 @@ class TestSigning(ChromeTest):
       self.assertEqual(resp["id"], id)
       self.assertEqual("cert" in resp, True)
       base64.b64decode(resp["cert"]) # just to make sure it parses
-      cmd = {"type": "SIGN", "origin": "https://example.com/", "cert": resp["cert"], "hash": base64.b64encode(binascii.unhexlify("0001020304050607080900010203040506070809"))}
+      cmd = {"type": "SIGN", "origin": "https://example.com/", "cert": resp["cert"], "hash": base64.b64encode(binascii.unhexlify("2CADA1A6A22AA2A9BF9093281DC6C42D46142F9CABDFA490658A84677E4AA40E"))}
       resp = self.transceive(cmd)
 
 

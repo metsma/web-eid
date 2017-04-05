@@ -39,7 +39,7 @@ struct PCSCReader {
 
 class PCSC {
 public:
-    static std::vector<std::vector<unsigned char>> atrList(bool all);
+    static std::vector<std::vector<unsigned char>> atrList();
     static std::vector<PCSCReader> readerList(SCARDCONTEXT ctx = 0);
     static LONG cancel(SCARDCONTEXT ctx);
 

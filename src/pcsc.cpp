@@ -20,7 +20,6 @@
 #include "Logger.h"
 #include "util.h"
 
-#include <stdexcept>
 #include <cstring>
 
 template < typename Func, typename... Args>
@@ -88,7 +87,7 @@ LONG PCSC::connect(const std::string &reader, const std::string &protocol) {
     } else if (protocol == "*") {
         // do nothing, both already enabled
     } else {
-        throw new std::invalid_argument("Incorrect protocol " + protocol);
+        return SCARD_E_INVALID_PARAMETER;
     }
 
 
@@ -207,7 +206,7 @@ PCSC::~PCSC() {
 }
 
 // TODO: get rid of this
-std::vector<std::vector<unsigned char>> PCSC::atrList(bool all = false) {
+std::vector<std::vector<unsigned char>> PCSC::atrList() {
     std::vector<std::vector<unsigned char>> result;
     for (const auto &reader: readerList()) {
         if (!reader.exclusive && !reader.atr.empty()) {

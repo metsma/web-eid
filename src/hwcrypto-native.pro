@@ -1,3 +1,6 @@
+OBJECTS_DIR = build
+MOC_DIR = build
+RCC_DIR = build
 TEMPLATE = app
 isEmpty(VERSION) {
     include(../VERSION.mk)
@@ -36,12 +39,9 @@ SOURCES += \
     pcsc.cpp \
     pkcs11module.cpp \
     qt/chrome-host.cpp \
-    qt/authenticate.cpp \
-    qt/sign.cpp \
-    qt/qt_signer.cpp \
-    qt/qt_certselect.cpp \
-    qt/qt_pcsc.cpp
-HEADERS += *.h qt/*.h
+    qt/qt_pcsc.cpp \
+    qt/qt_pki.cpp
+HEADERS += *.h qt/*.h qt/dialogs/*.h
 RESOURCES += qt/hwcrypto-native.qrc qt/translations/strings.qrc
 TRANSLATIONS = qt/translations/strings_et.ts qt/translations/strings_ru.ts
 

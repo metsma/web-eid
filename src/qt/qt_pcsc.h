@@ -21,14 +21,13 @@
 
 #include <QObject>
 
-#include "Common.h"
 #include "pcsc.h"
 
 #include <vector>
 
-#include "qt_insert_dialog.h"
-#include "qt_inuse_dialog.h"
-#include "qt_select_reader_dialog.h"
+#include "dialogs/insert_card.h"
+#include "dialogs/reader_in_use.h"
+#include "dialogs/select_reader.h"
 
 // Handles PCSC stuff in a dedicated thread.
 class QtPCSC: public QObject {
@@ -43,17 +42,17 @@ public:
     QtReaderInUse inuse_dialog;
 
 public slots:
-    void connect_reader(std::string reader, std::string protocol);
-    void send_apdu(std::vector<unsigned char> apdu);
+    void connect_reader(const QString &reader, const QString &protocol);
+    void send_apdu(const QByteArray &apdu);
     void disconnect_reader();
 
     void cancel_reader(); // Signalled from QtReaderInUse
 
 signals:
-    void reader_connected(LONG status, std::string reader, std::string protocol, std::vector<unsigned char> atr);
-    void apdu_sent(LONG status, std::vector<unsigned char> response);
+    void reader_connected(LONG status, const QString &reader, const QString &protocol, const QByteArray &atr);
+    void apdu_sent(LONG status, const QByteArray &response);
     void reader_disconnected();
-    void show_insert_card(bool show, std::string name, SCARDCONTEXT ctx);
+    void show_insert_card(bool show, const QString &name, const SCARDCONTEXT ctx);
 
 private:
     PCSC pcsc;

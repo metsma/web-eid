@@ -41,22 +41,26 @@ struct P11Token {
 
 class PKCS11Module {
 public:
-    void load(const std::string &module);
-    std::vector<unsigned char> sign(const std::vector<unsigned char> &cert, const std::vector<unsigned char> &hash, const char *pin) const;
+    CK_RV load(const std::string &module);
+    CK_RV login(const std::vector<unsigned char> &cert, const char *pin);
+    CK_RV sign(const std::vector<unsigned char> &cert, const std::vector<unsigned char> &hash, std::vector<unsigned char> &result);
 
     bool isLoaded() {return !certs.empty();}
     std::vector<std::vector <unsigned char>> getCerts(CertificatePurpose type = CertificatePurpose(Authentication|Signing));
 
-    P11Token getP11Token(const std::vector<unsigned char> &cert) const;
+    const P11Token *getP11Token(const std::vector<unsigned char> &cert) const;
 
     bool isPinpad(const std::vector<unsigned char> &cert) const;
-    int getPINRetryCount(const std::vector<unsigned char> &cert) const;
+    static int getPINRetryCount(const P11Token &cert);
     std::pair<int, int> getPINLengths(const std::vector<unsigned char> &cert);
 
     ~PKCS11Module();
 
+    static const char *errorName(CK_RV err);
+
 private:
     std::string path;
+    bool initialized = false;
 #ifdef _WIN32
     HINSTANCE library = 0;
 #else

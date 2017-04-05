@@ -21,6 +21,8 @@
 #include "Common.h"
 #include "Logger.h"
 
+#include "pkcs11.h"
+
 #include <Windows.h>
 #include <ncrypt.h>
 #include <WinCrypt.h>
@@ -28,8 +30,9 @@
 
 using namespace std;
 
-std::vector<unsigned char> WinSigner::sign(const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert) {
+CK_RV WinSigner::sign(const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert, std::vector<unsigned char> &result) {
 
+	CK_RV rv = CKR_OK;
 	BCRYPT_PKCS1_PADDING_INFO padInfo;
 	DWORD obtainKeyStrategy = CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG;
 
@@ -54,26 +57,26 @@ std::vector<unsigned char> WinSigner::sign(const std::vector<unsigned char> &has
 		alg = CALG_SHA_512;
 		break;
 	default:
-		throw std::invalid_argument("Hash size does not match a known size");
+		return CKR_ARGUMENTS_BAD;
 	}
 
 	SECURITY_STATUS err = 0;
 	DWORD size = 256; // FIXME use NULL and resize accordingly
-	vector<unsigned char> signature(size, 0);
+	result.resize(size);
 
 	HCERTSTORE store = CertOpenSystemStore(0, L"MY");
 	if (!store) {
-		throw std::runtime_error("Could not open MY store");
+		_log("Could not open MY store"); // TODO lasterror
+		return CKR_GENERAL_ERROR;
 	}
 
-    PCCERT_CONTEXT certFromBinary = CertCreateCertificateContext(X509_ASN_ENCODING, cert.data(), cert.size());
+	PCCERT_CONTEXT certFromBinary = CertCreateCertificateContext(X509_ASN_ENCODING, cert.data(), cert.size());
 	PCCERT_CONTEXT certInStore = CertFindCertificateInStore(store, X509_ASN_ENCODING, 0, CERT_FIND_EXISTING, certFromBinary, 0);
 	CertFreeCertificateContext(certFromBinary);
 
-	if (!certInStore)
-	{
+	if (!certInStore) {
 		CertCloseStore(store, 0);
-		throw std::invalid_argument("Certificate is not found in store"); // TODO: TBS
+		return CKR_KEY_NEEDED; // FIXME: TBS
 	}
 
 	DWORD flags = obtainKeyStrategy | CRYPT_ACQUIRE_COMPARE_KEY_FLAG;
@@ -90,7 +93,7 @@ std::vector<unsigned char> WinSigner::sign(const std::vector<unsigned char> &has
 	{
 	case CERT_NCRYPT_KEY_SPEC:
 	{
-        err = NCryptSignHash(key, &padInfo, PBYTE(hash.data()), DWORD(hash.size()), signature.data(), DWORD(signature.size()), (DWORD*)&size, BCRYPT_PAD_PKCS1);
+        err = NCryptSignHash(key, &padInfo, PBYTE(hash.data()), DWORD(hash.size()), result.data(), DWORD(result.size()), (DWORD*)&size, BCRYPT_PAD_PKCS1);
 		if (freeKeyHandle) {
 			NCryptFreeObject(key);
 		}
@@ -103,7 +106,8 @@ std::vector<unsigned char> WinSigner::sign(const std::vector<unsigned char> &has
 			if (freeKeyHandle) {
 				CryptReleaseContext(key, 0);
 			}
-			throw std::invalid_argument("CreateHash failed");
+			_log("CreateHash failed");
+			return CKR_GENERAL_ERROR;
 		}
 
 		if (!CryptSetHashParam(capihash, HP_HASHVAL, hash.data(), 0))	{
@@ -111,10 +115,11 @@ std::vector<unsigned char> WinSigner::sign(const std::vector<unsigned char> &has
 				CryptReleaseContext(key, 0);
 			}
 			CryptDestroyHash(capihash);
-			throw std::invalid_argument("SetHashParam failed");
+			_log("CryptSetHashParam failed");
+                        return CKR_GENERAL_ERROR;
 		}
 
-        INT retCode = CryptSignHashW(capihash, AT_SIGNATURE, 0, 0, signature.data(), &size);
+	        INT retCode = CryptSignHashW(capihash, AT_SIGNATURE, 0, 0, result.data(), &size);
 		err = retCode ? ERROR_SUCCESS : GetLastError();
 		_log("CryptSignHash() return code: %u (%s) %x", retCode, retCode ? "SUCCESS" : "FAILURE", err);
 		if (freeKeyHandle) {
@@ -122,27 +127,29 @@ std::vector<unsigned char> WinSigner::sign(const std::vector<unsigned char> &has
 		}
 		CryptDestroyHash(capihash);
 		// TODO: link to docs
-		reverse(signature.begin(), signature.end());
+		reverse(result.begin(), result.end());
+		result.resize(size);
 		break;
 	}
 	default:
-		throw std::invalid_argument("Incompatible key");
+		_log("Invalid key type (not CERT_NCRYPT_KEY_SPEC nor AT_SIGNATURE)");
+                return CKR_GENERAL_ERROR;
 	}
 
 	switch (err)
 	{
 	case ERROR_SUCCESS:
-		break;
+		return CKR_OK;
 	case SCARD_W_CANCELLED_BY_USER:
 	case ERROR_CANCELLED:
-        throw UserCanceledError();
+	     return CKR_FUNCTION_CANCELED;
 	case SCARD_W_CHV_BLOCKED:
-		throw PinBlockedException();
-	case NTE_INVALID_HANDLE:
-		throw std::invalid_argument("The supplied handle is invalid");
+		return CKR_PIN_LOCKED;
+	case NTE_INVALID_HANDLE: // TODO: document
+		_log("NTE_INVALID_HANDLE");
+		return CKR_GENERAL_ERROR;
 	default:
-		throw std::invalid_argument("Signing failed");
+		 _log("Signing failed: 0x%u08x", err);
+		 return CKR_GENERAL_ERROR;
 	}
-	signature.resize(size);
-	return signature;
 }

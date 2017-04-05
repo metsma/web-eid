@@ -18,9 +18,10 @@
 
 #pragma once
 
+#include "pkcs11.h"
 #include <vector>
 
 class WinSigner {
 public:
-	static std::vector<unsigned char> sign(const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert);
+	static CK_RV sign(const std::vector<unsigned char> &hash, const std::vector<unsigned char> &cert, std::vector<unsigned char> &result);
 };
