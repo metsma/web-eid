@@ -63,7 +63,7 @@ QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, ar
         });
         // TODO: add HTTP listener
     } else {
-        _log("Starting browser extension host %s args %s", VERSION, arguments().join("\" \"").toStdString().c_str());
+        _log("Starting browser extension host v%s args \"%s\"", VERSION, arguments().join("\" \"").toStdString().c_str());
         // Parse the window handle
         QCommandLineParser parser;
         QCommandLineOption pwindow("parent-window");
@@ -175,91 +175,76 @@ void QtHost::incoming(const QJsonObject &json)
     // Serial access
     if (!msgid.isEmpty()) {
         _log("Already processing message %s", msgid.toStdString().c_str());
-        resp = {{"result", "process_ongoing"}, {"version", VERSION}};
+        resp = {{"error", "process_ongoing"}, {"version", VERSION}};
         write(resp);
         return;
     }
 
 
-    try {
-        if (json.isEmpty()) {
-            resp = {{"result", "invalid_argument"}, {"version", VERSION}};
-            write(resp);
-            return shutdown(EXIT_FAILURE);
-        }
+    if (json.isEmpty() || !json.contains("id") || !json.contains("origin")) {
+        resp = {{"error", "protocol"}, {"version", VERSION}};
+        write(resp);
+        return shutdown(EXIT_FAILURE);
+    }
 
-        if(!json.contains("type") || !json.contains("id") || !json.contains("origin")) {
-            resp = {{"result", "invalid_argument"}};
-            write(resp);
-            return shutdown(EXIT_FAILURE);
-        }
+    msgid = json.value("id").toString();
 
-        msgid = json.value("id").toString();
-
-        // Origin. If unset for instance, set
-        if (origin.isEmpty()) {
-            // Check if origin is secure
-            QUrl url(json.value("origin").toString());
-            // https, file or localhost
-            if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost") {
-                origin = json.value("origin").toString();
-                // set the "human readable origin"
-                // use localhost for file url-s
-                if (url.scheme() == "file") {
-                    friendly_origin = "localhost";
-                } else {
-                    friendly_origin = url.host();
-                }
+    // Origin. If unset for instance, set
+    if (origin.isEmpty()) {
+        // Check if origin is secure
+        QUrl url(json.value("origin").toString());
+        // https, file or localhost
+        if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost") {
+            origin = json.value("origin").toString();
+            // set the "human readable origin"
+            // use localhost for file url-s
+            if (url.scheme() == "file") {
+                friendly_origin = "localhost";
             } else {
-                resp = {{"result", "not_allowed"}};
-                write(resp);
-                return shutdown(EXIT_FAILURE);
+                friendly_origin = url.host();
             }
-            // Setting the language is also a onetime operation, thus do it here.
-            QLocale locale = json.contains("lang") ? QLocale(json.value("lang").toString()) : QLocale::system();
-            _log("Setting language to %s", locale.name().toStdString().c_str());
-            // look up translation rom resource :/translations/strings_XX.qm
-            if (translator.load(QLocale(json.value("lang").toString()), QLatin1String("strings"), QLatin1String("_"), QLatin1String(":/translations"))) {
-                if (installTranslator(&translator)) {
-                    _log("Language set");
-                } else {
-                    _log("Language NOT set");
-                }
-            } else {
-                _log("Failed to load translation");
-            }
-        } else if (origin != json.value("origin").toString()) {
-            // Otherwise if already set, it must match
-            resp = {{"result", "invalid_argument"}};
-            write(resp);
-            return shutdown(EXIT_FAILURE);
-        }
-
-        // Command dispatch
-        QString type = json.value("type").toString();
-        if (type == "CONNECT") {
-            emit connect_reader(json.value("protocol").toString());
-        } else if (type == "DISCONNECT") {
-            emit disconnect_reader();
-        } else if (type == "APDU") {
-            emit send_apdu(QByteArray::fromHex(json.value("bytes").toString().toLatin1()));
-        } else if (type == "VERSION") {
-            resp = {{"version", VERSION}};
-        } else if (type == "SIGN") {
-            emit sign(origin, QByteArray::fromBase64(json.value("cert").toString().toLatin1()), QByteArray::fromBase64(json.value("hash").toString().toLatin1()), json.value("hashalgo").toString());
-        } else if (type == "CERT") {
-            emit select_certificate(origin, Signing, false);
-        } else if (type == "AUTH") {
-            emit authenticate(origin, json.value("nonce").toString());
         } else {
-            resp = {{"result", "invalid_argument"}};
+            resp = {{"error", "protocol"}};
+            write(resp);
+            return shutdown(EXIT_FAILURE);
         }
-    } catch (const std::runtime_error &e) {
-        _log("Error technical error: %s", e.what());
-        resp = {{"result", "technical_error"}};
-    } catch (const std::invalid_argument &e) {
-        _log("Error invalid argument: %s", e.what());
-        resp = {{"result", "invalid_argument"}};
+        // Setting the language is also a onetime operation, thus do it here.
+        QLocale locale = json.contains("lang") ? QLocale(json.value("lang").toString()) : QLocale::system();
+        _log("Setting language to %s", locale.name().toStdString().c_str());
+        // look up translation rom resource :/translations/strings_XX.qm
+        if (translator.load(QLocale(json.value("lang").toString()), QLatin1String("strings"), QLatin1String("_"), QLatin1String(":/translations"))) {
+            if (installTranslator(&translator)) {
+                _log("Language set");
+            } else {
+                _log("Language NOT set");
+            }
+        } else {
+            _log("Failed to load translation");
+        }
+    } else if (origin != json.value("origin").toString()) {
+        // Otherwise if already set, it must match
+        resp = {{"error", "protocol"}};
+        write(resp);
+        return shutdown(EXIT_FAILURE);
+    }
+
+    // Command dispatch
+    if (json.contains("options")) {
+        resp = {{"version", VERSION}}; // TODO: add something here
+    } else if (json.contains("SCardConnect")) {
+        emit connect_reader(json.value("SCardConnect").toObject().value("protocol").toString());
+    } else if (json.contains("SCardDisconnect")) {
+        emit disconnect_reader();
+    } else if (json.contains("SCardTransmit")) {
+        emit send_apdu(QByteArray::fromHex(json.value("SCardTransmit").toObject().value("bytes").toString().toLatin1()));
+    } else if (json.contains("sign")) {
+        emit sign(origin, QByteArray::fromBase64(json.value("sign").toObject().value("cert").toString().toLatin1()), QByteArray::fromBase64(json.value("sign").toObject().value("hash").toString().toLatin1()), json.value("sign").toObject().value("hashalgo").toString());
+    } else if (json.contains("cert")) {
+        emit select_certificate(origin, Signing, false);
+    } else if (json.contains("auth")) {
+        emit authenticate(origin, json.value("auth").toObject().value("nonce").toString());
+    } else {
+        resp = {{"error", "protocol"}};
     }
     if (!resp.empty()) {
         write(resp);
@@ -271,27 +256,27 @@ void QtHost::incoming(const QJsonObject &json)
 void QtHost::authentication_done(const CK_RV status, const QString &token) {
     _log("authentication done");
     if (status == CKR_OK) {
-        outgoing({{"result", "ok"}, {"token", token}}); // FIXME: error api
+        outgoing({{"token", token}});
     } else {
-        outgoing({{"result", QtPKI::errorName(status)}}); // FIXME: messaging api error
+        outgoing({{"error", QtPKI::errorName(status)}});
     }
 }
 
 void QtHost::sign_done(const CK_RV status, const QByteArray &signature) {
     _log("sign done");
     if (status == CKR_OK) {
-        outgoing({{"result", "ok"}, {"signature", signature.toBase64()}}); // FIXME: error api
+        outgoing({{"signature", signature.toBase64()}});
     } else {
-        outgoing({{"result", QtPKI::errorName(status)}}); // FIXME: messaging api error
+        outgoing({{"error", QtPKI::errorName(status)}});
     }
 }
 
 void QtHost::select_certificate_done(const CK_RV status, const QByteArray &certificate) {
     _log("select done: %s", certificate.toBase64().toStdString().c_str());
     if (status != CKR_OK) {
-        outgoing({{"result", QtPKI::errorName(status)}}); // FIXME: messaging api error
+        outgoing({{"error", QtPKI::errorName(status)}});
     } else {
-        outgoing({{"result", "ok"}, {"cert", certificate.toBase64()}});
+        outgoing({{"cert", certificate.toBase64()}});
     }
 }
 
@@ -318,23 +303,22 @@ void QtHost::reader_connected(LONG status, const QString &reader, const QString 
     if (status == SCARD_S_SUCCESS) {
         _log("HOST: reader connected");
         PCSC.inuse_dialog.showit(friendly_origin, reader);
-        outgoing({{"result", "ok"},
-            {"reader", reader},
+        outgoing({{"reader", reader},
             {"atr", atr.toHex()},
             {"protocol", protocol}
         });
     } else {
         _log("HOST: reader NOT connected: %s", PCSC::errorName(status));
-        outgoing({{"result", PCSC::errorName(status)}}); // TODO
+        outgoing({{"error", PCSC::errorName(status)}});
     }
 }
 
 void QtHost::apdu_sent(LONG status, const QByteArray &response) {
     _log("HOST: APDU sent");
     if (status == SCARD_S_SUCCESS) {
-        outgoing({{"result", "ok"}, {"bytes", response.toHex()}});
+        outgoing({{"bytes", response.toHex()}});
     } else {
-        outgoing({{"result", PCSC::errorName(status)}});
+        outgoing({{"error", PCSC::errorName(status)}});
     }
 }
 
@@ -362,7 +346,7 @@ void QtHost::cancel_insert(const SCARDCONTEXT ctx) {
 void QtHost::reader_disconnected() {
     _log("HOST: reader disconnected");
     PCSC.inuse_dialog.hide();
-    outgoing({{"result", "ok"}}); // FIXME: relict
+    outgoing({}); // FIXME: why this here?
 }
 
 void QtHost::outgoing(const QVariantMap &resp) {
@@ -377,10 +361,6 @@ void QtHost::write(QVariantMap &resp)
         resp["id"] = msgid;
         msgid.clear();
     }
-
-    // FIXME: remove.
-    if (!resp.contains("result"))
-        resp["result"] = "ok";
 
     QByteArray response =  QJsonDocument::fromVariant(resp).toJson();
     quint32 responseLength = response.size();

@@ -39,20 +39,25 @@ class ChromeTest(unittest.TestCase):
       response_length = struct.unpack("=I", self.p.stdout.read(4))[0]
       response = str(self.p.stdout.read(response_length))
       # make it into "oneline" json before printing
-      response_print = json.dumps(json.loads(response))
-      print("RECV: %s" % response_print)
-      return json.loads(response)
+      json_object = json.loads(response)
+      print("RECV: %s" % json.dumps(json_object))
+      return json_object
 
   def transceive(self, msg):
-      if not "id" in msg: msg["id"] = str(uuid.uuid4())
       return self.transceive_dumb(json.dumps(msg))
 
+  def transact(self, msg):
+      if not "id" in msg: msg["id"] = str(uuid.uuid4())
+      if not "origin" in msg: msg["origin"] = "https://example.com"
+      response = self.transceive(msg)
+      self.assertEqual(response["id"], msg["id"])
+      self.assertEqual("error" in response, False)
+      return response
+
   def transceive_dumb(self, msg):
-      # send like described in ...
       print("SEND: %s" % msg)
       self.p.stdin.write(struct.pack("=I", len(msg)))
       self.p.stdin.write(bytearray(msg, 'utf-8'))
-      # now read the input
       return self.get_response()
 
   def setUp(self):

@@ -43,7 +43,7 @@ public:
             if (messageLength > 1024*8) {
                 _log("Invalid message size: %u", messageLength);
                 // This will result in a properly terminated connection
-                emit messageReceived(QJsonObject({}));
+                return emit messageReceived(QJsonObject({}));
             } else {
                 QByteArray msg(int(messageLength), 0);
                 std::cin.read(msg.data(), msg.size());

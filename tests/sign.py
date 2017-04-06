@@ -26,14 +26,12 @@ class TestSigning(ChromeTest):
 
   def test_simple_sign_session(self):
       id = str(uuid.uuid4())
-      cmd = {"type": "CERT", "id": id, "origin": "https://example.com/"}
-      resp = self.transceive(cmd)
-      self.assertEqual(resp["result"], "ok")
-      self.assertEqual(resp["id"], id)
+      cmd = {"cert": {}}
+      resp = self.transact(cmd)
       self.assertEqual("cert" in resp, True)
       base64.b64decode(resp["cert"]) # just to make sure it parses
-      cmd = {"type": "SIGN", "origin": "https://example.com/", "cert": resp["cert"], "hash": base64.b64encode(binascii.unhexlify("2CADA1A6A22AA2A9BF9093281DC6C42D46142F9CABDFA490658A84677E4AA40E"))}
-      resp = self.transceive(cmd)
+      cmd = {"sign": {"cert": resp["cert"], "hash": base64.b64encode(binascii.unhexlify("2CADA1A6A22AA2A9BF9093281DC6C42D46142F9CABDFA490658A84677E4AA40E")), "hashalgo": "SHA-256"}}
+      resp = self.transact(cmd)
 
 
 if __name__ == '__main__':

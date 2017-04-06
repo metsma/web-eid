@@ -60,7 +60,7 @@ public:
         }
 
         nameLabel->setText(x509subject(cert).c_str());
-        pinLabel->setText("PKCS11 token name");
+        pinLabel->setText(tr("Enter PIN for \"%1\"").arg(QString::fromStdString(p11token.label)));
         ok->setEnabled(false);
         ok->setText(type == Signing ? tr("Sign") : tr("Authenticate"));
 

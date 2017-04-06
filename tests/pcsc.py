@@ -22,22 +22,19 @@ from chrome import ChromeTest
 
 class TestPCSC(ChromeTest):
   def test_pcsc_open(self):
-      cmd = {"type": "CONNECT", "protocol": "*", "origin": "https://example.com/"}
-      resp = self.transceive(cmd)
-      if resp["result"] != "ok":
-        cmd = {"type": "CONNECT", "protocol": "*", "origin": "https://example.com/"}
-        resp = self.transceive(cmd)
-      if resp["result"] != "ok":
-        return
-      #self.instruct("Just to see if dialog is running")
+      cmd = {"SCardConnect": {"protocol": "*"}, "origin": "https://example.com/"}
+      resp = self.transact(cmd)
       for x in range(10):
-        cmd = {"type": "APDU", "bytes": "00a4000400", "origin": "https://example.com/"}
-        resp = self.transceive(cmd)
-        if resp["result"] == "SCARD_E_CANCELLED":
-          return
+        cmd = {"SCardTransmit": {"bytes": "00a4000400"}, "origin": "https://example.com/"}
+        resp = self.transact(cmd)
         time.sleep(1)
-      cmd = {"type": "DISCONNECT", "origin": "https://example.com/"}
-      resp = self.transceive(cmd)
+      cmd = {"SCardDisconnect": {}, "origin": "https://example.com/"}
+      resp = self.transact(cmd)
+
+  def test_pcsc_card_removal(self):
+     self.instruct("Select a reader, insert card, remove during apdu-s")
+     cmd = {"SCardConnect": {"protocol": "*"}, "origin": "https://example.com/"}
+     resp = self.transact(cmd)
 
 if __name__ == '__main__':
     # run tests
