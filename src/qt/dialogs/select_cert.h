@@ -37,6 +37,7 @@ public:
 
     void getCert(const std::vector<std::vector<unsigned char>> &certs, const QString &origin, CertificatePurpose type) {
         std::vector<unsigned char> result;
+        table->clear();
         // Construct the list that is shown to the user.
         for (const std::vector<unsigned char> &c: certs) {
             QSslCertificate cert = v2cert(c);

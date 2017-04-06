@@ -70,7 +70,7 @@ private:
 #endif
 
     CK_FUNCTION_LIST_PTR fl = nullptr;
-    CK_SESSION_HANDLE session = 0; // active session
+    CK_SESSION_HANDLE session = CK_INVALID_HANDLE; // active session
 
     // Contains all the certificates this module exposes
     // der maps to a pair of slot id and object id

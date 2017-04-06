@@ -328,7 +328,7 @@ CK_RV PKCS11Module::sign(const std::vector<unsigned char> &cert, const std::vect
     // We require a new login for next signature
     // return code is ignored
     C(CloseSession, session);
-
+    session = CK_INVALID_HANDLE;
     return CKR_OK;
 }
 

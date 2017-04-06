@@ -95,9 +95,9 @@ void QtPKI::start_signature(const QByteArray &cert, const QByteArray &hash, cons
 
 // Login has been successful. Finish ongoing operation
 void QtPKI::pkcs11_sign(const CK_RV status) {
-    _log("Finishing signature");
+    _log("Doing C_Sign()");
     if (status != CKR_OK) {
-        finish_signature(status, 0);
+        return finish_signature(status, 0);
     }
 
     std::vector<unsigned char> signature_vector;
@@ -111,12 +111,12 @@ void QtPKI::finish_signature(const CK_RV status, const QByteArray &signature) {
     if (purpose == Signing) {
         clear();
         // Nothing else to do
-        emit sign_done(status, signature);
+        return emit sign_done(status, signature);
     } else if (purpose == Authentication) {
         // Construct the authentication token.
         // FIXME: check before concat ?
         QByteArray token = jwt_token + "." + signature.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-        emit authentication_done(status, QString(token));
+        return emit authentication_done(status, QString(token));
     }
 }
 

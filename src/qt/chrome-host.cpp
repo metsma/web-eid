@@ -229,7 +229,7 @@ void QtHost::incoming(const QJsonObject &json)
     }
 
     // Command dispatch
-    if (json.contains("options")) {
+    if (json.contains("version")) {
         resp = {{"version", VERSION}}; // TODO: add something here
     } else if (json.contains("SCardConnect")) {
         emit connect_reader(json.value("SCardConnect").toObject().value("protocol").toString());
