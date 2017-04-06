@@ -107,7 +107,20 @@ LONG PCSC::connect(const std::string &reader, const std::string &protocol) {
     } else {
         _log("Reader is not in use, assuming exclusive access is possible");
         mode = SCARD_SHARE_EXCLUSIVE;
-        check_SCard(Connect, context, reader.c_str(), mode, proto, &card, &this->protocol);
+        // Try to connect multiple times, a freshly inserted card is often probed by other software as well
+        int i = 0;
+        do {
+            err = SCard(Connect, context, reader.c_str(), mode, proto, &card, &this->protocol);
+            if (err != SCARD_E_SHARING_VIOLATION)
+                break;
+#ifdef _WIN32
+            Sleep(300);
+#endif
+            i++;
+        } while (i < 3);
+        if (err != SCARD_S_SUCCESS) {
+            return err;
+        }
     }
 #ifndef _WIN32
     check_SCard(BeginTransaction, card);
