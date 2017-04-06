@@ -1,6 +1,3 @@
-/host-windows/Debug
-/host-windows/Release
-/host-windows/ipch
 *.opensdf
 *.sdf
 *.suo
@@ -15,7 +12,7 @@
 /*.tar.gz
 *.pkg
 /tmp
-/hwcrypto-native.plist
+/web-eid.plist
 moc_*.cpp
 moc_*.h
 qrc_*.cpp

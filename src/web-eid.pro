@@ -42,13 +42,13 @@ SOURCES += \
     qt/qt_pcsc.cpp \
     qt/qt_pki.cpp
 HEADERS += $$files(*.h) $$files(qt/*.h) $$files(qt/dialogs/*.h)
-RESOURCES += qt/hwcrypto-native.qrc qt/translations/strings.qrc
+RESOURCES += qt/web-eid.qrc qt/translations/strings.qrc
 TRANSLATIONS = qt/translations/strings_et.ts qt/translations/strings_ru.ts
 
 isEmpty(QMAKE_LRELEASE) {
     win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
     else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
 }
-lrelease.commands = $$QMAKE_LRELEASE $$PWD/hwcrypto-native.pro
+lrelease.commands = $$QMAKE_LRELEASE $$PWD/web-eid.pro
 PRE_TARGETDEPS += lrelease
 QMAKE_EXTRA_TARGETS += lrelease

@@ -10,7 +10,7 @@ Section
 SetOutPath "$INSTDIR"
 AllowSkipFiles off
 
-File src\release\hwcrypto-native.exe
+File src\release\web-eid.exe
 
 File windows\org.hwcrypto.native.json
 File windows\org.hwcrypto.native.firefox.json

@@ -24,14 +24,14 @@ def get_exe():
     if "EXE" in os.environ:
         return os.environ["EXE"]
     if sys.platform == 'darwin':
-        return "src/hwcrypto-native.app/Contents/MacOS/hwcrypto-native"
+        return "src/web-eid.app/Contents/MacOS/web-eid"
     elif sys.platform == "linux2":
-        return "src/hwcrypto-native"
+        return "src/web-eid"
     elif sys.platform == 'win32':
-        if os.path.isfile("src\\debug\\hwcrypto-native.exe"):
-            return "src\\debug\\hwcrypto-native.exe"
+        if os.path.isfile("src\\debug\\web-eid.exe"):
+            return "src\\debug\\web-eid.exe"
         else:
-            return "src\\release\\hwcrypto-native.exe"
+            return "src\\release\\web-eid.exe"
     else:
         print("Unsupported platform: %s" % sys.platform)
         sys.exit(1)

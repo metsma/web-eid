@@ -44,9 +44,9 @@ static void printCurrentDateTime(FILE *log) {
 
 static string getLogFilePath() {
 #ifdef _WIN32
-    return string(getenv("TEMP"))+"\\hwcrypto-native.log";
+    return string(getenv("TEMP"))+"\\web-eid.log";
 #else
-    return string(getenv("HOME"))+"/tmp/hwcrypto-native.log";
+    return string(getenv("HOME"))+"/tmp/web-eid.log";
 #endif
 }
 

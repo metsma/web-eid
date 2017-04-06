@@ -1,0 +1,5 @@
+<RCC>
+<qresource prefix="/">
+<file alias="web-eid.png">../../artwork/icon128.png</file>
+</qresource>
+</RCC>

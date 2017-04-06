@@ -53,7 +53,7 @@ QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, ar
 
     if (standalone) {
         _log("Starting standalone app v%s", VERSION);
-        tray.setIcon(QIcon(":/hwcrypto-native.png"));
+        tray.setIcon(QIcon(":/web-eid.png"));
         tray.show();
         tray.setToolTip("Web eID is running on port XXXX. Click to quit.");
         tray.showMessage("Web eID starts", "Click the icon to quit", QSystemTrayIcon::Warning);
@@ -92,7 +92,7 @@ QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, ar
     }
 
 
-    setWindowIcon(QIcon(":/hwcrypto-native.png"));
+    setWindowIcon(QIcon(":/web-eid.png"));
     setQuitOnLastWindowClosed(false);
 
     // Register slots and signals

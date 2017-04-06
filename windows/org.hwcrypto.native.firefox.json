@@ -1,7 +1,7 @@
 {
     "name": "org.hwcrypto.native",
     "description": "Give signatures with your eID on the web",
-    "path": "hwcrypto-native.exe",
+    "path": "web-eid.exe",
     "type": "stdio",
     "allowed_extensions": [
         "native@hwcrypto.org",

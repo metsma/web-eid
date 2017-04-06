@@ -1,0 +1,5 @@
+/usr/share/web-eid/org.hwcrypto.native.json /etc/chromium/native-messaging-hosts/org.hwcrypto.native.json
+/usr/share/web-eid/org.hwcrypto.native.json /etc/chromium-browser/native-messaging-hosts/org.hwcrypto.native.json
+/usr/share/web-eid/fmpfihjoladdfajbnkdfocnbcehjpogi.json /usr/share/chromium/extensions/fmpfihjoladdfajbnkdfocnbcehjpogi.json
+/usr/share/web-eid/fmpfihjoladdfajbnkdfocnbcehjpogi.json /usr/share/chromium-browser/extensions/fmpfihjoladdfajbnkdfocnbcehjpogi.json
+/usr/share/web-eid/fmpfihjoladdfajbnkdfocnbcehjpogi.json /usr/share/google-chrome/extensions/fmpfihjoladdfajbnkdfocnbcehjpogi.json

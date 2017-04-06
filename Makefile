@@ -23,7 +23,7 @@ BUILD_NUMBER=1
 !ENDIF
 !include VERSION.mk
 SIGN = signtool sign /v /n "$(SIGNER)" /fd SHA256 /tr http://timestamp.comodoca.com/?td=sha256 /td sha256
-EXE = src/release/hwcrypto-native.exe
+EXE = src/release/web-eid.exe
 DISTNAME = Web-eID
 
 $(EXE): src\*.h src\*.cpp src\win\*.cpp src\win\*.h src\qt\*.h src\qt\*.cpp
@@ -32,22 +32,22 @@ $(EXE): src\*.h src\*.cpp src\win\*.cpp src\win\*.h src\qt\*.h src\qt\*.cpp
 
 x64: $(DISTNAME)_$(VERSION)_x64.msi
 $(DISTNAME)_$(VERSION)_x64.msi: $(EXE)
-	"$(WIX)\bin\candle.exe" -nologo windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
-	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSION)-unsigned_x64.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x64
+	"$(WIX)\bin\candle.exe" -nologo windows\web-eid.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
+	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSION)-unsigned_x64.msi web-eid.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x64
 	IF DEFINED SIGNER (copy $(DISTNAME)_$(VERSION)-unsigned_x64.msi $(DISTNAME)_$(VERSION)_x64.msi)
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION)_x64.msi)
 
 x86: $(DISTNAME)_$(VERSION)_x86.msi
 $(DISTNAME)_$(VERSION)_x86.msi: $(EXE)
-	"$(WIX)\bin\candle.exe" -nologo windows\hwcrypto-native.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
-	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSION)-unsigned_x86.msi hwcrypto-native.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x86
+	"$(WIX)\bin\candle.exe" -nologo windows\web-eid.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
+	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSION)-unsigned_x86.msi web-eid.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x86
 	IF DEFINED SIGNER (copy $(DISTNAME)_$(VERSION)-unsigned_x86.msi $(DISTNAME)_$(VERSION)_x86.msi)
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION)_x86.msi)
 
 pkg: x86 x64
 
 nsis:
-	"C:\Program Files (x86)\NSIS\makensis.exe" /nocd /DVERSION=$(VERSION) windows\hwcrypto-native.nsi
+	"C:\Program Files (x86)\NSIS\makensis.exe" /nocd /DVERSION=$(VERSION) windows\web-eid.nsi
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION)-local.exe)
 
 clean:

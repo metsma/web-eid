@@ -34,7 +34,7 @@ env:
 addons:
   coverity_scan:
     project:
-      name: hwcrypto/hwcrypto-native
+      name: web-eid/web-eid
     notification_email: hwcrypto@googlegroups.com
     build_command: make
     branch_pattern: coverity_scan
@@ -45,8 +45,8 @@ deploy:
   file_glob: true
   file:
     - Web-eID*.pkg
-    - hwcrypto-native_*.deb
-    - hwcrypto-native*.rpm
+    - web-eid_*.deb
+    - web-eid*.rpm
   skip_cleanup: true
   on:
     tags: true

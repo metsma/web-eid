@@ -1,6 +1,6 @@
 /build
 /.qmake.stash
 /Makefile
-/hwcrypto-native.app
-/hwcrypto-native
+/web-eid.app
+/web-eid
 *.qm

@@ -1,7 +1,7 @@
 {
     "name": "org.hwcrypto.native",
     "description": "Give signatures with your eID on the web",
-    "path": "/usr/lib/hwcrypto-native",
+    "path": "/usr/bin/web-eid",
     "type": "stdio",
     "allowed_origins": [
         "chrome-extension://ckjefchnfjhjfedoccjbhjpbncimppeg/",
