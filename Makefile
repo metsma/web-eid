@@ -23,7 +23,7 @@ BUILD_NUMBER=1
 !ENDIF
 !include VERSION.mk
 SIGN = signtool sign /v /n "$(SIGNER)" /fd SHA256 /tr http://timestamp.comodoca.com/?td=sha256 /td sha256
-EXE = src/release/web-eid.exe
+EXE = src\release\web-eid.exe
 DISTNAME = Web-eID
 
 $(EXE): src\*.h src\*.cpp src\win\*.cpp src\win\*.h src\qt\*.h src\qt\*.cpp
@@ -34,15 +34,15 @@ x64: $(DISTNAME)_$(VERSION)_x64.msi
 $(DISTNAME)_$(VERSION)_x64.msi: $(EXE)
 	"$(WIX)\bin\candle.exe" -nologo windows\web-eid.wxs -dVERSION=$(VERSIONEX) -dPlatform=x64
 	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSION)-unsigned_x64.msi web-eid.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x64
-	IF DEFINED SIGNER (copy $(DISTNAME)_$(VERSION)-unsigned_x64.msi $(DISTNAME)_$(VERSION)_x64.msi)
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION)_x64.msi)
+	IF DEFINED SIGNER (copy $(DISTNAME)_$(VERSION)-unsigned_x64.msi $(DISTNAME)_$(VERSION)_x64.msi)
 
 x86: $(DISTNAME)_$(VERSION)_x86.msi
 $(DISTNAME)_$(VERSION)_x86.msi: $(EXE)
 	"$(WIX)\bin\candle.exe" -nologo windows\web-eid.wxs -dVERSION=$(VERSIONEX) -dPlatform=x86
 	"$(WIX)\bin\light.exe" -nologo -out $(DISTNAME)_$(VERSION)-unsigned_x86.msi web-eid.wixobj -ext WixUIExtension -ext WixUtilExtension -dPlatform=x86
-	IF DEFINED SIGNER (copy $(DISTNAME)_$(VERSION)-unsigned_x86.msi $(DISTNAME)_$(VERSION)_x86.msi)
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION)_x86.msi)
+	IF DEFINED SIGNER (copy $(DISTNAME)_$(VERSION)-unsigned_x86.msi $(DISTNAME)_$(VERSION)_x86.msi)
 
 pkg: x86 x64
 
@@ -52,6 +52,7 @@ nsis:
 
 clean:
 	del /f $(EXE)
+	del /f *.msi *.exe
 
 test: $(EXE)
 	C:\Python27\python.exe tests\pipe-test.py -v
