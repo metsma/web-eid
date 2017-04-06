@@ -40,7 +40,7 @@ void QtPCSC::reader_selected(const LONG status, const QString &reader, const QSt
     LONG err = pcsc.connect(reader.toStdString(), protocol.toStdString());
     // XXX: this should be more logical with a single call to PC/SC
     // If empty at first, wait for insertion, with a dialog
-    if (err == LONG(SCARD_E_NO_SMARTCARD)) {
+    if (err == LONG(SCARD_E_NO_SMARTCARD) || err == LONG(SCARD_W_REMOVED_CARD)) {
         emit show_insert_card(true, reader, pcsc.getContext());
         err = pcsc.wait(reader.toStdString(), protocol.toStdString());
         emit show_insert_card(false, reader, pcsc.getContext());

@@ -178,8 +178,9 @@ LONG PCSC::transmit(const std::vector<unsigned char> &apdu, std::vector<unsigned
 
     SCARD_IO_REQUEST req;
     req.dwProtocol = protocol;
+    req.cbPciLength = sizeof(req);
     DWORD rlen = response.size();
-    LONG err = SCard(Transmit, card, &req, &apdu[0], DWORD(apdu.size()), &req, &response[0], &rlen);
+    LONG err = SCard(Transmit, card, &req, apdu.data(), DWORD(apdu.size()), &req, response.data(), &rlen);
     if (err != SCARD_S_SUCCESS) {
         response.resize(0);
         return err;
