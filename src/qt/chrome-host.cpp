@@ -96,6 +96,9 @@ QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, ar
     setQuitOnLastWindowClosed(false);
 
     // Register slots and signals
+    // FRAGILE: registered types and explicit queued connections are necessary to
+    // make the Qt signal magic work. Otherwise runtime errors of type "could not serialize type CK_RV" will happen
+
     qRegisterMetaType<CertificatePurpose>();
     qRegisterMetaType<P11Token>();
 
@@ -111,6 +114,7 @@ QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, ar
 
     // PCSC related dialogs
     connect(&PCSC, &QtPCSC::show_insert_card, this, &QtHost::show_insert_card, Qt::QueuedConnection);
+    connect(&PCSC, &QtPCSC::show_select_reader, this, &QtHost::show_select_reader, Qt::QueuedConnection);
 
     // Wire up signals for reader dialogs
     connect(&PCSC.inuse_dialog, &QDialog::rejected, &PCSC, &QtPCSC::cancel_reader, Qt::QueuedConnection);
@@ -234,10 +238,7 @@ void QtHost::incoming(const QJsonObject &json)
         // Command dispatch
         QString type = json.value("type").toString();
         if (type == "CONNECT") {
-            // Choose reader (in main thread)
-            PCSCReader reader = QtPCSC::getReader(friendly_origin);
-            // Open reader
-            emit connect_reader(QString::fromStdString(reader.name), "*"); // TODO: incoming protocol ?
+            emit connect_reader(json.value("protocol").toString());
         } else if (type == "DISCONNECT") {
             emit disconnect_reader();
         } else if (type == "APDU") {
@@ -344,6 +345,11 @@ void QtHost::show_insert_card(bool show, const QString &name, const SCARDCONTEXT
         PCSC.insert_dialog.hide();
     }
 }
+
+void QtHost::show_select_reader(const QString &protocol) {
+    PCSC.select_dialog.showit(friendly_origin, protocol, PCSC::readerList());
+}
+
 
 // Called from the "insert card" dialog in the main thread to cancel
 // SCardGetStatusChange in the PC/SC thread

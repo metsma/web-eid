@@ -34,25 +34,30 @@ class QtPCSC: public QObject {
     Q_OBJECT
 
 public:
-    // Called from main thread
-    static PCSCReader getReader(const QString &origin);
-
     // Ongoing dialogs of PCSC subsystem
     QtInsertCard insert_dialog;
     QtReaderInUse inuse_dialog;
+    QtSelectReader select_dialog;
+
+    QtPCSC() {
+        connect(&this->select_dialog, &QtSelectReader::reader_selected, this, &QtPCSC::reader_selected, Qt::QueuedConnection);
+    }
+
 
 public slots:
-    void connect_reader(const QString &reader, const QString &protocol);
+    void connect_reader(const QString &protocol);
     void send_apdu(const QByteArray &apdu);
     void disconnect_reader();
 
-    void cancel_reader(); // Signalled from QtReaderInUse
+    void reader_selected(const LONG status, const QString &reader, const QString &protocol);
+    void cancel_reader(); // Signalled from QtReaderInUse dialog
 
 signals:
     void reader_connected(LONG status, const QString &reader, const QString &protocol, const QByteArray &atr);
     void apdu_sent(LONG status, const QByteArray &response);
     void reader_disconnected();
     void show_insert_card(bool show, const QString &name, const SCARDCONTEXT ctx);
+    void show_select_reader(const QString &protocol);
 
 private:
     PCSC pcsc;

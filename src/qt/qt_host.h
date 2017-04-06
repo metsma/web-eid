@@ -92,6 +92,7 @@ public slots:
     void reader_disconnected();
 
     void show_insert_card(bool show, const QString &name, const SCARDCONTEXT ctx);
+    void show_select_reader(const QString &protocol);
     void cancel_insert(const SCARDCONTEXT ctx); // TODO: move to PCSC and call directly from dialog
 
 signals:
@@ -101,7 +102,7 @@ signals:
 
     void login(const QString &pin, CertificatePurpose purpose);
 
-    void connect_reader(const QString &reader, const QString &protocol);
+    void connect_reader(const QString &protocol);
     void send_apdu(const QByteArray &apdu);
     void disconnect_reader();
 
