@@ -32,6 +32,7 @@
 #include <QUrl>
 #include <QString>
 #include <QMenu>
+#include <QDesktopServices>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -53,15 +54,29 @@ QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, ar
 
     if (standalone) {
         _log("Starting standalone app v%s", VERSION);
+        mainwindow = new MainDialog();
         tray.setIcon(QIcon(":/web-eid.png"));
+        QMenu *menu = new QMenu();
+        QAction *about = menu->addAction("About");
+        connect(about, &QAction::triggered, [&] {
+            QDesktopServices::openUrl(QUrl(QStringLiteral("https://web-eid.com")));
+        });
+        QAction *a1 = menu->addAction("Start at login");
+        a1->setCheckable(true);
+        QAction *a2 = menu->addAction("Quit");
+        connect(a2, &QAction::triggered, [&] {
+            quit();
+        });
+        connect(a1, &QAction::toggled, [&] (bool checked) {
+            _log("Triggered value %d", checked);
+        });
+        
         tray.show();
         tray.setToolTip("Web eID is running on port XXXX. Click to quit.");
         tray.showMessage("Web eID starts", "Click the icon to quit", QSystemTrayIcon::Warning);
-        connect(&tray, &QSystemTrayIcon::activated, [&] {
-            // TODO: Show window "do you want to start again"
-            exit(1);
-        });
-        // TODO: add HTTP listener
+        tray.setContextMenu(menu);
+        server = new WSServer(12345, this);
+        printf("Checkdone\n");
     } else {
         _log("Starting browser extension host v%s args \"%s\"", VERSION, arguments().join("\" \"").toStdString().c_str());
         // Parse the window handle

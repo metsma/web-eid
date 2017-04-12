@@ -22,6 +22,9 @@
 #include "qt_input.h"
 #include "qt_pcsc.h"
 #include "qt_pki.h"
+#include "server.h"
+
+#include "dialogs/main.h"
 
 #include <QApplication>
 #include <QSystemTrayIcon>
@@ -68,6 +71,9 @@ public:
     // both in a separate thread
     QThread *pcsc_thread;
     QThread *pki_thread;
+    
+    WSServer *server;
+    MainDialog *mainwindow;
 
 public slots:
     // Called when a message has been received from the

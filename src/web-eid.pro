@@ -9,7 +9,7 @@ isEmpty(VERSION) {
     VERSION=$$VERSION"."$$BUILD_NUMBER
 }
 CONFIG += console c++11
-QT += widgets network
+QT += widgets network websockets
 RC_ICONS = ../artwork/win_icon.ico
 macx {
     LIBS += -framework PCSC
@@ -40,7 +40,8 @@ SOURCES += \
     pkcs11module.cpp \
     qt/chrome-host.cpp \
     qt/qt_pcsc.cpp \
-    qt/qt_pki.cpp
+    qt/qt_pki.cpp \
+    qt/server.cpp
 HEADERS += $$files(*.h) $$files(qt/*.h) $$files(qt/dialogs/*.h)
 RESOURCES += qt/web-eid.qrc qt/translations/strings.qrc
 TRANSLATIONS = qt/translations/strings_et.ts qt/translations/strings_ru.ts
