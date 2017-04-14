@@ -22,6 +22,7 @@
 
 namespace Logger {
 void writeLog(const char *functionName, const char *fileName, int lineNumber, const char *message, ...);
+void setOutput(bool value);
 }
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L

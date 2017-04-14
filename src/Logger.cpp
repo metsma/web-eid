@@ -29,6 +29,8 @@
 
 using namespace std;
 
+static bool output = false;
+
 static void printCurrentDateTime(FILE *log) {
     time_t now = time(0);
     tm *ltm = localtime(&now);
@@ -59,13 +61,20 @@ static bool logFileExist() {
     return true;
 }
 
+void Logger::setOutput(bool value) {
+    output = value;
+}
+
 void Logger::writeLog(const char *functionName, const char *fileName, int lineNumber, const char *message, ...) {
-    if (!logFileExist()) {
-        return;
-    }
-    FILE *log = fopen(getLogFilePath().c_str(), "a");
-    if (!log) {
-        return;
+    FILE *log = stdout;
+    if (!output) {
+        if (!logFileExist()) {
+            return;
+        }
+        log = fopen(getLogFilePath().c_str(), "a");
+        if (!log) {
+            return;
+        }
     }
     printCurrentDateTime(log);
 #ifndef _WIN32
@@ -77,5 +86,8 @@ void Logger::writeLog(const char *functionName, const char *fileName, int lineNu
     vfprintf(log, message, args);
     va_end(args);
     fprintf(log, "\n");
-    fclose(log);
+    fflush(log);
+    if (!output) {
+        fclose(log);
+    }
 }

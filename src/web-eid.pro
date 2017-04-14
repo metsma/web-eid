@@ -14,6 +14,7 @@ RC_ICONS = ../artwork/win_icon.ico
 macx {
     LIBS += -framework PCSC
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
+    ICON = ../artwork/mac.icns
     QMAKE_INFO_PLIST += Info.plist
     CONFIG += app_bundle
 }
@@ -45,7 +46,7 @@ SOURCES += \
 HEADERS += $$files(*.h) $$files(qt/*.h) $$files(qt/dialogs/*.h)
 RESOURCES += qt/web-eid.qrc qt/translations/strings.qrc
 TRANSLATIONS = qt/translations/strings_et.ts qt/translations/strings_ru.ts
-
+TARGET = "Web-eID"
 isEmpty(QMAKE_LRELEASE) {
     win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
     else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease

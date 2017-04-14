@@ -47,14 +47,11 @@
 #include <unistd.h>
 #endif
 
-// The lifecycle of the native components is the lifecycle of a page.
-// Every message must have an origin and the origin must not change
-// during the lifecycle of the program.
 QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, argv), tray(this) {
 
     if (standalone) {
         _log("Starting standalone app v%s", VERSION);
-        mainwindow = new MainDialog();
+        // Construct tray icon and related menu
         tray.setIcon(QIcon(":/web-eid.png"));
         QMenu *menu = new QMenu();
         QAction *about = menu->addAction("About");
@@ -63,20 +60,21 @@ QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, ar
         });
         QAction *a1 = menu->addAction("Start at login");
         a1->setCheckable(true);
+        connect(a1, &QAction::toggled, [&] (bool checked) {
+            _log("Setting start at login to %d", checked);
+        });
+
         QAction *a2 = menu->addAction("Quit");
         connect(a2, &QAction::triggered, [&] {
             quit();
         });
-        connect(a1, &QAction::toggled, [&] (bool checked) {
-            _log("Triggered value %d", checked);
-        });
         
-        tray.show();
-        tray.setToolTip("Web eID is running on port XXXX. Click to quit.");
-        tray.showMessage("Web eID starts", "Click the icon to quit", QSystemTrayIcon::Warning);
+        server = new WSServer(this);
+        
         tray.setContextMenu(menu);
-        server = new WSServer(12345, this);
-        printf("Checkdone\n");
+        tray.setToolTip(tr("Web eID is running on port %1").arg(12345));
+        tray.show();
+        tray.showMessage(tr("Web eID started"), tr("Click the icon for more information"), QSystemTrayIcon::Information, 2000); // Show message for 2 seconds
     } else {
         _log("Starting browser extension host v%s args \"%s\"", VERSION, arguments().join("\" \"").toStdString().c_str());
         // Parse the window handle
@@ -154,7 +152,7 @@ QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, ar
     connect(&PKI, &QtPKI::hide_pin_dialog, this, &QtHost::hide_pin_dialog, Qt::QueuedConnection);
     connect(&PKI.pin_dialog, &QtPINDialog::login, &PKI, &QtPKI::login, Qt::QueuedConnection);
 
-    // Start PCSC thread
+    // Start worker threads
     pki_thread = new QThread;
     pcsc_thread = new QThread;
     pki_thread->start();
@@ -418,6 +416,7 @@ int main(int argc, char *argv[])
         _setmode(_fileno(stdout), O_BINARY);
 #endif
     } else if (argc == 1) {
+        Logger::setOutput(true);
         standalone = true;
     }
     return QtHost(argc, argv, standalone).exec();

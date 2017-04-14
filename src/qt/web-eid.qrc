@@ -1,5 +1,7 @@
 <RCC>
 <qresource prefix="/">
-<file alias="web-eid.png">../../artwork/icon128.png</file>
+	<file alias="web-eid.png">../../artwork/icon128.png</file>
+	<file alias="app.web-eid.com.key">../localhost.key</file>
+	<file alias="app.web-eid.com.pem">../fullchain.pem</file>
 </qresource>
 </RCC>

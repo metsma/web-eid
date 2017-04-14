@@ -23,21 +23,23 @@
 #include <QtWebSockets/QtWebSockets>
 #include <QWebSocketServer>
 
-// Handles PCSC stuff in a dedicated thread.
+// Handled WebSocket communication
 class WSServer: public QObject {
     Q_OBJECT
 
 public:
-    WSServer(quint16 port, QObject *parent);
+    WSServer(QObject *parent);
 
 public slots:
-    void onNewConnection();
+    void processConnect();
     void processMessage(QString message);
-    void onSslErrors(const QList<QSslError> &);
-    void acceptError(QAbstractSocket::SocketError socketError);
-    void serverError(QWebSocketProtocol::CloseCode closeCode);
+    void processDisconnect();
 
 private:
     QWebSocketServer *srv;
+    QWebSocketServer *srv6; // IPv6
+    
+    // 
+//    QMap<QString, Context>
 };
 

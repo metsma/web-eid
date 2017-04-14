@@ -17,7 +17,7 @@ $(APP):
 	$(MAKE) -C src
 	mkdir -p $(TARGETFOLDER)
 	cp -R src/web-eid.app $(TARGETFOLDER)
-	$(QTPATH)/bin/macdeployqt $(APP) -always-overwrite
+	macdeployqt $(APP) -always-overwrite
 
 codesign: $(APP)
 	codesign -f --deep -s "Developer ID Application: $(SIGNER)" $(APP)

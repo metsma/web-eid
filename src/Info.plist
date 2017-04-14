@@ -6,8 +6,10 @@
 	<string>en</string>
 	<key>CFBundleExecutable</key>
 	<string>@EXECUTABLE@</string>
+	<key>CFBundleIconFile</key>
+	<string>@ICON@</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.hwcrypto.native</string>
+	<string>com.web-eid.app</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -27,7 +29,7 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>10.9</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Covered with LGPL-2.1</string>
+	<string>Covered by LGPL-2.1+</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

@@ -24,8 +24,6 @@
 #include "qt_pki.h"
 #include "server.h"
 
-#include "dialogs/main.h"
-
 #include <QApplication>
 #include <QSystemTrayIcon>
 #include <QTranslator>
@@ -46,6 +44,7 @@ class QtHost: public QApplication
 
 public:
     QtHost(int &argc, char *argv[], bool standalone);
+    static QString friendlyOrigin(const QString &origin);
 
     // TODO: It is currently assumed that all invocations from one origin
     // go to the same PKCS#11 module
@@ -61,9 +60,6 @@ public:
     // Only with a new cert message
     std::vector<unsigned char> signcert;
 
-    // We keep a flag around that show if the selected cert is from CAPI
-    bool winsign = false;
-
     // PCSC and PKI subsystems
     QtPCSC PCSC;
     QtPKI PKI;
@@ -73,7 +69,6 @@ public:
     QThread *pki_thread;
     
     WSServer *server;
-    MainDialog *mainwindow;
 
 public slots:
     // Called when a message has been received from the
