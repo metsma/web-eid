@@ -111,7 +111,7 @@ LONG PCSC::connect(const std::string &reader, const std::string &protocol) {
         int i = 0;
         do {
             err = SCard(Connect, context, reader.c_str(), mode, proto, &card, &this->protocol);
-            if (err != SCARD_E_SHARING_VIOLATION)
+            if (err != LONG(SCARD_E_SHARING_VIOLATION))
                 break;
 #ifdef _WIN32
             Sleep(300);
