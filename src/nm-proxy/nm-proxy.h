@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "../Logger.h"
 
@@ -58,8 +58,15 @@ public:
 
         // TODO: possibly play with Figure out the server name
         serverApp = "/home/martin/efforts/hwcrypto/hwcrypto-native/src/Web-eID";
+#ifdef Q_OS_WIN32
+        serverName = qgetenv("USERNAME") + "-webeid";
+        serverApp = "C:/Users/Martin Paljak/projects/hwcrypto-native/src/release/Web-eID.exe";
+#else
+        serverName = qgetenv("USER") + "-webeid";
+#endif
         serverName = "martin-webeid";
-                
+        _log("Connecting to %s", qPrintable(serverName));
+
         // Starting app something something
         connect(sock, &QLocalSocket::connected, this, &NMProxy::connected);
 
@@ -97,8 +104,11 @@ public:
         out.open(stdout, QFile::WriteOnly);
         input = new InputChecker(this);
         connect(input, &InputChecker::messageReceived, this, &NMProxy::messageFromBrowser, Qt::QueuedConnection);
-        
-        
+
+        connect(sock, &QLocalSocket::disconnected, [this] {
+            // XXX: on Linux, error() with peercloederror is also thrown
+            _log("Socket disconnected");
+        });
         sock->connectToServer(serverName);        
     }
 
@@ -106,8 +116,9 @@ public slots:
     void connected() {
         _log("Connected to %s", qPrintable(sock->fullServerName()));
         // Start input reading thread
-        input->start();
-        
+        if (!input->isRunning())
+            input->start();
+
         connect(sock, &QLocalSocket::readyRead, [this] {
             // Data available from app, read message and pass to browser
             _log("Reading from app");
@@ -119,7 +130,8 @@ public slots:
                     return;
                 }
                 QByteArray msg(int(msgsize), 0);
-                if (sock->read(msg.data(), msgsize) == msgsize) {
+                qint64 readsize = sock->read(msg.data(), msgsize) ;
+                if (readsize == msgsize) {
                     _log("Read message of %d bytes", msgsize);
                     // Pass verbatim
                     quint32 responseLength = msg.size();
@@ -128,7 +140,7 @@ public slots:
                     out.write(msg);
                     out.flush(); 
                 } else {
-                    _log("Could not read message");
+                    _log("Could not read message, read %d of %d", readsize, msgsize);
                     sock->abort();
                 }
             } else {

@@ -6,10 +6,10 @@ IF %ERRORLEVEL% NEQ 0 (
 )
 REM For some reason running of lrelease before qmake is needed on Windows
 c:\Qt\5.8\msvc2015\bin\lrelease.exe web-eid.pro || exit /b
-c:\Qt\5.8\msvc2015\bin\qmake.exe -config release || exit /b
+c:\Qt\5.8\msvc2015\bin\qmake.exe -config debug || exit /b
 nmake %* || exit /b
 REM copy the interesting files for testing purposes
 REM (installer picks them up from source)
-c:\Qt\5.8\msvc2015\bin\windeployqt release\web-eid.exe
-copy c:\OpenSSL-Win32\bin\libeay32.dll release\
-copy c:\OpenSSL-Win32\bin\ssleay32.dll release\
+c:\Qt\5.8\msvc2015\bin\windeployqt debug\web-eid.exe
+copy c:\OpenSSL-Win32\bin\libeay32.dll debug\
+copy c:\OpenSSL-Win32\bin\ssleay32.dll debug\

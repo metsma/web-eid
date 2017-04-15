@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #ifdef _WIN32
+#include <Windows.h>
 // for setting stdio mode
 #include <fcntl.h>
 #include <io.h>

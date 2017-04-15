@@ -86,6 +86,7 @@ void QtPKI::start_signature(const QByteArray &cert, const QByteArray &hash, cons
         CK_RV status = WinSigner::sign(ba2v(hash), crt, signature);
         QByteArray qsignature = v2ba(signature);
         finish_signature(status, qsignature);
+		return;
     }
 #endif
 
