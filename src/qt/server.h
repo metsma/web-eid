@@ -22,6 +22,7 @@
 
 #include <QtWebSockets/QtWebSockets>
 #include <QWebSocketServer>
+#include <QLocalServer>
 
 // Handled WebSocket communication
 class WSServer: public QObject {
@@ -32,14 +33,19 @@ public:
 
 public slots:
     void processConnect();
-    void processMessage(QString message);
+    void processIncoming(QString message);
     void processDisconnect();
+    void processOutgoing(QVariantMap message);
+
+    void processConnectLocal();
 
 private:
     QWebSocketServer *srv;
     QWebSocketServer *srv6; // IPv6
-    
-    // 
-//    QMap<QString, Context>
+    QLocalServer *local;
+
+    // message id to socket
+    QMap<QString, QWebSocket *> id2websocket;
+    QMap<QString, QLocalSocket *> id2localsocket;
 };
 

@@ -53,6 +53,12 @@ QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, ar
         _log("Starting standalone app v%s", VERSION);
         // Construct tray icon and related menu
         tray.setIcon(QIcon(":/web-eid.png"));
+        connect(&tray, &QSystemTrayIcon::activated, [&] (QSystemTrayIcon::ActivationReason reason) {
+            // TODO: show some generic dialog here.
+            _log("activated: %d", reason);
+        });
+        
+        // Context menu
         QMenu *menu = new QMenu();
         QAction *about = menu->addAction("About");
         connect(about, &QAction::triggered, [&] {
@@ -74,7 +80,7 @@ QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, ar
         tray.setContextMenu(menu);
         tray.setToolTip(tr("Web eID is running on port %1").arg(12345));
         tray.show();
-        tray.showMessage(tr("Web eID started"), tr("Click the icon for more information"), QSystemTrayIcon::Information, 2000); // Show message for 2 seconds
+        //tray.showMessage(tr("Web eID started"), tr("Click the icon for more information"), QSystemTrayIcon::Information, 2000); // Show message for 2 seconds
     } else {
         _log("Starting browser extension host v%s args \"%s\"", VERSION, arguments().join("\" \"").toStdString().c_str());
         // Parse the window handle
@@ -203,7 +209,6 @@ void QtHost::incoming(const QJsonObject &json)
     msgid = json.value("id").toString();
 
     // Origin. If unset for instance, set
-    if (origin.isEmpty()) {
         // Check if origin is secure
         QUrl url(json.value("origin").toString());
         // https, file or localhost
@@ -221,6 +226,8 @@ void QtHost::incoming(const QJsonObject &json)
             write(resp);
             return shutdown(EXIT_FAILURE);
         }
+        
+        // TODO: have lanagueg in app settings
         // Setting the language is also a onetime operation, thus do it here.
         QLocale locale = json.contains("lang") ? QLocale(json.value("lang").toString()) : QLocale::system();
         _log("Setting language to %s", locale.name().toStdString().c_str());
@@ -234,12 +241,13 @@ void QtHost::incoming(const QJsonObject &json)
         } else {
             _log("Failed to load translation");
         }
-    } else if (origin != json.value("origin").toString()) {
-        // Otherwise if already set, it must match
-        resp = {{"error", "protocol"}};
-        write(resp);
-        return shutdown(EXIT_FAILURE);
-    }
+    
+ //   if (origin != json.value("origin").toString()) {
+ //       // Otherwise if already set, it must match
+ //       resp = {{"error", "protocol"}};
+ //       write(resp);
+ //       return shutdown(EXIT_FAILURE);
+ //   }
 
     // Command dispatch
     if (json.contains("version")) {
@@ -364,7 +372,13 @@ void QtHost::reader_disconnected() {
 
 void QtHost::outgoing(const QVariantMap &resp) {
     QVariantMap map = resp;
-    write(map);
+
+    if (!msgid.isEmpty()) {
+        map["id"] = msgid;
+        msgid.clear();
+    }
+    server->processOutgoing(map);
+    //write(map);
 }
 
 void QtHost::write(QVariantMap &resp)
@@ -416,7 +430,7 @@ int main(int argc, char *argv[])
         _setmode(_fileno(stdout), O_BINARY);
 #endif
     } else if (argc == 1) {
-        Logger::setOutput(true);
+        //Logger::setOutput(true);
         standalone = true;
     }
     return QtHost(argc, argv, standalone).exec();

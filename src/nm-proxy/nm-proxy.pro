@@ -8,8 +8,9 @@ isEmpty(VERSION) {
     isEmpty(BUILD_NUMBER) BUILD_NUMBER = 1
     VERSION=$$VERSION"."$$BUILD_NUMBER
 }
-CONFIG += console c++11
-QT += network websockets
+CONFIG += console c++11 debug
+QT += websockets
+QT -= gui
 RC_ICONS = ../artwork/win_icon.ico
 macx {
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9

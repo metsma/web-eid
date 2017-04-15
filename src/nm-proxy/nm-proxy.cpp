@@ -4,7 +4,6 @@
 #include <sys/stat.h>
 #include <stdio.h>
 
-
 #ifdef _WIN32
 // for setting stdio mode
 #include <fcntl.h>
@@ -14,10 +13,11 @@
 
 int main(int argc, char *argv[])
 {
+    const char *msg = "This is not a regular program, it is expected to be run from a browser.\n";
     // Check if run as a browser extension
     if (argc < 2) {
-        printf("Need arguments\n");
-// FIXME        exit(1);
+        printf(msg);
+        exit(1);
     }
     std::string arg1(argv[1]);
     if (arg1.find("chrome-extension://") == 0) {
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     isPipe = S_ISFIFO(sb.st_mode);
 #endif
     if (!isPipe) {
-        printf("This is not a regular program, it is expected to be run from a browser.\n");
+        printf(msg);
 // FIXME        exit(1);
     }
 #ifdef _WIN32

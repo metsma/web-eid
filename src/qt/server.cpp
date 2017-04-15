@@ -17,6 +17,8 @@
  */
 
 #include "server.h"
+#include "qt_host.h" // XXX: circular
+
 
 #include "Logger.h"
 #include <QSslCertificate>
@@ -27,7 +29,7 @@
 #include <QLocalServer>
 
 WSServer::WSServer(QObject *parent):
-    QObject(parent), 
+    QObject(parent),
     srv(new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this)),
     srv6(new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this))
 {
@@ -41,11 +43,11 @@ WSServer::WSServer(QObject *parent):
     sslConfiguration.setLocalCertificateChain(QSslCertificate::fromPath(QStringLiteral(":/app.web-eid.com.pem")));
     sslConfiguration.setPrivateKey(sslKey);
     sslConfiguration.setProtocol(QSsl::TlsV1SslV3);
-    
+
     // Listen on v4 and v6
     srv->setSslConfiguration(sslConfiguration);
     srv6->setSslConfiguration(sslConfiguration);
-    
+
     if (srv6->listen(QHostAddress::LocalHostIPv6, port)) {
         _log("Server running on %s", qPrintable(srv6->serverUrl().toString()));
         connect(srv6, &QWebSocketServer::newConnection, this, &WSServer::processConnect);
@@ -59,35 +61,97 @@ WSServer::WSServer(QObject *parent):
     } else {
         _log("Could not listen on %d", port);
     }
-    
-    QLocalServer *local = new QLocalServer(this);
+
+    // Set up local server
+    local = new QLocalServer(this);
     local->setSocketOptions(QLocalServer::UserAccessOption);
+    
+    // TODO: on macosx the tempdir is cycled per process (terminal)
+
     _log("Listening in %s", qPrintable(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)));
     if (local->listen("martin-webeid")) {
         _log("Listening on %s", qPrintable(local->fullServerName()));
+        connect(local, &QLocalServer::newConnection, this, &WSServer::processConnectLocal);
     }
 }
+
+void WSServer::processConnectLocal() {
+    _log("Connection to local");
+    QLocalSocket *socket = local->nextPendingConnection();
+    connect(socket, &QLocalSocket::readyRead, [this, socket] {
+        _log("Handling data from socket");
+        quint32 msgsize = 0;
+        if (socket->read((char*)&msgsize, sizeof(msgsize)) == sizeof(msgsize)) {
+            _log("Reading  message of %d bytes", msgsize);
+            QByteArray msg(int(msgsize), 0);
+            if (socket->read(msg.data(), msgsize) == msgsize) {
+                _log("Read message of %d bytes", msgsize);
+                // Make JSON
+                QJsonObject jo = QJsonDocument::fromJson(msg).object();
+                QVariantMap json = jo.toVariantMap();
+                
+                // add to map
+                id2localsocket[json["id"].toString()] = socket;
+                // re-serialize msg
+                QByteArray response =  QJsonDocument::fromVariant(json).toJson();
+                _log("Read message: %s", response.constData());
+                
+                // now call processing
+                qobject_cast<QtHost*>(parent())->incoming(jo);
+            } else {
+                _log("Could not read message");
+                socket->abort();
+            }
+        } else {
+            _log("Could not read message size");
+            socket->abort();
+        }
+    });
+}
+
 
 void WSServer::processConnect() {
     QWebSocket *client = srv->nextPendingConnection();
     _log("Connection to %s from %s:%d (%s)", qPrintable(client->requestUrl().toString()), qPrintable(client->peerAddress().toString()), client->peerPort(), qPrintable(client->origin()));
     // TODO: make sure that pairing is authorized
-    // FIXME: Add to some list/map
     QUuid uuid = QUuid::createUuid();
     _log("Assigned context ID %s", qPrintable(uuid.toString()));
-    connect(client, &QWebSocket::textMessageReceived, this, &WSServer::processMessage);
+    connect(client, &QWebSocket::textMessageReceived, this, &WSServer::processIncoming);
     connect(client, &QWebSocket::disconnected, this, &WSServer::processDisconnect);
 }
 
-void WSServer::processMessage(QString message) {
+void WSServer::processIncoming(QString message) {
     QWebSocket *client = qobject_cast<QWebSocket *>(sender());
     _log("Received from %s: \"%s\"", qPrintable(client->origin()), qPrintable(message));
     QJsonObject json = QJsonDocument::fromJson(message.toUtf8()).object();
-    
-    
-    // FIXME: 
-    client->sendTextMessage(QStringLiteral("PONG"));
+    json["origin"] = client->origin();
+    id2websocket[json["id"].toString()] = client;
+
+    //_log("Identified context: %s", qPrintable(id2socket.keys(client).at(0)));
+    // FIXME
+    qobject_cast<QtHost*>(parent())->incoming(json);
 }
+
+void WSServer::processOutgoing(QVariantMap message) {
+    QByteArray response =  QJsonDocument::fromVariant(message).toJson();
+    _log("Sending outgoing message %s", response.constData());
+    QString msgid = message["id"].toString();
+    // Find the socket where to send
+    if (id2websocket.contains(msgid)) {
+        _log("Sending message to websocket");
+        QWebSocket *s = id2websocket.take(msgid);
+        s->sendTextMessage(QString(response));
+    } else if (id2localsocket.contains(msgid)) {
+        _log("Sending message to localsocket");
+        QLocalSocket *s = id2localsocket.take(msgid);
+        quint32 msgsize = response.size();
+        s->write((char *)&msgsize, sizeof(msgsize));
+        s->write(response);
+    } else {
+        _log("Do not know where to send a reply for %s", qPrintable(msgid));
+    }     
+}
+
 
 void WSServer::processDisconnect() {
     QWebSocket *client = qobject_cast<QWebSocket *>(sender());
