@@ -1,0 +1,27 @@
+version: '{build}'
+install:
+- cmd: 
+build_script:
+- cmd: >-
+    set BUILD_NUMBER=%APPVEYOR_BUILD_NUMBER%
+    make pkg
+    make nsis
+test_script:
+- cmd: >-
+    type NUL > %TEMP%\hwcrypto-native.log
+    make test
+    type %TEMP%\hwcrypto-native.log
+artifacts:
+- path: Web-eID*.msi
+  name: msi
+- path: Web-eID*-local.exe
+  name: msi
+deploy:
+- provider: GitHub
+  auth_token:
+    secure: G50AzB8+dz34GyB94n3dT9t3ocniwZEEKVn+/d8dXAz47XcSqaQG6Y27T2egY/7O
+  artifact: msi
+  draft: true
+  force_update: true
+  on:
+    appveyor_repo_tag: true
