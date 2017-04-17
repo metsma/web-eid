@@ -20,11 +20,10 @@
 include VERSION.mk
 UNAME :=$(shell uname)
 
-
 # Default target
-default: pkg
+default: app
 
-# include platform-specific makefile
+# include platform-specific makefile for the package
 ifeq ($(UNAME),Linux)
 include linux/Makefile
 else ifeq ($(UNAME),Darwin)
@@ -35,12 +34,13 @@ QMAKE ?= qmake
 
 app:
 	$(QMAKE) -o QMakefile
-	make -f QMakefile
+	$(MAKE) -f QMakefile
 
-test:
+# Tests must be re-thought
+#test:
 	# wildcard will resolve to an empty string with a missing file
 	# so that OSX will not run with xvfb
-	$(wildcard /usr/bin/xvfb-run) python tests/pipe-test.py -v
+#	$(wildcard /usr/bin/xvfb-run) python tests/pipe-test.py -v
 
 release:
 	# Make sure we are on master branch

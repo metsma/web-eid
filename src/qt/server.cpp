@@ -129,6 +129,7 @@ void WSServer::processConnect() {
     // TODO: make sure that pairing is authorized
     QUuid uuid = QUuid::createUuid();
     _log("Assigned context ID %s", qPrintable(uuid.toString()));
+
     connect(client, &QWebSocket::textMessageReceived, this, &WSServer::processIncoming);
     connect(client, &QWebSocket::disconnected, this, &WSServer::processDisconnect);
 }
@@ -164,7 +165,6 @@ void WSServer::processOutgoing(QVariantMap message) {
         _log("Do not know where to send a reply for %s", qPrintable(msgid));
     }     
 }
-
 
 void WSServer::processDisconnect() {
     QWebSocket *client = qobject_cast<QWebSocket *>(sender());

@@ -19,7 +19,7 @@ macx {
 win32 {
     DEFINES += WIN32_LEAN_AND_MEAN
 }
-TARGET = nm-bridge
+TARGET = web-eid-bridge
 DEFINES += VERSION=\\\"$$VERSION\\\"
 SOURCES += \
     ..\Logger.cpp \

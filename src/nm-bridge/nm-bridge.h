@@ -9,7 +9,7 @@
 #include <QDir>
 #include <QFile>
 #include <QThread>
-
+#include <QStandardPaths>
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -73,13 +73,18 @@ public:
         serverApp = "/usr/bin/web-eid";
 
         // /run/user/1000/webeid-socket
-        serverName = QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation))).filePath("webeid-socket");
+        serverName = QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)).filePath("webeid-socket");
 #else
     #error "Unsupported platform"
 #endif
-        _log("Connecting to %s", qPrintable(serverName));
+        // Override, for testing purposes
+        if (qEnvironmentVariableIsSet("WEB_EID_APP"))
+            serverApp = qgetenv("WEB_EID_APP");
 
-        // Starting app something something
+        _log("Connecting to %s", qPrintable(serverName));
+        _log("Running \"%s\" to get server", qPrintable(serverApp));
+
+        // Starting app
         connect(sock, &QLocalSocket::connected, this, &NMBridge::connected);
 
         connect(sock, static_cast<void(QLocalSocket::*)(QLocalSocket::LocalSocketError)>(&QLocalSocket::error), [this] (QLocalSocket::LocalSocketError socketError) {
@@ -102,12 +107,13 @@ public:
                     // TODO: set working folder
                     if (QProcess::startDetached(serverApp)) {
                         server_started++;
+                        _log("Started %s", qPrintable(serverApp));
                     } else {
                         _log("Could not start server");
                     }
                 } else {
                     if (server_started < 10) {
-                        _log("Server has already been started, trying to reconnect (%d)");
+                        _log("Server has already been started, trying to reconnect (%d)", server_started);
                         server_started++;
                         QTimer::singleShot(500, [this] {sock->connectToServer(serverName);});
                     }
@@ -138,7 +144,7 @@ public slots:
 
         connect(sock, &QLocalSocket::readyRead, [this] {
             // Data available from app, read message and pass to browser
-            _log("Reading from app");
+            _log("Handling message from application");
             quint32 msgsize = 0;
             if (sock->read((char*)&msgsize, sizeof(msgsize)) == sizeof(msgsize)) {
                 if (msgsize > 8 * 1024) {

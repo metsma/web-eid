@@ -47,68 +47,52 @@
 #include <unistd.h>
 #endif
 
-QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, argv), tray(this) {
+QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 
-    if (standalone) {
-        _log("Starting standalone app v%s", VERSION);
-        // Construct tray icon and related menu
-        tray.setIcon(QIcon(":/web-eid.png"));
-        connect(&tray, &QSystemTrayIcon::activated, [&] (QSystemTrayIcon::ActivationReason reason) {
-            // TODO: show some generic dialog here.
-            _log("activated: %d", reason);
-        });
-        
-        // Context menu
-        QMenu *menu = new QMenu();
-        QAction *about = menu->addAction("About");
-        connect(about, &QAction::triggered, [&] {
-            QDesktopServices::openUrl(QUrl(QStringLiteral("https://web-eid.com")));
-        });
-        QAction *a1 = menu->addAction("Start at login");
-        a1->setCheckable(true);
-        connect(a1, &QAction::toggled, [&] (bool checked) {
-            _log("Setting start at login to %d", checked);
-        });
+    QCommandLineParser parser;
+    QCommandLineOption pwindow("parent-window");
+    pwindow.setValueName("handle");
+    parser.addOption(pwindow);
+    parser.process(arguments());
+    if (parser.isSet(pwindow)) {
+        // XXX: we can not actually utilize the window handle, as it is always 0
+        // See issue #12
+        _log("Parent window handle: %d", stoi(parser.value(pwindow).toStdString()));
+    }
 
-        QAction *a2 = menu->addAction("Quit");
-        connect(a2, &QAction::triggered, [&] {
-            quit();
-        });
-        
-        server = new WSServer(this);
-        
+
+    _log("Starting standalone app v%s", VERSION);
+    // Construct tray icon and related menu
+    tray.setIcon(QIcon(":/web-eid.png"));
+    connect(&tray, &QSystemTrayIcon::activated, [&] (QSystemTrayIcon::ActivationReason reason) {
+        // TODO: show some generic dialog here.
+        _log("activated: %d", reason);
+    });
+
+    // Context menu
+    QMenu *menu = new QMenu();
+    QAction *about = menu->addAction("About");
+    connect(about, &QAction::triggered, [&] {
+        QDesktopServices::openUrl(QUrl(QStringLiteral("https://web-eid.com")));
+    });
+    QAction *a1 = menu->addAction("Start at login");
+    a1->setCheckable(true);
+    connect(a1, &QAction::toggled, [&] (bool checked) {
+        _log("Setting start at login to %d", checked);
+    });
+
+    QAction *a2 = menu->addAction("Quit");
+    connect(a2, &QAction::triggered, [&] {
+        quit();
+    });
+
+    server = new WSServer(this);
+    if (QSystemTrayIcon::isSystemTrayAvailable()) {
         tray.setContextMenu(menu);
         tray.setToolTip(tr("Web eID is running on port %1").arg(12345));
         tray.show();
-        //tray.showMessage(tr("Web eID started"), tr("Click the icon for more information"), QSystemTrayIcon::Information, 2000); // Show message for 2 seconds
-    } else {
-        _log("Starting browser extension host v%s args \"%s\"", VERSION, arguments().join("\" \"").toStdString().c_str());
-        // Parse the window handle
-        QCommandLineParser parser;
-        QCommandLineOption pwindow("parent-window");
-        pwindow.setValueName("handle");
-        parser.addOption(pwindow);
-        parser.process(arguments());
-        if (parser.isSet(pwindow)) {
-            // XXX: we can not actually utilize the window handle, as it is always 0
-            // See issue #12
-            _log("Parent window handle: %d", stoi(parser.value(pwindow).toStdString()));
-        }
-
-        // Open the output file
-        out.open(stdout, QFile::WriteOnly);
-
-        // InputChecker runs a blocking input reading loop and signals the main
-        // Qt appliction when a message gas been read.
-        input = new InputChecker(this);
-
-        // Start input reading thread with inherited priority
-        input->start();
-
-        // From input thread to host process
-        connect(input, &InputChecker::messageReceived, this, &QtHost::incoming, Qt::QueuedConnection);
-
     }
+    //tray.showMessage(tr("Web eID started"), tr("Click the icon for more information"), QSystemTrayIcon::Information, 2000); // Show message for 2 seconds
 
 
     setWindowIcon(QIcon(":/web-eid.png"));
@@ -170,18 +154,11 @@ QtHost::QtHost(int &argc, char *argv[], bool standalone) : QApplication(argc, ar
 
 void QtHost::shutdown(int exitcode) {
     _log("Exiting with %d", exitcode);
-    // This should make the input thread close nicely.
-#ifdef _WIN32
-    //close(_fileno(stdin));
-    input->terminate();
-#else
-    close(0);
-#endif
-    _log("input closed");
     pcsc_thread->exit(0);
     pki_thread->exit(0);
     pcsc_thread->wait();
     pki_thread->wait();
+
     exit(exitcode);
 }
 
@@ -191,67 +168,60 @@ void QtHost::incoming(const QJsonObject &json)
     _log("Processing message");
     QVariantMap resp;
 
-    // Serial access
-    if (!msgid.isEmpty()) {
-        _log("Already processing message %s", msgid.toStdString().c_str());
-        resp = {{"error", "process_ongoing"}, {"version", VERSION}};
-        write(resp);
-        return;
-    }
-
-
-    if (json.isEmpty() || !json.contains("id") || !json.contains("origin")) {
-        resp = {{"error", "protocol"}, {"version", VERSION}};
-        write(resp);
-        return shutdown(EXIT_FAILURE);
-    }
+    // FIXME: move to server
+//    if (json.isEmpty() || !json.contains("id")) {
+//        // Do nothing, as we can not reply
+//        resp = {{"error", "protocol"}, {"version", VERSION}};
+//        write(resp);
+//    }
 
     msgid = json.value("id").toString();
 
     // Origin. If unset for instance, set
-        // Check if origin is secure
-        QUrl url(json.value("origin").toString());
-        // https, file or localhost
-        if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost") {
-            origin = json.value("origin").toString();
-            // set the "human readable origin"
-            // use localhost for file url-s
-            if (url.scheme() == "file") {
-                friendly_origin = "localhost";
-            } else {
-                friendly_origin = url.host();
-            }
+    // Check if origin is secure
+    QUrl url(json.value("origin").toString());
+    // https, file or localhost
+    if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost" || url.scheme() == "moz-extension" || url.scheme() == "chrome-extension") {
+        origin = json.value("origin").toString();
+        // set the "human readable origin"
+        // use localhost for file url-s
+        if (url.scheme() == "file") {
+            friendly_origin = "localhost";
         } else {
-            resp = {{"error", "protocol"}};
-            write(resp);
-            return shutdown(EXIT_FAILURE);
+            friendly_origin = url.host();
         }
-        
-        // TODO: have lanagueg in app settings
-        // Setting the language is also a onetime operation, thus do it here.
-        QLocale locale = json.contains("lang") ? QLocale(json.value("lang").toString()) : QLocale::system();
-        _log("Setting language to %s", locale.name().toStdString().c_str());
-        // look up translation rom resource :/translations/strings_XX.qm
-        if (translator.load(QLocale(json.value("lang").toString()), QLatin1String("strings"), QLatin1String("_"), QLatin1String(":/translations"))) {
-            if (installTranslator(&translator)) {
-                _log("Language set");
-            } else {
-                _log("Language NOT set");
-            }
+    } else {
+        // FIXME: response ?
+//            resp = {{"error", "protocol"}};
+//            write(resp);
+//            return shutdown(EXIT_FAILURE);
+    }
+
+    // TODO: have lanagueg in app settings
+    // Setting the language is also a onetime operation, thus do it here.
+    QLocale locale = json.contains("lang") ? QLocale(json.value("lang").toString()) : QLocale::system();
+    _log("Setting language to %s", locale.name().toStdString().c_str());
+    // look up translation rom resource :/translations/strings_XX.qm
+    if (translator.load(QLocale(json.value("lang").toString()), QLatin1String("strings"), QLatin1String("_"), QLatin1String(":/translations"))) {
+        if (installTranslator(&translator)) {
+            _log("Language set");
         } else {
-            _log("Failed to load translation");
+            _log("Language NOT set");
         }
-    
- //   if (origin != json.value("origin").toString()) {
- //       // Otherwise if already set, it must match
- //       resp = {{"error", "protocol"}};
- //       write(resp);
- //       return shutdown(EXIT_FAILURE);
- //   }
+    } else {
+        _log("Failed to load translation");
+    }
+
+//   if (origin != json.value("origin").toString()) {
+//       // Otherwise if already set, it must match
+//       resp = {{"error", "protocol"}};
+//       write(resp);
+//       return shutdown(EXIT_FAILURE);
+//   }
 
     // Command dispatch
     if (json.contains("version")) {
-        resp = {{"version", VERSION}}; // TODO: add something here
+        resp = {{"id", msgid}, {"version", VERSION}}; // TODO: add something here
     } else if (json.contains("SCardConnect")) {
         emit connect_reader(json.value("SCardConnect").toObject().value("protocol").toString());
     } else if (json.contains("SCardDisconnect")) {
@@ -268,7 +238,7 @@ void QtHost::incoming(const QJsonObject &json)
         resp = {{"error", "protocol"}};
     }
     if (!resp.empty()) {
-        write(resp);
+        outgoing(resp);
     }
 }
 
@@ -381,57 +351,9 @@ void QtHost::outgoing(const QVariantMap &resp) {
     //write(map);
 }
 
-void QtHost::write(QVariantMap &resp)
-{
-    // Without a valid message ID it is a "technical send"
-    if (!msgid.isEmpty()) {
-        resp["id"] = msgid;
-        msgid.clear();
-    }
-
-    QByteArray response =  QJsonDocument::fromVariant(resp).toJson();
-    quint32 responseLength = response.size();
-    _log("Response(%u) %s", responseLength, response.constData());
-    out.write((const char*)&responseLength, sizeof(responseLength));
-    out.write(response);
-    out.flush();
-}
-
-int main(int argc, char *argv[])
-{
-    bool standalone = false;
-
-    // Check if run as a browser extension
-    if (argc > 1) {
-        std::string arg1(argv[1]);
-        if (arg1.find("chrome-extension://") == 0) {
-            // Chrome extension
-        } else if (QFile::exists(QString::fromStdString(arg1))) {
-            // printf("Probably Firefox\n");
-        }
-        // Check that input is a pipe (the app is not run from command line)
-        bool isPipe = false;
-#ifdef _WIN32
-        isPipe = GetFileType(GetStdHandle(STD_INPUT_HANDLE)) == FILE_TYPE_PIPE;
-#else
-        struct stat sb;
-        if (fstat(fileno(stdin), &sb) != 0) {
-            exit(1);
-        }
-        isPipe = S_ISFIFO(sb.st_mode);
+int main(int argc, char *argv[]) {
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+    // Check for too fast startup
 #endif
-        if (!isPipe) {
-            printf("This is not a regular program, it is expected to be run from a browser.\n");
-            exit(1);
-        }
-#ifdef _WIN32
-        // Set files to binary mode, to be able to read the uint32 msg size
-        _setmode(_fileno(stdin), O_BINARY);
-        _setmode(_fileno(stdout), O_BINARY);
-#endif
-    } else if (argc == 1) {
-        //Logger::setOutput(true);
-        standalone = true;
-    }
-    return QtHost(argc, argv, standalone).exec();
+    return QtHost(argc, argv).exec();
 }

@@ -21,7 +21,7 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p %{buildroot}/%{_bindir}
 install -p -m 755 src/web-eid %{buildroot}/%{_bindir}
 mkdir -p %{buildroot}/%{_libexecdir}
-install -p -m 755 src/nm-bridge/nm-bridge %{buildroot}/%{_libexecdir}/web-eid-bridge
+install -p -m 755 src/nm-bridge/web-eid-bridge %{buildroot}/%{_libexecdir}
 
 mkdir -p %{buildroot}/etc/opt/chrome/native-messaging-hosts
 install -p -m 644 linux/org.hwcrypto.native.json %{buildroot}/etc/opt/chrome/native-messaging-hosts/org.hwcrypto.native.json

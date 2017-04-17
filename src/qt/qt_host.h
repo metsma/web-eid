@@ -19,7 +19,6 @@
 #pragma once
 
 #include "pkcs11module.h"
-#include "qt_input.h"
 #include "qt_pcsc.h"
 #include "qt_pki.h"
 #include "server.h"
@@ -43,7 +42,7 @@ class QtHost: public QApplication
     Q_OBJECT
 
 public:
-    QtHost(int &argc, char *argv[], bool standalone);
+    QtHost(int &argc, char *argv[]);
     static QString friendlyOrigin(const QString &origin);
 
     // TODO: It is currently assumed that all invocations from one origin
@@ -112,9 +111,7 @@ private:
     QSystemTrayIcon tray;
 
     QFile out;
-    void write(QVariantMap &resp);
     void shutdown(int exitcode);
-    InputChecker *input;
 
     QTranslator translator;
 };
