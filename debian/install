@@ -1,4 +1,5 @@
 ./src/web-eid /usr/bin
+./src/nm-bridge/nm-bridge /usr/lib/web-eid-bridge
 ./linux/org.hwcrypto.native.json /usr/share/web-eid
 ./linux/firefox/org.hwcrypto.native.json /usr/lib/mozilla/native-messaging-hosts
 ./fmpfihjoladdfajbnkdfocnbcehjpogi.json /usr/share/web-eid
