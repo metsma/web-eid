@@ -62,14 +62,27 @@ WSServer::WSServer(QObject *parent):
         _log("Could not listen on %d", port);
     }
 
+    // TODO: shared file between app and nm-proxy
     // Set up local server
+    QString serverName;
+#if defined(Q_OS_MACOS)
+    // /tmp/martin-webeid
+    serverName = QDir("/tmp").filePath(qgetenv("USER") + "-webeid");
+#elif defined(Q_OS_WIN32)
+    // \\.\pipe\Martin_Paljak-webeid
+    serverName = qgetenv("USERNAME").simplified().replace(" ", "_") + "-webeid";
+#elif defined(Q_OS_LINUX)
+    // /run/user/1000/webeid-socket
+    serverName = QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation))).filePath("webeid-socket");
+#else
+    #error "Unsupported platform"
+#endif
+
     local = new QLocalServer(this);
     local->setSocketOptions(QLocalServer::UserAccessOption);
-    
-    // TODO: on macosx the tempdir is cycled per process (terminal)
 
     _log("Listening in %s", qPrintable(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)));
-    if (local->listen("martin-webeid")) {
+    if (local->listen(serverName)) {
         _log("Listening on %s", qPrintable(local->fullServerName()));
         connect(local, &QLocalServer::newConnection, this, &WSServer::processConnectLocal);
     }

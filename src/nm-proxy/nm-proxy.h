@@ -6,6 +6,7 @@
 #include <QLocalSocket>
 #include <QProcess>
 #include <QTimer>
+#include <QDir>
 #include <QFile>
 #include <QThread>
 
@@ -29,10 +30,10 @@ public:
         // Here we do busy-sleep
         while (std::cin.read((char*)&messageLength, sizeof(messageLength))) {
             _log("Message size: %u", messageLength);
-                QByteArray msg(int(messageLength), 0);
-                std::cin.read(msg.data(), msg.size());
-                _log("Message (%u): %s", messageLength, msg.constData());
-                emit messageReceived(msg);
+            QByteArray msg(int(messageLength), 0);
+            std::cin.read(msg.data(), msg.size());
+            _log("Message (%u): %s", messageLength, msg.constData());
+            emit messageReceived(msg);
         }
         _log("Input reading thread is done.");
         // If input is closed, we quit
@@ -54,17 +55,27 @@ public:
     NMProxy(int &argc, char *argv[]) : QCoreApplication(argc, argv),
         sock(new QLocalSocket(this))
     {
+        Logger::setFile("nm-proxy.log");
         _log("Running %s", qPrintable(applicationFilePath()));
 
-        // TODO: possibly play with Figure out the server name
-        serverApp = "/home/martin/efforts/hwcrypto/hwcrypto-native/src/Web-eID";
-#ifdef Q_OS_WIN32
-        serverName = qgetenv("USERNAME") + "-webeid";
-        serverApp = "C:/Users/Martin Paljak/projects/hwcrypto-native/src/release/Web-eID.exe";
+        // TODO: figure out the right paths depending on free-form app location
+#if defined(Q_OS_MACOS)
+        serverApp = "open -b com.web-eid.app";
+        // /tmp/martin-webeid
+        serverName = QDir("/tmp").filePath(qgetenv("USER") + "-webeid");
+#elif defined(Q_OS_WIN32)
+        serverApp = QDir("C:/Program Files (x86)/Web eID/Web-eID.exe")
+
+        // \\.\pipe\Martin_Paljak-webeid
+        serverName = qgetenv("USERNAME").simplified().replace(" ", "_") + "-webeid";
+#elif defined(Q_OS_LINUX)
+        serverApp = "/usr/bin/web-eid";
+
+        // /run/user/1000/webeid-socket
+        serverName = QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation))).filePath("webeid-socket");
 #else
-        serverName = qgetenv("USER") + "-webeid";
+    #error "Unsupported platform"
 #endif
-        serverName = "martin-webeid";
         _log("Connecting to %s", qPrintable(serverName));
 
         // Starting app something something
@@ -85,12 +96,13 @@ public:
                 // Start the server
                 if (!server_started) {
                     // leave some time for startup
-                    QTimer::singleShot(500, [this] {sock->connectToServer(serverName);});
+                    // TODO: possibly use QFileSystemWatcher ?
+                    QTimer::singleShot(1000, [this] {sock->connectToServer(serverName);});
                     // TODO: set working folder
-                    if (QProcess::startDetached(serverApp, QStringList())) {
+                    if (QProcess::startDetached(serverApp)) {
                         server_started = true;
                     } else {
-                        _log("Coult not start server");
+                        _log("Could not start server");
                     }
                 } else {
                     _log("Server has already been started, trying to reconnect");
@@ -100,22 +112,22 @@ public:
                 _log("Connection failed: %d", socketError);
             }
         });
-        
+
         out.open(stdout, QFile::WriteOnly);
         input = new InputChecker(this);
         connect(input, &InputChecker::messageReceived, this, &NMProxy::messageFromBrowser, Qt::QueuedConnection);
 
         connect(sock, &QLocalSocket::disconnected, [this] {
-            // XXX: on Linux, error() with peercloederror is also thrown
+            // XXX: on Linux, error() with QLocalSocket::PeerClosedError is also thrown
             _log("Socket disconnected");
         });
-        sock->connectToServer(serverName);        
+        sock->connectToServer(serverName);
     }
 
 public slots:
     void connected() {
         _log("Connected to %s", qPrintable(sock->fullServerName()));
-        // Start input reading thread
+        // Start input reading thread, if not already running
         if (!input->isRunning())
             input->start();
 
@@ -138,7 +150,7 @@ public slots:
                     _log("Response(%u) %s", responseLength, msg.constData());
                     out.write((const char*)&responseLength, sizeof(responseLength));
                     out.write(msg);
-                    out.flush(); 
+                    out.flush();
                 } else {
                     _log("Could not read message, read %d of %d", readsize, msgsize);
                     sock->abort();
@@ -150,13 +162,13 @@ public slots:
             }
         });
     }
-    
+
     void messageFromBrowser(const QByteArray &msg) {
         _log("Handling message from browser");
         quint32 responseLength = msg.size();
         // TODO: error handling?
         sock->write((const char*)&responseLength, sizeof(responseLength));
-        sock->write(msg); 
+        sock->write(msg);
     }
 
 private:

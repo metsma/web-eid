@@ -19,10 +19,12 @@
 #pragma once
 
 #include <cstdarg>
+#include <string>
 
 namespace Logger {
 void writeLog(const char *functionName, const char *fileName, int lineNumber, const char *message, ...);
-void setOutput(bool value);
+void setOutput(const bool value);
+void setFile(const std::string &name);
 }
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L

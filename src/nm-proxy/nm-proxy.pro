@@ -9,6 +9,7 @@ isEmpty(VERSION) {
     VERSION=$$VERSION"."$$BUILD_NUMBER
 }
 CONFIG += console c++11
+CONFIG -= app_bundle
 QT += network
 QT -= gui
 RC_ICONS = ../../artwork/win_icon.ico

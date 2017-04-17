@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     const char *msg = "This is not a regular program, it is expected to be run from a browser.\n";
     // Check if run as a browser extension
     if (argc < 2) {
-        printf(msg);
+        printf("%s", msg);
         exit(1);
     }
     std::string arg1(argv[1]);
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     isPipe = S_ISFIFO(sb.st_mode);
 #endif
     if (!isPipe) {
-        printf(msg);
+        printf("%s", msg);
 // FIXME        exit(1);
     }
 #ifdef _WIN32

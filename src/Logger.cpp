@@ -30,6 +30,7 @@
 using namespace std;
 
 static bool output = false;
+static string logfile = "web-eid.log";
 
 static void printCurrentDateTime(FILE *log) {
     time_t now = time(0);
@@ -46,9 +47,9 @@ static void printCurrentDateTime(FILE *log) {
 
 static string getLogFilePath() {
 #ifdef _WIN32
-    return string(getenv("TEMP"))+"\\web-eid.log";
+    return string(getenv("TEMP"))+ "\\" + logfile;
 #else
-    return string(getenv("HOME"))+"/tmp/web-eid.log";
+    return string(getenv("HOME"))+ "/tmp/" + logfile;
 #endif
 }
 
@@ -61,8 +62,12 @@ static bool logFileExist() {
     return true;
 }
 
-void Logger::setOutput(bool value) {
+void Logger::setOutput(const bool value) {
     output = value;
+}
+
+void Logger::setFile(const string &name) {
+    logfile = name;
 }
 
 void Logger::writeLog(const char *functionName, const char *fileName, int lineNumber, const char *message, ...) {
