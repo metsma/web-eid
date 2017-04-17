@@ -10,19 +10,20 @@ FIREFOX_HOSTS = /Library/Application\ Support/Mozilla/NativeMessagingHosts
 FFEXTENSION_PATH = /Library/Application\ Support/Mozilla/Extensions/\{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
 
 TMPROOT = $(CURDIR)/tmp
-TARGETFOLDER = $(TMPROOT)/Library/Web\ eID
-APP = $(TARGETFOLDER)/web-eid.app
+TARGETFOLDER = $(TMPROOT)/Applications
+APP = $(TARGETFOLDER)/Web\ eID.app
 
 $(APP):
 	$(MAKE) -C src
 	mkdir -p $(TARGETFOLDER)
-	cp -R src/web-eid.app $(TARGETFOLDER)
+	cp -R src/Web\ eID.app $(TARGETFOLDER)
+	cp src/nm-bridge/nm-bridge $(APP)/Contents/MacOS/nm-bridge
 	$(QTPATH)/bin/macdeployqt $(APP) -always-overwrite
 
 codesign: $(APP)
 	codesign -f --deep -s "Developer ID Application: $(SIGNER)" $(APP)
 
-web-eid.pkg: $(APP)
+web-eid-app.pkg: $(APP)
 	# Copy necessary files
 	mkdir -p $(TMPROOT)$(CHROME_HOSTS) $(TMPROOT)$(FIREFOX_HOSTS) $(TMPROOT)$(EXTERNAL_PATH)
 	cp -v macos/org.hwcrypto.native.json $(TMPROOT)$(CHROME_HOSTS)
@@ -42,7 +43,7 @@ web-eid.pkg: $(APP)
 
 	pkgbuild --version $(VERSION) \
 	--root $(TMPROOT) \
-	--identifier org.hwcrypto.native \
+	--identifier com.web-eid.app \
 	--component-plist web-eid.plist \
         --install-location / \
 	$@
@@ -51,7 +52,7 @@ scripts.pkg: macos/installer-scripts/*
 	pkgbuild --nopayload --scripts macos/installer-scripts --id org.hwcrypto.scripts --version $(VERSION) $@
 
 pkg: Web-eID_$(VERSION)-unsigned.pkg
-Web-eID_$(VERSION)-unsigned.pkg: web-eid.pkg scripts.pkg
+Web-eID_$(VERSION)-unsigned.pkg: web-eid-app.pkg scripts.pkg
 	productbuild --distribution macos/web-eid.dist.xml \
 	--package-path . \
 	--resources macos \

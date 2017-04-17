@@ -12,7 +12,7 @@
         <line choice="default"/>
     </choices-outline>
     <choice id="default">
-        <pkg-ref id="org.hwcrypto.native">web-eid.pkg</pkg-ref>
-        <pkg-ref id="org.hwcrypto.scripts">scripts.pkg</pkg-ref>
+        <pkg-ref id="com.web-eid.app">web-eid-app.pkg</pkg-ref>
+        <pkg-ref id="com.web-eid.scripts">scripts.pkg</pkg-ref>
     </choice>
 </installer-gui-script>

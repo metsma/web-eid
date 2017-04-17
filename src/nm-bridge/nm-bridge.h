@@ -47,15 +47,16 @@ signals:
 
 
 
-class NMProxy: public QCoreApplication
+class NMBridge: public QCoreApplication
 {
     Q_OBJECT
 
 public:
-    NMProxy(int &argc, char *argv[]) : QCoreApplication(argc, argv),
-        sock(new QLocalSocket(this))
+    NMBridge(int &argc, char *argv[], const QString &browser_name) : QCoreApplication(argc, argv),
+        sock(new QLocalSocket(this)),
+        browser(browser_name)
     {
-        Logger::setFile("nm-proxy.log");
+        Logger::setFile("nm-bridge.log");
         _log("Running %s", qPrintable(applicationFilePath()));
 
         // TODO: figure out the right paths depending on free-form app location
@@ -79,7 +80,7 @@ public:
         _log("Connecting to %s", qPrintable(serverName));
 
         // Starting app something something
-        connect(sock, &QLocalSocket::connected, this, &NMProxy::connected);
+        connect(sock, &QLocalSocket::connected, this, &NMBridge::connected);
 
         connect(sock, static_cast<void(QLocalSocket::*)(QLocalSocket::LocalSocketError)>(&QLocalSocket::error), [this] (QLocalSocket::LocalSocketError socketError) {
             if (socketError == QLocalSocket::PeerClosedError) {
@@ -115,7 +116,7 @@ public:
 
         out.open(stdout, QFile::WriteOnly);
         input = new InputChecker(this);
-        connect(input, &InputChecker::messageReceived, this, &NMProxy::messageFromBrowser, Qt::QueuedConnection);
+        connect(input, &InputChecker::messageReceived, this, &NMBridge::messageFromBrowser, Qt::QueuedConnection);
 
         connect(sock, &QLocalSocket::disconnected, [this] {
             // XXX: on Linux, error() with QLocalSocket::PeerClosedError is also thrown
@@ -167,6 +168,7 @@ public slots:
         _log("Handling message from browser");
         quint32 responseLength = msg.size();
         // TODO: error handling?
+        // TODO: add browser type (means parsign JSON)
         sock->write((const char*)&responseLength, sizeof(responseLength));
         sock->write(msg);
     }
@@ -182,4 +184,5 @@ private:
     QString serverApp;
     InputChecker *input;
     QFile out;
+    QString browser;
 };

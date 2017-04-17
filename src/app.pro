@@ -17,10 +17,12 @@ macx {
     ICON = ../artwork/mac.icns
     QMAKE_INFO_PLIST += Info.plist
     CONFIG += app_bundle
+    TARGET = "Web eID"
 }
 unix:!macx: {
     PKGCONFIG += libpcsclite
     CONFIG += link_pkgconfig
+    TARGET = "web-eid"
 }
 unix {
     LIBS += -ldl
@@ -32,6 +34,7 @@ win32 {
     HEADERS += win/WinCertSelect.h win/WinSigner.h
     INCLUDEPATH += win
     QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
+    TARGET = "Web-eID"
 }
 DEFINES += VERSION=\\\"$$VERSION\\\"
 SOURCES += \
@@ -46,7 +49,7 @@ SOURCES += \
 HEADERS += $$files(*.h) $$files(qt/*.h) $$files(qt/dialogs/*.h)
 RESOURCES += qt/web-eid.qrc qt/translations/strings.qrc
 TRANSLATIONS = qt/translations/strings_et.ts qt/translations/strings_ru.ts
-TARGET = "Web-eID"
+
 isEmpty(QMAKE_LRELEASE) {
     win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
     else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease

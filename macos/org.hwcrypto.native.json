@@ -1,7 +1,7 @@
 {
     "name": "org.hwcrypto.native",
     "description": "Use your eID on the Web",
-    "path": "/Library/Web eID/web-eid.app/Contents/MacOS/web-eid",
+    "path": "/Applications/Web eID.app/Contents/MacOS/nm-bridge",
     "type": "stdio",
     "allowed_origins": [
         "chrome-extension://ckjefchnfjhjfedoccjbhjpbncimppeg/",

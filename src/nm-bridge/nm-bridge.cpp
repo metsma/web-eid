@@ -1,4 +1,4 @@
-#include "nm-proxy.h"
+#include "nm-bridge.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -21,10 +21,11 @@ int main(int argc, char *argv[])
         exit(1);
     }
     std::string arg1(argv[1]);
+    QString browser = "unknown";
     if (arg1.find("chrome-extension://") == 0) {
-        // Chrome extension
+        browser = "chrome";
     } else if (QFile::exists(QString::fromStdString(arg1))) {
-        // printf("Probably Firefox\n");
+        browser = "firefox";
     }
     // Check that input is a pipe (the app is not run from command line)
     bool isPipe = false;
@@ -46,5 +47,5 @@ int main(int argc, char *argv[])
     _setmode(_fileno(stdin), O_BINARY);
     _setmode(_fileno(stdout), O_BINARY);
 #endif
-    return NMProxy(argc, argv).exec();
+    return NMBridge(argc, argv, browser).exec();
 }

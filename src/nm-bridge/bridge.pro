@@ -19,9 +19,9 @@ macx {
 win32 {
     DEFINES += WIN32_LEAN_AND_MEAN
 }
+TARGET = nm-bridge
 DEFINES += VERSION=\\\"$$VERSION\\\"
 SOURCES += \
     ..\Logger.cpp \
-    nm-proxy.cpp
-
+    nm-bridge.cpp
 HEADERS += $$files(*.h)
