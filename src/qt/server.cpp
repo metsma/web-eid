@@ -73,7 +73,7 @@ WSServer::WSServer(QObject *parent):
     serverName = qgetenv("USERNAME").simplified().replace(" ", "_") + "-webeid";
 #elif defined(Q_OS_LINUX)
     // /run/user/1000/webeid-socket
-    serverName = QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation))).filePath("webeid-socket");
+    serverName = QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)).filePath("webeid-socket");
 #else
     #error "Unsupported platform"
 #endif

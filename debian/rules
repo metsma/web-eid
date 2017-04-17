@@ -8,4 +8,4 @@ include /usr/share/dpkg/buildflags.mk
 	dh $@
 
 override_dh_auto_build:
-	make -C src
+	make app
