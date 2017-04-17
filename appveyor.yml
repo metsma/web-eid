@@ -4,12 +4,16 @@ install:
 build_script:
 - cmd: >-
     set BUILD_NUMBER=%APPVEYOR_BUILD_NUMBER%
+
     make pkg
+
     make nsis
 test_script:
 - cmd: >-
     type NUL > %TEMP%\hwcrypto-native.log
+
     make test
+
     type %TEMP%\hwcrypto-native.log
 artifacts:
 - path: Web-eID*.msi
