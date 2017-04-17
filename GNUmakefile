@@ -20,16 +20,22 @@
 include VERSION.mk
 UNAME :=$(shell uname)
 
+
 # Default target
 default: pkg
 
 # include platform-specific makefile
-
 ifeq ($(UNAME),Linux)
 include linux/Makefile
 else ifeq ($(UNAME),Darwin)
 include macos/Makefile
 endif
+
+QMAKE ?= qmake
+
+app:
+	$(QMAKE) -o QMakefile
+	make -f QMakefile
 
 test:
 	# wildcard will resolve to an empty string with a missing file

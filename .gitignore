@@ -12,7 +12,7 @@
 /*.tar.gz
 *.pkg
 /tmp
-/web-eid.plist
+/web-eid-app.plist
 moc_*.cpp
 moc_*.h
 qrc_*.cpp

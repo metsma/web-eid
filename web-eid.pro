@@ -1,4 +1,3 @@
 TEMPLATE = subdirs
-SUBDIRS = src/nm-proxy src
-CONFIG += ordered
+SUBDIRS = src/nm-bridge src
 

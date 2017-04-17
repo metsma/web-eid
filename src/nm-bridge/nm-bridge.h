@@ -101,13 +101,16 @@ public:
                     QTimer::singleShot(1000, [this] {sock->connectToServer(serverName);});
                     // TODO: set working folder
                     if (QProcess::startDetached(serverApp)) {
-                        server_started = true;
+                        server_started++;
                     } else {
                         _log("Could not start server");
                     }
                 } else {
-                    _log("Server has already been started, trying to reconnect");
-                    QTimer::singleShot(500, [this] {sock->connectToServer(serverName);});
+                    if (server_started < 10) {
+                        _log("Server has already been started, trying to reconnect (%d)");
+                        server_started++;
+                        QTimer::singleShot(500, [this] {sock->connectToServer(serverName);});
+                    }
                 }
             } else {
                 _log("Connection failed: %d", socketError);
@@ -128,6 +131,7 @@ public:
 public slots:
     void connected() {
         _log("Connected to %s", qPrintable(sock->fullServerName()));
+        server_started = 0;
         // Start input reading thread, if not already running
         if (!input->isRunning())
             input->start();
@@ -179,7 +183,7 @@ private:
     }
     // We have a single connection to the server app
     QLocalSocket *sock;
-    bool server_started = false;
+    int server_started = 0;
     QString serverName;
     QString serverApp;
     InputChecker *input;

@@ -54,6 +54,6 @@ isEmpty(QMAKE_LRELEASE) {
     win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
     else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
 }
-lrelease.commands = $$QMAKE_LRELEASE $$PWD/web-eid.pro
+lrelease.commands = $$QMAKE_LRELEASE $$PWD/src.pro
 PRE_TARGETDEPS += lrelease
 QMAKE_EXTRA_TARGETS += lrelease

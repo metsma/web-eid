@@ -13,8 +13,7 @@ TMPROOT = $(CURDIR)/tmp
 TARGETFOLDER = $(TMPROOT)/Applications
 APP = $(TARGETFOLDER)/Web\ eID.app
 
-$(APP):
-	$(MAKE) -C src
+$(APP): app
 	mkdir -p $(TARGETFOLDER)
 	cp -R src/Web\ eID.app $(TARGETFOLDER)
 	cp src/nm-bridge/nm-bridge $(APP)/Contents/MacOS/nm-bridge
@@ -35,8 +34,8 @@ web-eid-app.pkg: $(APP)
 	osacompile -o $(TARGETFOLDER)/Web\ eID\ Uninstaller.app macos/uninstaller.applescript
 
 	# Remove relocate flag from app bundle
-	pkgbuild --analyze  --root $(TMPROOT) web-eid.plist
-	/usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" web-eid.plist
+	pkgbuild --analyze  --root $(TMPROOT) web-eid-app.plist
+	/usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" web-eid-app.plist
 
 	# Store version in a convenient .plist
 	/usr/libexec/PlistBuddy -c "Add Version string $(VERSION)" $(TARGETFOLDER)/version.plist
@@ -44,12 +43,12 @@ web-eid-app.pkg: $(APP)
 	pkgbuild --version $(VERSION) \
 	--root $(TMPROOT) \
 	--identifier com.web-eid.app \
-	--component-plist web-eid.plist \
+	--component-plist web-eid-app.plist \
         --install-location / \
 	$@
 
 scripts.pkg: macos/installer-scripts/*
-	pkgbuild --nopayload --scripts macos/installer-scripts --id org.hwcrypto.scripts --version $(VERSION) $@
+	pkgbuild --nopayload --scripts macos/installer-scripts --id com.web-eid.scripts --version $(VERSION) $@
 
 pkg: Web-eID_$(VERSION)-unsigned.pkg
 Web-eID_$(VERSION)-unsigned.pkg: web-eid-app.pkg scripts.pkg
