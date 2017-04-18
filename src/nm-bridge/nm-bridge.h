@@ -65,7 +65,7 @@ public:
         // /tmp/martin-webeid
         serverName = QDir("/tmp").filePath(qgetenv("USER") + "-webeid");
 #elif defined(Q_OS_WIN32)
-        serverApp = QDir("C:/Program Files (x86)/Web eID/Web-eID.exe")
+        serverApp = QDir::toNativeSeparators(QDir(QCoreApplication::applicationDirPath()).filePath("Web-eID.exe"));
 
         // \\.\pipe\Martin_Paljak-webeid
         serverName = qgetenv("USERNAME").simplified().replace(" ", "_") + "-webeid";
@@ -105,7 +105,7 @@ public:
                     // TODO: possibly use QFileSystemWatcher ?
                     QTimer::singleShot(1000, [this] {sock->connectToServer(serverName);});
                     // TODO: set working folder
-                    if (QProcess::startDetached(serverApp)) {
+                    if (QProcess::startDetached(serverApp, QStringList())) {
                         server_started++;
                         _log("Started %s", qPrintable(serverApp));
                     } else {
@@ -146,7 +146,12 @@ public slots:
         connect(sock, &QLocalSocket::readyRead, [this] {
             // Data available from app, read message and pass to browser
             _log("Handling message from application");
+            _log("%d bytes available from app", sock->bytesAvailable());
             quint32 msgsize = 0;
+            if (sock->bytesAvailable() < sizeof(msgsize)) {
+                _log("Not enought data available %d, waiting for next update", sock->bytesAvailable());
+                return;
+            }
             if (sock->read((char*)&msgsize, sizeof(msgsize)) == sizeof(msgsize)) {
                 if (msgsize > 8 * 1024) {
                     _log("Bad message size, closing");

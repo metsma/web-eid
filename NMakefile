@@ -23,11 +23,18 @@ BUILD_NUMBER=1
 !ENDIF
 !include VERSION.mk
 SIGN = signtool sign /v /n "$(SIGNER)" /fd SHA256 /tr http://timestamp.comodoca.com/?td=sha256 /td sha256
-EXE = src\release\web-eid.exe
+EXE = src\release\Web-eID.exe
 DISTNAME = Web-eID
 
-$(EXE): src\*.h src\*.cpp src\win\*.cpp src\win\*.h src\qt\*.h src\qt\*.cpp
-	cd src & make & cd ..
+app: src\*.h src\*.cpp src\win\*.cpp src\win\*.h src\qt\*.h src\qt\*.cpp
+	c:\Qt\5.8\msvc2015\bin\lrelease.exe src\src.pro
+	c:\Qt\5.8\msvc2015\bin\qmake.exe -config release -o QMakefile
+	$(MAKE) /f QMakefile
+	c:\Qt\5.8\msvc2015\bin\windeployqt src\release\Web-eID.exe
+	copy c:\OpenSSL-Win32\bin\libeay32.dll src\release
+	copy c:\OpenSSL-Win32\bin\ssleay32.dll src\release
+
+$(EXE): app
 	IF DEFINED SIGNER ($(SIGN) $(EXE))
 
 x64: $(DISTNAME)_$(VERSION)_x64.msi
@@ -46,12 +53,13 @@ $(DISTNAME)_$(VERSION)_x86.msi: $(EXE)
 
 pkg: x86 x64
 
-nsis:
+nsis: $(EXE)
 	"C:\Program Files (x86)\NSIS\makensis.exe" /nocd /DVERSION=$(VERSION) windows\web-eid.nsi
 	timeout /t 1
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION)-local.exe)
 
 clean:
+	git clean -dfx
 	del /f $(EXE)
 	del /f *.msi *.exe
 

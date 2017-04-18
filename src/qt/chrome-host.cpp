@@ -357,12 +357,16 @@ void QtHost::outgoing(const QVariantMap &resp) {
 
 int main(int argc, char *argv[]) {
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+    QString lockfile_folder = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+#elif defined (Q_OS_WIN)
+    QString lockfile_folder = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+#endif
     // Check for too fast startup
-    QLockFile *lf = new QLockFile(QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)).filePath("webeid.lock"));
+    QLockFile *lf = new QLockFile(QDir(lockfile_folder).filePath("webeid.lock"));
     if (!lf->tryLock(100)) {
         _log("Could not get lockfile");
         exit(1);
     }
-#endif
+
     return QtHost(argc, argv).exec();
 }

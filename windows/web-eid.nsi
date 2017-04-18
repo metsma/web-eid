@@ -1,6 +1,6 @@
 Name "Web eID per-user installer"
 OutFile "Web-eID_${VERSION}-local.exe"
-ShowInstDetails show
+ShowInstDetails hide
 RequestExecutionLevel user
 
 InstallDir "$LOCALAPPDATA\Web eID"
@@ -10,7 +10,8 @@ Section
 SetOutPath "$INSTDIR"
 AllowSkipFiles off
 
-File src\release\web-eid.exe
+File src\release\Web-eID.exe
+File src\nm-bridge\release\web-eid-bridge.exe
 
 File windows\org.hwcrypto.native.json
 File windows\org.hwcrypto.native.firefox.json
@@ -21,6 +22,7 @@ File C:\Qt\5.8\msvc2015\bin\Qt5Network.dll
 File C:\Qt\5.8\msvc2015\bin\Qt5PrintSupport.dll
 File C:\Qt\5.8\msvc2015\bin\Qt5Widgets.dll
 File C:\Qt\5.8\msvc2015\bin\Qt5WinExtras.dll
+File C:\Qt\5.8\msvc2015\bin\Qt5WebSockets.dll
 File C:\Qt\5.8\msvc2015\bin\libEGL.dll
 File C:\Qt\5.8\msvc2015\bin\libGLESv2.dll
 File C:\Qt\5.8\msvc2015\bin\D3DCompiler_47.dll
@@ -43,8 +45,10 @@ SetRegView 64
 WriteRegStr HKCU "SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native" '' '$INSTDIR\org.hwcrypto.native.firefox.json'
 WriteRegStr HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native" '' '$INSTDIR\org.hwcrypto.native.json'
 
+WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" 'Web-eID' '$INSTDIR\Web-eID.exe'
 
 writeUninstaller "$INSTDIR\uninstall.exe"
+ExecShell "open" "$INSTDIR\Web-eID.exe"
 ExecShell "open" "https://web-eid.com/?installer=windows-local&version=${VERSION}"
 
 SectionEnd

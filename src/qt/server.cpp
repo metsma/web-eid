@@ -105,13 +105,11 @@ void WSServer::processConnectLocal() {
                 // Make JSON
                 QJsonObject jo = QJsonDocument::fromJson(msg).object();
                 QVariantMap json = jo.toVariantMap();
-                
-                // add to map
-                id2localsocket[json["id"].toString()] = socket;
                 // re-serialize msg
                 QByteArray response =  QJsonDocument::fromVariant(json).toJson();
                 _log("Read message: %s", response.constData());
-                
+                // add to map XXX: this adds id key with null value
+                id2localsocket[json["id"].toString()] = socket;
                 // now call processing
                 qobject_cast<QtHost*>(parent())->incoming(jo);
             } else {

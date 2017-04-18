@@ -53,7 +53,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
         <Directory Id="APPLICATIONFOLDER" Name="Web eID">
           <Component Id="Application" Guid="79730a31-61d7-4395-b91e-191279b08798" Win64="no">
             <!-- Our payload -->
-            <File Source="src/release/web-eid.exe"/>
+            <File Source="src/release/Web-eID.exe"/>
+            <File Source="src/nm-bridge/release/web-eid-bridge.exe"/>
             <File Source="windows/org.hwcrypto.native.json"/>
             <File Source="windows/org.hwcrypto.native.firefox.json"/>
             <!-- Register native component for Chrome -->
@@ -69,6 +70,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
             <File Source="$(var.qt_path)\bin\Qt5PrintSupport.dll"/>
             <File Source="$(var.qt_path)\bin\Qt5Widgets.dll"/>
             <File Source="$(var.qt_path)\bin\Qt5WinExtras.dll"/>
+            <File Source="$(var.qt_path)\bin\Qt5WebSockets.dll"/>
             <File Source="$(var.qt_path)\bin\libEGL.dll"/>
             <File Source="$(var.qt_path)\bin\libGLESv2.dll"/>
             <File Source="$(var.qt_path)\bin\D3DCompiler_47.dll"/>
