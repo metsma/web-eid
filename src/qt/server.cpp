@@ -33,12 +33,15 @@ WSServer::WSServer(QObject *parent):
     srv(new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this)),
     srv6(new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this))
 {
-    quint16 port = 12345; // FIXME: 3 ports to try.
+    quint16 port = 42123; // TODO: 3 ports to try.
+    
+    // Now this will probably get some bad publicity ...
     QSslConfiguration sslConfiguration;
     QFile keyFile(":/app.web-eid.com.key");
     keyFile.open(QIODevice::ReadOnly);
     QSslKey sslKey(&keyFile, QSsl::Rsa, QSsl::Pem);
     keyFile.close();
+
     sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyNone);
     sslConfiguration.setLocalCertificateChain(QSslCertificate::fromPath(QStringLiteral(":/app.web-eid.com.pem")));
     sslConfiguration.setPrivateKey(sslKey);
@@ -119,6 +122,9 @@ void WSServer::processConnectLocal() {
             _log("Could not read message size");
             socket->abort();
         }
+    });
+    connect(socket, &QLocalSocket::disconnected, [this, socket] {
+        _log("Local client disconnected");
     });
 }
 
