@@ -33,6 +33,10 @@
 #include <QString>
 #include <QMenu>
 #include <QDesktopServices>
+#include <QLockFile>
+#include <QDir>
+#include <QStandardPaths>
+
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -49,6 +53,8 @@
 
 QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 
+    _log("Starting Web eID app v%s", VERSION);
+
     QCommandLineParser parser;
     QCommandLineOption pwindow("parent-window");
     pwindow.setValueName("handle");
@@ -60,8 +66,6 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
         _log("Parent window handle: %d", stoi(parser.value(pwindow).toStdString()));
     }
 
-
-    _log("Starting standalone app v%s", VERSION);
     // Construct tray icon and related menu
     tray.setIcon(QIcon(":/web-eid.png"));
     connect(&tray, &QSystemTrayIcon::activated, [&] (QSystemTrayIcon::ActivationReason reason) {
@@ -354,6 +358,11 @@ void QtHost::outgoing(const QVariantMap &resp) {
 int main(int argc, char *argv[]) {
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
     // Check for too fast startup
+    QLockFile *lf = new QLockFile(QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)).filePath("webeid.lock"));
+    if (!lf->tryLock(100)) {
+        _log("Could not get lockfile");
+        exit(1);
+    }
 #endif
     return QtHost(argc, argv).exec();
 }

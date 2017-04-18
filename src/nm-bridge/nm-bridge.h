@@ -89,14 +89,14 @@ public:
 
         connect(sock, static_cast<void(QLocalSocket::*)(QLocalSocket::LocalSocketError)>(&QLocalSocket::error), [this] (QLocalSocket::LocalSocketError socketError) {
             if (socketError == QLocalSocket::PeerClosedError) {
-                _log("Server disconnected");
+                _log("QLocalSocket::PeerClosedError");
                 // We no like it, try connecting again
-                QTimer::singleShot(500, [this] {sock->connectToServer(serverName);});
+                // QTimer::singleShot(500, [this] {sock->connectToServer(serverName);});
                 return;
             } else if (socketError == QLocalSocket::ConnectionRefusedError) {
-                _log("Socket exists but server is not listening");
+                _log("QLocalSocket::ConnectionRefusedError");
             } else if (socketError == QLocalSocket::ServerNotFoundError) {
-                _log("Socket does not exist");
+                _log("QLocalSocket::ServerNotFoundError");
             }
             if ((socketError == QLocalSocket::ConnectionRefusedError) || (socketError == QLocalSocket::ServerNotFoundError)) {
                 // Start the server
@@ -130,6 +130,7 @@ public:
         connect(sock, &QLocalSocket::disconnected, [this] {
             // XXX: on Linux, error() with QLocalSocket::PeerClosedError is also thrown
             _log("Socket disconnected");
+            quit();
         });
         sock->connectToServer(serverName);
     }

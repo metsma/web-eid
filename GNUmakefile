@@ -18,10 +18,13 @@
 
 # This is the Makefile for OSX/Linux. See Makefile for Windows NMake.
 include VERSION.mk
-UNAME :=$(shell uname)
+UNAME := $(shell uname)
 
 # Default target
 default: app
+
+QT_SELECT ?= 5
+export QT_SELECT
 
 # include platform-specific makefile for the package
 ifeq ($(UNAME),Linux)
