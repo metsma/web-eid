@@ -4,7 +4,7 @@
 /usr/libexec/PlistBuddy -c "Merge chrome-policy.plist" /Library/Preferences/com.google.Chrome.plist
 
 # Read the installed version from plist
-VER=$(/usr/libexec/PlistBuddy -c "Print Version" /Library/Web\ eID/version.plist)
+VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" /Applications/Web\ eID.app/Contents/Info.plist)
 
 # Without sudo the script would open the default brwoser of the
 # root user (which would probably be safari).

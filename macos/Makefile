@@ -10,13 +10,14 @@ FIREFOX_HOSTS = /Library/Application\ Support/Mozilla/NativeMessagingHosts
 FFEXTENSION_PATH = /Library/Application\ Support/Mozilla/Extensions/\{ec8030f7-c20a-464f-9b0e-13a3a9e97384\}
 
 TMPROOT = $(CURDIR)/tmp
-TARGETFOLDER = $(TMPROOT)/Applications
-APP = $(TARGETFOLDER)/Web\ eID.app
+APPDIR = $(TMPROOT)/Applications
+LIBDIR = $(TMPROOT)/Library/Web\ eID
+APP = $(APPDIR)/Web\ eID.app
 
 $(APP): app
-	mkdir -p $(TARGETFOLDER)
-	cp -R src/Web\ eID.app $(TARGETFOLDER)
-	cp src/nm-bridge/nm-bridge $(APP)/Contents/MacOS/nm-bridge
+	mkdir -p $(APPDIR)
+	cp -R src/Web\ eID.app $(APP)
+	cp src/nm-bridge/web-eid-bridge $(APP)/Contents/MacOS/web-eid-bridge
 	$(QTPATH)/bin/macdeployqt $(APP) -always-overwrite
 
 codesign: $(APP)
@@ -30,15 +31,14 @@ web-eid-app.pkg: $(APP)
 	cp -v fmpfihjoladdfajbnkdfocnbcehjpogi.json $(TMPROOT)$(EXTERNAL_PATH)
 
 	# Create the uninstaller
-	cp macos/uninstall.sh $(TARGETFOLDER)/uninstall.sh
-	osacompile -o $(TARGETFOLDER)/Web\ eID\ Uninstaller.app macos/uninstaller.applescript
+	mkdir -p $(LIBDIR)
+	cp macos/uninstall.sh $(LIBDIR)
+	osacompile -o $(APPDIR)/Web\ eID\ Uninstaller.app macos/uninstaller.applescript
 
 	# Remove relocate flag from app bundle
+	# TODO: check what to do with free-form app
 	pkgbuild --analyze  --root $(TMPROOT) web-eid-app.plist
 	/usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" web-eid-app.plist
-
-	# Store version in a convenient .plist
-	/usr/libexec/PlistBuddy -c "Add Version string $(VERSION)" $(TARGETFOLDER)/version.plist
 
 	pkgbuild --version $(VERSION) \
 	--root $(TMPROOT) \
