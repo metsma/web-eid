@@ -11,6 +11,8 @@ Section
 SetAutoClose true
 SetOutPath "$INSTDIR"
 AllowSkipFiles off
+IfFileExists $INSTDIR\Web-eID.exe 0 +2
+MessageBox MB_OK "If you are upgrading, make sure Web eID app is closed before continuing"
 
 File src\release\Web-eID.exe
 File src\nm-bridge\release\web-eid-bridge.exe
@@ -56,8 +58,8 @@ CreateDirectory "$SMPROGRAMS\Web eID"
 CreateShortCut "$SMPROGRAMS\Web eID\Start Web eID.lnk" "$INSTDIR\Web-eID.exe"
 CreateShortCut "$SMPROGRAMS\Web eID\Uninstall Web eID.lnk" "$INSTDIR\uninstall.exe"
 
-
 writeUninstaller "$INSTDIR\uninstall.exe"
+
 ExecShell "open" "$INSTDIR\Web-eID.exe"
 Sleep 1000
 ExecShell "open" "https://web-eid.com/?installer=windows-local&version=${VERSION}"
@@ -66,9 +68,11 @@ SectionEnd
 
 
 Section "uninstall"
+SetAutoClose true
 MessageBox MB_OK "Make sure Web eID app is closed before continuing"
 rmDir /r "$LOCALAPPDATA\Web eID"
 rmDir /r "$SMPROGRAMS\Web eID"
+Delete "$DESKTOP\Web eID.lnk"
 SetRegView 32
 DeleteRegKey HKCU "SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native"
 DeleteRegKey HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native"
