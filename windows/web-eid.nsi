@@ -47,11 +47,14 @@ WriteRegStr HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.nativ
 
 WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" 'Web-eID' '$INSTDIR\Web-eID.exe'
 
+CreateShortCut "$DESKTOP\Web eID.lnk" "$INSTDIR\Web-eID.exe" ""
+
 writeUninstaller "$INSTDIR\uninstall.exe"
 ExecShell "open" "$INSTDIR\Web-eID.exe"
 ExecShell "open" "https://web-eid.com/?installer=windows-local&version=${VERSION}"
 
 SectionEnd
+
 
 Section "uninstall"
 rmDir /r "$LOCALAPPDATA\Web eID"
