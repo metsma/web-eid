@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Terminal=false
+Exec=/usr/bin/web-eid
+Name=Web eID app
+Categories=Network
