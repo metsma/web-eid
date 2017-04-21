@@ -1,12 +1,14 @@
 Name "Web eID per-user installer"
 OutFile "Web-eID_${VERSION}-local.exe"
 ShowInstDetails hide
+SilentInstall normal
 RequestExecutionLevel user
 
 InstallDir "$LOCALAPPDATA\Web eID"
 
 
 Section
+SetAutoClose true
 SetOutPath "$INSTDIR"
 AllowSkipFiles off
 
@@ -45,19 +47,28 @@ SetRegView 64
 WriteRegStr HKCU "SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native" '' '$INSTDIR\org.hwcrypto.native.firefox.json'
 WriteRegStr HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native" '' '$INSTDIR\org.hwcrypto.native.json'
 
+; By default start on login
 WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" 'Web-eID' '$INSTDIR\Web-eID.exe'
 
-CreateShortCut "$DESKTOP\Web eID.lnk" "$INSTDIR\Web-eID.exe" ""
+; Make shortcut on desktop
+CreateShortCut "$DESKTOP\Web eID.lnk" "$INSTDIR\Web-eID.exe"
+CreateDirectory "$SMPROGRAMS\Web eID"
+CreateShortCut "$SMPROGRAMS\Web eID\Start Web eID.lnk" "$INSTDIR\Web-eID.exe"
+CreateShortCut "$SMPROGRAMS\Web eID\Uninstall Web eID.lnk" "$INSTDIR\uninstall.exe"
+
 
 writeUninstaller "$INSTDIR\uninstall.exe"
 ExecShell "open" "$INSTDIR\Web-eID.exe"
+Sleep 1000
 ExecShell "open" "https://web-eid.com/?installer=windows-local&version=${VERSION}"
 
 SectionEnd
 
 
 Section "uninstall"
+MessageBox MB_OK "Make sure Web eID app is closed before continuing"
 rmDir /r "$LOCALAPPDATA\Web eID"
+rmDir /r "$SMPROGRAMS\Web eID"
 SetRegView 32
 DeleteRegKey HKCU "SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native"
 DeleteRegKey HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native"
