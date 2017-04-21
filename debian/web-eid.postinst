@@ -1,7 +1,11 @@
 #!/bin/bash
 set -e
+# lintian: must not install to /etc/opt
 mkdir -p /etc/opt/chrome/native-messaging-hosts
 ln -sf /usr/share/web-eid/org.hwcrypto.native.json /etc/opt/chrome/native-messaging-hosts/org.hwcrypto.native.json
+
+mkdir -p /etc/opt/chrome/policies/managed
+ln -sf /usr/share/web-eid/com.web-eid.policy.json /etc/opt/chrome/policies/managed/com.web-eid.policy.json
 
 # Nice trick to open the browser of the installing user
 # XXX: might be reasonable to do this only on the first install

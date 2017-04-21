@@ -13,6 +13,6 @@ pkg-rpm:
 	fedpkg --release f25 local
 
 pkg-deb:
-	rm -f debian/changelog
+	git clean -dffx debian
 	dch --create -M --package web-eid --force-distribution --distribution `lsb_release -cs` --newversion $(VERSION)-$(BUILD_NUMBER)`lsb_release -cs`  "Publish $(VERSION) from Git `git describe --tags --always`"
 	+fakeroot debian/rules binary
