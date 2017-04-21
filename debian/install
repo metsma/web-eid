@@ -3,6 +3,7 @@
 ./linux/org.hwcrypto.native.json /usr/share/web-eid
 ./linux/firefox/org.hwcrypto.native.json /usr/lib/mozilla/native-messaging-hosts
 ./linux/com.web-eid.policy.json /etc/chromium/policies/managed
+./linux/com.web-eid.policy.json /etc/opt/chrome/policies/managed
 ./fmpfihjoladdfajbnkdfocnbcehjpogi.json /usr/share/web-eid
 ./linux/web-eid-service.desktop /etc/xdg/autostart
 ./linux/web-eid.desktop /usr/share/applications
