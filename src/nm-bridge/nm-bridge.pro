@@ -21,7 +21,4 @@ win32 {
 }
 TARGET = web-eid-bridge
 DEFINES += VERSION=\\\"$$VERSION\\\"
-SOURCES += \
-    ..\Logger.cpp \
-    nm-bridge.cpp
-HEADERS += $$files(*.h)
+SOURCES += ..\Logger.cpp nm-bridge.cpp
