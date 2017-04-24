@@ -362,8 +362,8 @@ int main(int argc, char *argv[]) {
     QString lockfile_folder = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
 #endif
     // Check for too fast startup
-    QLockFile *lf = new QLockFile(QDir(lockfile_folder).filePath("webeid.lock"));
-    if (!lf->tryLock(100)) {
+    QLockFile lf(QDir(lockfile_folder).filePath("webeid.lock"));
+    if (!lf.tryLock(100)) {
         _log("Could not get lockfile");
         exit(1);
     }
