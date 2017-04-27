@@ -51,6 +51,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef __APPLE__
+#include <ServiceManagement/ServiceManagement.h>
+#endif
+
 QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 
     _log("Starting Web eID app v%s", VERSION);
@@ -81,8 +85,26 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     });
     QAction *a1 = menu->addAction("Start at login");
     a1->setCheckable(true);
+#ifdef __APPLE__
+    CFArrayRef jobs = SMCopyAllJobDictionaries(kSMDomainUserLaunchd);
+    if (jobs) {
+        for (CFIndex i = 0, count = CFArrayGetCount(jobs); i < count; ++i) {
+            CFDictionaryRef job = CFDictionaryRef(CFArrayGetValueAtIndex(jobs, i));
+            if (CFStringCompare(CFStringRef(CFDictionaryGetValue(job, CFSTR("Label"))), CFSTR("com.web-eid.login"), 0) == kCFCompareEqualTo) {
+                a1->setChecked(CFBooleanGetValue(CFBooleanRef(CFDictionaryGetValue(job, CFSTR("OnDemand")))));
+                break;
+            }
+        }
+        CFRelease(jobs);
+    }
+#endif
     connect(a1, &QAction::toggled, [&] (bool checked) {
         _log("Setting start at login to %d", checked);
+#ifdef __APPLE__
+        if (!SMLoginItemSetEnabled(CFSTR("com.web-eid.login"), checked)) {
+            _log("Login Item Was Not Successful");
+        }
+#endif
     });
 
     QAction *a2 = menu->addAction("Quit");
@@ -97,7 +119,6 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
         tray.show();
     }
     //tray.showMessage(tr("Web eID started"), tr("Click the icon for more information"), QSystemTrayIcon::Information, 2000); // Show message for 2 seconds
-
 
     setWindowIcon(QIcon(":/web-eid.png"));
     setQuitOnLastWindowClosed(false);

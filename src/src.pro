@@ -12,12 +12,13 @@ CONFIG += c++11
 QT += widgets network websockets
 RC_ICONS = ../artwork/win_icon.ico
 macx {
-    LIBS += -framework PCSC
+    LIBS += -framework PCSC -framework ServiceManagement -framework CoreFoundation
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
     ICON = ../artwork/mac.icns
     QMAKE_INFO_PLIST += Info.plist
     CONFIG += app_bundle
     TARGET = "Web eID"
+    QMAKE_POST_LINK += "mkdir -p \"$${TARGET}.app/Contents/Library/LoginItems\" && cp -r login/login.app \"$${TARGET}.app/Contents/Library/LoginItems\""
 }
 unix:!macx: {
     PKGCONFIG += libpcsclite
