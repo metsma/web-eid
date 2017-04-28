@@ -26,7 +26,7 @@
 WebContext::WebContext(QObject *parent, QLocalSocket *client) {
     this->ls = client;
     connect(client, &QLocalSocket::readyRead, [this, client] {
-        _log("Handling data from socket");
+        _log("Handling data from local socket");
         quint32 msgsize = 0;
         if (client->read((char*)&msgsize, sizeof(msgsize)) == sizeof(msgsize)) {
             _log("Reading  message of %d bytes", msgsize);
@@ -34,51 +34,74 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client) {
             if (client->read(msg.data(), msgsize) == msgsize) {
                 _log("Read message of %d bytes", msgsize);
                 // Make JSON
-                QJsonObject jo = QJsonDocument::fromJson(msg).object();
-                QVariantMap json = jo.toVariantMap();
+                QVariantMap json = QJsonDocument::fromJson(msg).toVariant().toMap();
+
                 // re-serialize msg
                 QByteArray response =  QJsonDocument::fromVariant(json).toJson();
                 _log("Read message: %s", response.constData());
-                // now call processing
+
+                // Check for mandatory fields
+                if (!json.contains("origin") || !json.contains("id")) {
+                    _log("No id or origin, terminating");
+                    terminate();
+                }
+
+                // Check origin
+                if (origin.isEmpty()) {
+                    origin = json.value("origin").toString();
+                } else {
+                    if (origin != json.value("origin").toString()) {
+                        _log("Origin mismatch, terminating");
+                        terminate();
+                    }
+                }
                 processMessage(json);
             } else {
                 _log("Could not read message");
-                client->abort();
+                terminate();
             }
         } else {
             _log("Could not read message size");
-            client->abort();
+            terminate();
         }
     });
     connect(client, &QLocalSocket::disconnected, [this, client] {
         _log("Local client disconnected");
+        deleteLater();
     });
 }
 
 WebContext::WebContext(QObject *parent, QWebSocket *client) {
     this->ws = client;
+    this->origin = client->origin();
     connect(client, &QWebSocket::textMessageReceived, [this, client] (QString message) {
-        _log("Message received from %s", qPrintable(client->origin()));
-        QJsonObject jo = QJsonDocument::fromJson(message.toUtf8()).object();
-        QVariantMap json = jo.toVariantMap();
+        _log("Message received from %s", qPrintable(origin));
+        QVariantMap json = QJsonDocument::fromJson(message.toUtf8()).toVariant().toMap();
+        if (!json.contains("id")) {
+            _log("No id, terminating");
+            terminate();
+        }
         // re-serialize msg
         QByteArray response =  QJsonDocument::fromVariant(json).toJson();
         _log("Read message: %s", response.constData());
 
+        // Add origin for uniform message processing
+        json["origin"] = origin;
         processMessage(json);
     });
     connect(client, &QWebSocket::disconnected, [this, client] {
         _log("%s disconnected", qPrintable(client->origin()));
+        deleteLater();
     });
 }
 
 
-// Messages from owner
-void WebContext::receiveIPC(const QVariantMap &message) {
+// Messages from main application. This means
+void WebContext::receiveIPC(const InternalMessage &message) {
 
 }
 
-
+// Process a message from a browsing context
 void WebContext::processMessage(const QVariantMap &message) {
     _log("Processing message");
     QVariantMap resp;
@@ -92,7 +115,7 @@ void WebContext::processMessage(const QVariantMap &message) {
 
     msgid = message.value("id").toString();
 
-    // Origin. If unset for instance, set
+    // Origin. If unset for context, set
     // Check if origin is secure
     QUrl url(message.value("origin").toString());
     // https, file or localhost
@@ -141,6 +164,8 @@ void WebContext::processMessage(const QVariantMap &message) {
     } else if (message.contains("cert")) {
 //        emit select_certificate(origin, Signing, false);
     } else if (message.contains("auth")) {
+        // We need to have a certificate
+//        return emit sendIPC({{"PKI", ""}});
 //        emit authenticate(origin, message.value("auth").toMap().value("nonce").toString());
     } else {
         resp = {{"error", "protocol"}};
@@ -152,8 +177,7 @@ void WebContext::processMessage(const QVariantMap &message) {
 
 
 void WebContext::outgoing(QVariantMap &message) {
-
-    QByteArray response =  QJsonDocument::fromVariant(message).toJson();
+    QByteArray response =  QJsonDocument::fromVariant(message).toJson(QJsonDocument::Compact);
     _log("Sending outgoing message %s", response.constData());
     if (this->ls) {
         quint32 msgsize = response.size();

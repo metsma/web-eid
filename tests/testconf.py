@@ -25,7 +25,7 @@ def get_exe():
         return os.environ["EXE"]
     if sys.platform == 'darwin':
         os.environ["WEB_EID_APP"] = "src/Web eID.app/Contents/MacOS/Web eID"
-        return "src/nm-bridge/nm-bridge"
+        return "src/nm-bridge/web-eid-bridge"
     elif sys.platform == "linux2":
         os.environ["WEB_EID_APP"] = "src/web-eid"
         return "src/nm-bridge/nm-bridge"

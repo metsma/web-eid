@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "internal.h"
+
 #include <QObject>
 
 #include <QWebSocket>
@@ -37,14 +39,13 @@ public:
     WebContext(QObject *parent, QWebSocket *client);
     WebContext(QObject *parent, QLocalSocket *client);
 
-    QString id = QUuid::createUuid().toString();
-
+    const QString id = QUuid::createUuid().toString();
 
 public slots:
-    void receiveIPC(const QVariantMap &msg);
+    void receiveIPC(const InternalMessage &msg);
 
 signals:
-    void sendIPC(const QVariantMap &msg);
+    void sendIPC(const InternalMessage &msg);
 
 private:
     void processMessage(const QVariantMap &message); // Message received from client

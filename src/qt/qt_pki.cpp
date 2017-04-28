@@ -43,11 +43,12 @@
 #endif
 
 
-void QtPKI::receiveIPC(const QVariantMap &message) {
+void QtPKI::receiveIPC(const InternalMessage &message) {
     // Receive messages from main thread
     // Message must contain the context id (internal to app)
 
 }
+
 
 // process SIGN message
 void QtPKI::sign(const QString &origin, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo) {

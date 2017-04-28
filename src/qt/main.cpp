@@ -172,6 +172,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 
     qRegisterMetaType<CertificatePurpose>();
     qRegisterMetaType<P11Token>();
+    qRegisterMetaType<InternalMessage>();
 
     // From host process to PCSC and vice versa
     connect(this, &QtHost::connect_reader, &PCSC, &QtPCSC::connect_reader, Qt::QueuedConnection);
@@ -242,25 +243,29 @@ void QtHost::processConnectLocal() {
     connect(ctx, &WebContext::sendIPC, this, &QtHost::dispatchIPC, Qt::DirectConnection);
 }
 
-void QtHost::receiveIPC(const QVariantMap &message) {
+void QtHost::receiveIPC(const InternalMessage &message) {
     // Called from another thread (PKI, PCSC)
     // Message contains context id, which we look up and dispatch directly
-    QString id = message["id"].toString();
+    QString id = message.data["id"].toString();
 
     WebContext *ctx = contexts[id];
     ctx->receiveIPC(message);
 }
 
 
-void QtHost::dispatchIPC(const QVariantMap &message) {
+void QtHost::dispatchIPC(const InternalMessage &message) {
     // We know the sender, either context id is in map
     // or we cast from sender()
+
+    WebContext *ctx = qobject_cast<WebContext *>(sender());
+    _log("Dispatching for %s", qPrintable(ctx->id));
 
     // Depending on message type, we send messages to other threads from here.
     // Other thread emtis a message and we process it in receiveIPC and
     // call directly the public slot of the context, that keeps state
 
     // TODO: document message signatures and necessary enum-s
+
 }
 
 void QtHost::processConnect() {

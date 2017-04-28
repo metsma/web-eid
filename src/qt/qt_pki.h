@@ -20,6 +20,8 @@
 
 #include <QObject>
 
+#include "internal.h"
+
 #include "pkcs11module.h"
 
 #include "dialogs/select_cert.h"
@@ -47,7 +49,7 @@ public slots:
     void login(const CK_RV status, const QString &pin, CertificatePurpose purpose);
     void pkcs11_sign(const CK_RV status);
 
-    void receiveIPC(const QVariantMap &message);
+    void receiveIPC(const InternalMessage &message);
 
 private:
     void authenticate_with(const CK_RV status, const QByteArray &cert);
@@ -65,7 +67,7 @@ signals:
     void show_pin_dialog(const CK_RV last, P11Token token, const QByteArray &cert, CertificatePurpose purpose);
     void hide_pin_dialog();
 
-    void sendIPC(const QVariantMap &message);
+    void sendIPC(const InternalMessage &message);
 
 public:
     void clear() {

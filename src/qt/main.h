@@ -23,6 +23,9 @@
 #include "qt_pki.h"
 #include "context.h"
 
+#include "internal.h"
+
+
 #include <QApplication>
 #include <QSystemTrayIcon>
 #include <QTranslator>
@@ -40,6 +43,7 @@
 
 Q_DECLARE_METATYPE(CertificatePurpose)
 Q_DECLARE_METATYPE(P11Token)
+Q_DECLARE_METATYPE(InternalMessage)
 
 class QtHost: public QApplication
 {
@@ -92,9 +96,9 @@ public slots:
     void cancel_insert(const SCARDCONTEXT ctx); // TODO: move to PCSC and call directly from dialog
 
     // From different threads and subsystems, dispatched to contexts
-    void receiveIPC(const QVariantMap &message);
+    void receiveIPC(const InternalMessage &message);
     // From contexts, in same thread, direct connection
-    void dispatchIPC(const QVariantMap &message);
+    void dispatchIPC(const InternalMessage &message);
 
 signals:
     void authenticate(const QString &origin, const QString &nonce);
@@ -107,8 +111,8 @@ signals:
     void send_apdu(const QByteArray &apdu);
     void disconnect_reader();
 
-    void toPKI(const QVariantMap &message);
-    void toPCSC(const QVariantMap &message);
+    void toPKI(const InternalMessage &message);
+    void toPCSC(const InternalMessage &message);
 
 private:
     QSystemTrayIcon tray;
