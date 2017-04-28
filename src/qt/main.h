@@ -91,6 +91,11 @@ public slots:
     void show_select_reader(const QString &protocol);
     void cancel_insert(const SCARDCONTEXT ctx); // TODO: move to PCSC and call directly from dialog
 
+    // From different threads and subsystems, dispatched to contexts
+    void receiveIPC(const QVariantMap &message);
+    // From contexts, in same thread, direct connection
+    void dispatchIPC(const QVariantMap &message);
+
 signals:
     void authenticate(const QString &origin, const QString &nonce);
     void sign(const QString &origin, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
@@ -101,6 +106,9 @@ signals:
     void connect_reader(const QString &protocol);
     void send_apdu(const QByteArray &apdu);
     void disconnect_reader();
+
+    void toPKI(const QVariantMap &message);
+    void toPCSC(const QVariantMap &message);
 
 private:
     QSystemTrayIcon tray;

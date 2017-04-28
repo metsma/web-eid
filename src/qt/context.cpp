@@ -23,11 +23,6 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 
-
-WebContext::WebContext(QObject *parent, const QString &origin) {
-
-}
-
 WebContext::WebContext(QObject *parent, QLocalSocket *client) {
     this->ls = client;
     connect(client, &QLocalSocket::readyRead, [this, client] {
@@ -75,6 +70,12 @@ WebContext::WebContext(QObject *parent, QWebSocket *client) {
     connect(client, &QWebSocket::disconnected, [this, client] {
         _log("%s disconnected", qPrintable(client->origin()));
     });
+}
+
+
+// Messages from owner
+void WebContext::receiveIPC(const QVariantMap &message) {
+
 }
 
 

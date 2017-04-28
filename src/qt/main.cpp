@@ -210,6 +210,12 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     connect(&PKI, &QtPKI::hide_pin_dialog, this, &QtHost::hide_pin_dialog, Qt::QueuedConnection);
     connect(&PKI.pin_dialog, &QtPINDialog::login, &PKI, &QtPKI::login, Qt::QueuedConnection);
 
+    // TODO: remove other signals, only keep these.
+    connect(this, &QtHost::toPKI, &PKI, &QtPKI::receiveIPC, Qt::QueuedConnection);
+    connect(&PKI, &QtPKI::sendIPC, this, &QtHost::receiveIPC, Qt::QueuedConnection);
+
+    // TODO: same for PCSC. Both subsystems can emit other signals that dialogs for example can react to.
+
     // Start worker threads
     pki_thread = new QThread;
     pcsc_thread = new QThread;
@@ -231,8 +237,31 @@ void QtHost::processConnectLocal() {
     connect(ctx, &QObject::destroyed, [this, ctx] {
         contexts.remove(ctx->id);
     });
+
+    // Context needs something from PKI or PCSC
+    connect(ctx, &WebContext::sendIPC, this, &QtHost::dispatchIPC, Qt::DirectConnection);
 }
 
+void QtHost::receiveIPC(const QVariantMap &message) {
+    // Called from another thread (PKI, PCSC)
+    // Message contains context id, which we look up and dispatch directly
+    QString id = message["id"].toString();
+
+    WebContext *ctx = contexts[id];
+    ctx->receiveIPC(message);
+}
+
+
+void QtHost::dispatchIPC(const QVariantMap &message) {
+    // We know the sender, either context id is in map
+    // or we cast from sender()
+
+    // Depending on message type, we send messages to other threads from here.
+    // Other thread emtis a message and we process it in receiveIPC and
+    // call directly the public slot of the context, that keeps state
+
+    // TODO: document message signatures and necessary enum-s
+}
 
 void QtHost::processConnect() {
     QWebSocket *client = ws->nextPendingConnection(); // FIXME: v6 vs v4

@@ -23,6 +23,8 @@
 #include <QWebSocket>
 #include <QLocalSocket>
 #include <QWidget>
+#include <QUuid>
+
 
 // Handles a browser context, either
 // via WebSocket or LocalSocket, which is owns.
@@ -35,13 +37,17 @@ public:
     WebContext(QObject *parent, QWebSocket *client);
     WebContext(QObject *parent, QLocalSocket *client);
 
-    QString id;
+    QString id = QUuid::createUuid().toString();
 
 
 public slots:
-    void processMessage(const QVariantMap &message); // Message received from client
+    void receiveIPC(const QVariantMap &msg);
+
+signals:
+    void sendIPC(const QVariantMap &msg);
 
 private:
+    void processMessage(const QVariantMap &message); // Message received from client
     void outgoing(QVariantMap &message);
     bool terminate();
 
