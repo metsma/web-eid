@@ -211,6 +211,8 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     connect(&PKI, &QtPKI::hide_pin_dialog, this, &QtHost::hide_pin_dialog, Qt::QueuedConnection);
     connect(&PKI.pin_dialog, &QtPINDialog::login, &PKI, &QtPKI::login, Qt::QueuedConnection);
 
+    connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QtPKI::refresh, Qt::QueuedConnection);
+
     // TODO: remove other signals, only keep these.
     connect(this, &QtHost::toPKI, &PKI, &QtPKI::receiveIPC, Qt::QueuedConnection);
     connect(&PKI, &QtPKI::sendIPC, this, &QtHost::receiveIPC, Qt::QueuedConnection);
@@ -248,17 +250,23 @@ void QtHost::receiveIPC(const InternalMessage &message) {
     // Message contains context id, which we look up and dispatch directly
     QString id = message.data["id"].toString();
 
+    // Get the target context.
     WebContext *ctx = contexts[id];
     ctx->receiveIPC(message);
 }
 
 
 void QtHost::dispatchIPC(const InternalMessage &message) {
-    // We know the sender, either context id is in map
-    // or we cast from sender()
-
+    // Context we are working from
     WebContext *ctx = qobject_cast<WebContext *>(sender());
     _log("Dispatching for %s", qPrintable(ctx->id));
+
+    switch (message.type) {
+    case MessageType::SelectCertificate:
+        return emit toPKI(message);
+    default:
+        _log("Don't know how to process message");
+    }
 
     // Depending on message type, we send messages to other threads from here.
     // Other thread emtis a message and we process it in receiveIPC and
@@ -275,8 +283,6 @@ void QtHost::processConnect() {
     // Context cleans up after itself on disconnect
     WebContext *ctx = new WebContext(this, client);
     contexts[ctx->id] = ctx;
-
-
 }
 
 

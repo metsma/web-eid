@@ -39,6 +39,8 @@ public:
     static const char *errorName(const CK_RV err);
 
 public slots:
+    void refresh(); //refresh available certificates. Triggered by PCSC on cardInserted()
+
     void authenticate(const QString &origin, const QString &nonce);
     void sign(const QString &origin, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
     void select_certificate(const QString &origin, CertificatePurpose purpose, bool silent);

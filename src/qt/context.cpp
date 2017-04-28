@@ -66,7 +66,7 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client) {
         }
     });
     connect(client, &QLocalSocket::disconnected, [this, client] {
-        _log("Local client disconnected");
+        _log("Local client disconnected (%s)", qPrintable(this->origin));
         deleteLater();
     });
 }
@@ -165,7 +165,7 @@ void WebContext::processMessage(const QVariantMap &message) {
 //        emit select_certificate(origin, Signing, false);
     } else if (message.contains("auth")) {
         // We need to have a certificate
-//        return emit sendIPC({{"PKI", ""}});
+        return emit sendIPC({MessageType::SelectCertificate, {{"PKI", "blah"}}});
 //        emit authenticate(origin, message.value("auth").toMap().value("nonce").toString());
     } else {
         resp = {{"error", "protocol"}};

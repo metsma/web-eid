@@ -21,12 +21,16 @@
 #include <QVariantMap>
 
 enum MessageType {
-    ShowSelectCertificate
+    SelectCertificate, //resolves once the certificate has been selected.
+    ShowSelectCertificate, // asks main thread to show a Qt cert selection window
+    CertificateSelected, // signalled from cert selection window when certificate is chosen by user
+
+    Authenticate, // resolves with token or error
+    Sign // resolves with signature or error
 };
 
 
 struct InternalMessage {
     MessageType type;
-    QString contextId;
     QVariantMap data;
 };

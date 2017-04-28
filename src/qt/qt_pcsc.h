@@ -59,6 +59,8 @@ signals:
     void show_insert_card(bool show, const QString &name, const SCARDCONTEXT ctx);
     void show_select_reader(const QString &protocol);
 
+    void cardInserted(); // emitted when a new card is inserted. Forces PKI to refresh cert list
+
 private:
     PCSC pcsc;
     LONG error = SCARD_S_SUCCESS;

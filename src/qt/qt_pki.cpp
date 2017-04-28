@@ -46,7 +46,13 @@
 void QtPKI::receiveIPC(const InternalMessage &message) {
     // Receive messages from main thread
     // Message must contain the context id (internal to app)
+    if (message.type == MessageType::SelectCertificate) {
+        _log("IPC: Selecting certificate");
+    }
+}
 
+void QtPKI::refresh() {
+    _log("Card inserted, refreshing available certificates");
 }
 
 
