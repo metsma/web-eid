@@ -22,6 +22,8 @@
 #include "qt_pcsc.h"
 #include "qt_pki.h"
 
+#include "context.h"
+
 #include "util.h"
 #include "Logger.h" // TODO: rename
 
@@ -93,7 +95,69 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
         quit();
     });
 
-    server = new WSServer(this);
+    // Initialize listening servers
+    ws = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
+    ws6 = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
+    ls = new QLocalServer(this);
+
+    // Set up listening
+
+    quint16 port = 42123; // TODO: 3 ports to try.
+
+    // Now this will probably get some bad publicity ...
+    QSslConfiguration sslConfiguration;
+    // TODO: make this configurable
+    QFile keyFile(":/app.web-eid.com.key");
+    keyFile.open(QIODevice::ReadOnly);
+    QSslKey sslKey(&keyFile, QSsl::Rsa, QSsl::Pem);
+    keyFile.close();
+
+    sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyNone);
+    sslConfiguration.setLocalCertificateChain(QSslCertificate::fromPath(QStringLiteral(":/app.web-eid.com.pem")));
+    sslConfiguration.setPrivateKey(sslKey);
+    sslConfiguration.setProtocol(QSsl::TlsV1SslV3);
+
+    // Listen on v4 and v6
+    ws->setSslConfiguration(sslConfiguration);
+    ws6->setSslConfiguration(sslConfiguration);
+
+    if (ws6->listen(QHostAddress::LocalHostIPv6, port)) {
+        _log("Server running on %s", qPrintable(ws6->serverUrl().toString()));
+        connect(ws6, &QWebSocketServer::newConnection, this, &QtHost::processConnect);
+    } else {
+        _log("Could not listen on v6 %d", port);
+    }
+
+    if (ws->listen(QHostAddress::LocalHost, port)) {
+        _log("Server running on %s", qPrintable(ws->serverUrl().toString()));
+        connect(ws, &QWebSocketServer::newConnection, this, &QtHost::processConnect);
+    } else {
+        _log("Could not listen on %d", port);
+    }
+
+    // TODO: shared file between app and nm-proxy
+    // Set up local server
+    QString serverName;
+#if defined(Q_OS_MACOS)
+    // /tmp/martin-webeid
+    serverName = QDir("/tmp").filePath(qgetenv("USER") + "-webeid");
+#elif defined(Q_OS_WIN32)
+    // \\.\pipe\Martin_Paljak-webeid
+    serverName = qgetenv("USERNAME").simplified().replace(" ", "_") + "-webeid";
+#elif defined(Q_OS_LINUX)
+    // /run/user/1000/webeid-socket
+    serverName = QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)).filePath("webeid-socket");
+#else
+#error "Unsupported platform"
+#endif
+
+    ls->setSocketOptions(QLocalServer::UserAccessOption);
+
+    if (ls->listen(serverName)) {
+        _log("Listening on %s", qPrintable(ls->fullServerName()));
+        connect(ls, &QLocalServer::newConnection, this, &QtHost::processConnectLocal);
+    }
+
     if (QSystemTrayIcon::isSystemTrayAvailable()) {
         tray.setContextMenu(menu);
         tray.setToolTip(tr("Web eID is running on port %1").arg(12345));
@@ -158,6 +222,25 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     PKI.moveToThread(pki_thread);
 }
 
+
+void QtHost::processConnectLocal() {
+    QLocalSocket *socket = ls->nextPendingConnection();
+    _log("Connection to local socket");
+
+    // Context cleans up after itself on disconnect
+    new WebContext(this, socket);
+}
+
+
+void QtHost::processConnect() {
+    QWebSocket *client = ws->nextPendingConnection(); // FIXME: v6 vs v4
+    _log("Connection to %s from %s:%d (%s)", qPrintable(client->requestUrl().toString()), qPrintable(client->peerAddress().toString()), client->peerPort(), qPrintable(client->origin()));
+
+    // Context cleans up after itself on disconnect
+    new WebContext(this, client);
+}
+
+
 void QtHost::shutdown(int exitcode) {
     _log("Exiting with %d", exitcode);
     pcsc_thread->exit(0);
@@ -166,86 +249,6 @@ void QtHost::shutdown(int exitcode) {
     pki_thread->wait();
 
     exit(exitcode);
-}
-
-// Called whenever a message is read from browser for processing
-void QtHost::incoming(const QJsonObject &json)
-{
-    _log("Processing message");
-    QVariantMap resp;
-
-    // FIXME: move to server
-//    if (json.isEmpty() || !json.contains("id")) {
-//        // Do nothing, as we can not reply
-//        resp = {{"error", "protocol"}, {"version", VERSION}};
-//        write(resp);
-//    }
-
-    msgid = json.value("id").toString();
-
-    // Origin. If unset for instance, set
-    // Check if origin is secure
-    QUrl url(json.value("origin").toString());
-    // https, file or localhost
-    if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost" || url.scheme() == "moz-extension" || url.scheme() == "chrome-extension") {
-        origin = json.value("origin").toString();
-        // set the "human readable origin"
-        // use localhost for file url-s
-        if (url.scheme() == "file") {
-            friendly_origin = "localhost";
-        } else {
-            friendly_origin = url.host();
-        }
-    } else {
-        // FIXME: response ?
-//            resp = {{"error", "protocol"}};
-//            write(resp);
-//            return shutdown(EXIT_FAILURE);
-    }
-
-    // TODO: have lanagueg in app settings
-    // Setting the language is also a onetime operation, thus do it here.
-    QLocale locale = json.contains("lang") ? QLocale(json.value("lang").toString()) : QLocale::system();
-    _log("Setting language to %s", locale.name().toStdString().c_str());
-    // look up translation rom resource :/translations/strings_XX.qm
-    if (translator.load(QLocale(json.value("lang").toString()), QLatin1String("strings"), QLatin1String("_"), QLatin1String(":/translations"))) {
-        if (installTranslator(&translator)) {
-            _log("Language set");
-        } else {
-            _log("Language NOT set");
-        }
-    } else {
-        _log("Failed to load translation");
-    }
-
-//   if (origin != json.value("origin").toString()) {
-//       // Otherwise if already set, it must match
-//       resp = {{"error", "protocol"}};
-//       write(resp);
-//       return shutdown(EXIT_FAILURE);
-//   }
-
-    // Command dispatch
-    if (json.contains("version")) {
-        resp = {{"id", msgid}, {"version", VERSION}}; // TODO: add something here
-    } else if (json.contains("SCardConnect")) {
-        emit connect_reader(json.value("SCardConnect").toObject().value("protocol").toString());
-    } else if (json.contains("SCardDisconnect")) {
-        emit disconnect_reader();
-    } else if (json.contains("SCardTransmit")) {
-        emit send_apdu(QByteArray::fromHex(json.value("SCardTransmit").toObject().value("bytes").toString().toLatin1()));
-    } else if (json.contains("sign")) {
-        emit sign(origin, QByteArray::fromBase64(json.value("sign").toObject().value("cert").toString().toLatin1()), QByteArray::fromBase64(json.value("sign").toObject().value("hash").toString().toLatin1()), json.value("sign").toObject().value("hashalgo").toString());
-    } else if (json.contains("cert")) {
-        emit select_certificate(origin, Signing, false);
-    } else if (json.contains("auth")) {
-        emit authenticate(origin, json.value("auth").toObject().value("nonce").toString());
-    } else {
-        resp = {{"error", "protocol"}};
-    }
-    if (!resp.empty()) {
-        outgoing(resp);
-    }
 }
 
 
@@ -282,12 +285,12 @@ void QtHost::select_certificate_done(const CK_RV status, const QByteArray &certi
 void QtHost::show_cert_select(const QString origin, std::vector<std::vector<unsigned char>> certs, CertificatePurpose purpose) {
     _log("Showign cert select dialog");
     // Trigger dialog
-    PKI.select_dialog.getCert(certs, friendly_origin, purpose); // FIXME: signature (use Q)
+    PKI.select_dialog.getCert(certs, "FIXME", purpose); // FIXME: signature (use Q)
 }
 
 void QtHost::show_pin_dialog(const CK_RV last, P11Token token, QByteArray cert, CertificatePurpose purpose) {
     _log("Show pin dialog");
-    PKI.pin_dialog.showit(last, token, ba2v(cert), origin, purpose);
+    PKI.pin_dialog.showit(last, token, ba2v(cert), "FIXME origin", purpose);
 }
 
 // Called after pinpad login has returned
@@ -299,7 +302,7 @@ void QtHost::hide_pin_dialog() {
 void QtHost::reader_connected(LONG status, const QString &reader, const QString &protocol, const QByteArray &atr) {
     if (status == SCARD_S_SUCCESS) {
         _log("HOST: reader connected");
-        PCSC.inuse_dialog.showit(friendly_origin, reader);
+        PCSC.inuse_dialog.showit("FIXME", reader);
         outgoing({{"reader", reader},
             {"atr", atr.toHex()},
             {"protocol", protocol}
@@ -321,14 +324,14 @@ void QtHost::apdu_sent(LONG status, const QByteArray &response) {
 
 void QtHost::show_insert_card(bool show, const QString &name, const SCARDCONTEXT ctx) {
     if (show) {
-        PCSC.insert_dialog.showit(friendly_origin, name, ctx);
+        PCSC.insert_dialog.showit("FIXME", name, ctx);
     } else {
         PCSC.insert_dialog.hide();
     }
 }
 
 void QtHost::show_select_reader(const QString &protocol) {
-    PCSC.select_dialog.showit(friendly_origin, protocol, PCSC::readerList());
+    PCSC.select_dialog.showit("FIXME", protocol, PCSC::readerList());
 }
 
 
@@ -346,16 +349,6 @@ void QtHost::reader_disconnected() {
     outgoing({}); // FIXME: why this here?
 }
 
-void QtHost::outgoing(const QVariantMap &resp) {
-    QVariantMap map = resp;
-
-    if (!msgid.isEmpty()) {
-        map["id"] = msgid;
-        msgid.clear();
-    }
-    server->processOutgoing(map);
-    //write(map);
-}
 
 int main(int argc, char *argv[]) {
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
@@ -371,4 +364,9 @@ int main(int argc, char *argv[]) {
     }
 
     return QtHost(argc, argv).exec();
+}
+
+
+void QtHost::outgoing(const QVariantMap &resp) {
+    // FIXME: dummy
 }

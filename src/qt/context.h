@@ -32,20 +32,25 @@ class WebContext: public QObject {
 
 public:
     WebContext(QObject *parent, const QString &origin);
+    WebContext(QObject *parent, QWebSocket *client);
+    WebContext(QObject *parent, QLocalSocket *client);
+
 
 public slots:
-    void processDisconnect(); // WS or LS disconnects abruptly
     void processMessage(const QVariantMap &message); // Message received from client
 
 private:
+    void outgoing(QVariantMap &message);
+    bool terminate();
+
     // message transport
-    QWebSocket *ws;
-    QLocalSocket *ls;
+    QWebSocket *ws = nullptr;
+    QLocalSocket *ls = nullptr;
 
     // browser context
     QString msgid;
     QString origin;
-    
+
     // Any running UI widget, associated with the context
     QWidget *ui = nullptr;
 };

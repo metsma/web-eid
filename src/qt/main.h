@@ -21,7 +21,6 @@
 #include "pkcs11module.h"
 #include "qt_pcsc.h"
 #include "qt_pki.h"
-#include "server.h"
 
 #include <QApplication>
 #include <QSystemTrayIcon>
@@ -29,6 +28,10 @@
 #include <QFile>
 #include <QVariantMap>
 #include <QJsonObject>
+
+#include <QtWebSockets/QtWebSockets>
+#include <QWebSocketServer>
+#include <QLocalServer>
 
 #ifdef _WIN32
 #include <qt_windows.h>
@@ -43,17 +46,12 @@ class QtHost: public QApplication
 
 public:
     QtHost(int &argc, char *argv[]);
+
     static QString friendlyOrigin(const QString &origin);
 
     // TODO: It is currently assumed that all invocations from one origin
     // go to the same PKCS#11 module
     PKCS11Module pkcs11;
-
-    // Thus the origin can not change, once set
-    QString origin;
-
-    // Friently origin is something that can be shown to the user
-    QString friendly_origin;
 
     // And the chosen signing certificate can not change either
     // Only with a new cert message
@@ -66,13 +64,10 @@ public:
     // both in a separate thread
     QThread *pcsc_thread;
     QThread *pki_thread;
-    
-    WSServer *server;
 
 public slots:
-    // Called when a message has been received from the
-    // browser, using the Qt signaling mechanism
-    void incoming(const QJsonObject &json);
+    void processConnect();
+    void processConnectLocal();
 
     // Called when a message is to be sent back to the browser
     void outgoing(const QVariantMap &resp);
@@ -107,10 +102,12 @@ signals:
     void disconnect_reader();
 
 private:
-    QString msgid; // If a message is being processed, set to ID
     QSystemTrayIcon tray;
 
-    QFile out;
+    QWebSocketServer *ws; // IPv4
+    QWebSocketServer *ws6; // IPv6
+    QLocalServer *ls; // localsocket
+
     void shutdown(int exitcode);
 
     QTranslator translator;

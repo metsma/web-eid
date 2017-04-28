@@ -46,7 +46,6 @@ SOURCES += \
     qt/main.cpp \
     qt/qt_pcsc.cpp \
     qt/qt_pki.cpp \
-    qt/server.cpp \
     qt/autostart.cpp \
     qt/context.cpp
 HEADERS += $$files(*.h) $$files(qt/*.h) $$files(qt/dialogs/*.h)
