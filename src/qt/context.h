@@ -35,6 +35,8 @@ public:
     WebContext(QObject *parent, QWebSocket *client);
     WebContext(QObject *parent, QLocalSocket *client);
 
+    QString id;
+
 
 public slots:
     void processMessage(const QVariantMap &message); // Message received from client

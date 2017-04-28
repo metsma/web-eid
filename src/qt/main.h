@@ -21,6 +21,7 @@
 #include "pkcs11module.h"
 #include "qt_pcsc.h"
 #include "qt_pki.h"
+#include "context.h"
 
 #include <QApplication>
 #include <QSystemTrayIcon>
@@ -108,7 +109,9 @@ private:
     QWebSocketServer *ws6; // IPv6
     QLocalServer *ls; // localsocket
 
-    void shutdown(int exitcode);
+    // Active contexts
+    QMap<QString, WebContext *> contexts;
 
+    void shutdown(int exitcode);
     QTranslator translator;
 };

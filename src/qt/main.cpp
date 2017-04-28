@@ -22,8 +22,6 @@
 #include "qt_pcsc.h"
 #include "qt_pki.h"
 
-#include "context.h"
-
 #include "util.h"
 #include "Logger.h" // TODO: rename
 
@@ -228,7 +226,11 @@ void QtHost::processConnectLocal() {
     _log("Connection to local socket");
 
     // Context cleans up after itself on disconnect
-    new WebContext(this, socket);
+    WebContext *ctx = new WebContext(this, socket);
+    contexts[ctx->id] = ctx;
+    connect(ctx, &QObject::destroyed, [this, ctx] {
+        contexts.remove(ctx->id);
+    });
 }
 
 
@@ -237,7 +239,10 @@ void QtHost::processConnect() {
     _log("Connection to %s from %s:%d (%s)", qPrintable(client->requestUrl().toString()), qPrintable(client->peerAddress().toString()), client->peerPort(), qPrintable(client->origin()));
 
     // Context cleans up after itself on disconnect
-    new WebContext(this, client);
+    WebContext *ctx = new WebContext(this, client);
+    contexts[ctx->id] = ctx;
+
+
 }
 
 

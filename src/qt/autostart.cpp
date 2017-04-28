@@ -30,7 +30,7 @@ bool StartAtLoginHelper::isEnabled() {
     if (QFile("/etc/xdg/autostart/web-eid-service.desktop").exists())
         return true;
     // TODO: if the following file exists as well, it means user has overriden the default
-    // startup script, eg disabled (X-MATE-Autostart-enabled=false or something similar)    
+    // startup script, eg disabled (X-MATE-Autostart-enabled=false or something similar)
     //if (QFile(QDir::homePath().filePath(".config/autostart/web-eid-service.desktop")))
 #elif defined(Q_OS_MACOS)
     if (CFArrayRef jobs = SMCopyAllJobDictionaries(kSMDomainUserLaunchd)) {
@@ -47,8 +47,8 @@ bool StartAtLoginHelper::isEnabled() {
     // Check registry entry and if it addresses *this* instance of the app
     // QCoreApplication::applicationFilePath()
 #else
-    #error "Unsupported platform"
-#endif 
+#error "Unsupported platform"
+#endif
     return enabled;
 }
 
@@ -63,8 +63,8 @@ bool StartAtLoginHelper::setEnabled(bool enabled) {
 #elif defined(Q_OS_WIN32)
     // Add registry entry. Utilizing  QCoreApplication::applicationFilePath()
 #else
-    #error "Unsupported platform"
-#endif 
+#error "Unsupported platform"
+#endif
 
 
     return true;
