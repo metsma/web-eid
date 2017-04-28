@@ -43,7 +43,7 @@ SOURCES += \
     modulemap.cpp \
     pcsc.cpp \
     pkcs11module.cpp \
-    qt/chrome-host.cpp \
+    qt/main.cpp \
     qt/qt_pcsc.cpp \
     qt/qt_pki.cpp \
     qt/server.cpp

@@ -17,7 +17,7 @@
  */
 
 #include "server.h"
-#include "qt_host.h" // XXX: circular
+#include "main.h" // XXX: circular
 
 
 #include "Logger.h"
