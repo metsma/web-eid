@@ -10,5 +10,7 @@ VER=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" /Application
 # root user (which would probably be safari).
 # Use sudo to switch to the context of the user running the installer
 
+sudo -u $USER open /Applications/Web\ eID.app
+sleep 1 # Give it some time to start up
 sudo -u $USER open "https://web-eid.com/?installer=macos&version=$VER" || echo "Could not open browser"
 exit 0
