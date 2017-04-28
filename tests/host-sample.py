@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 #
-# Chrome Token Signing Native Host
+# Web eID app, (C) 2017 Web eID team and contributors
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
