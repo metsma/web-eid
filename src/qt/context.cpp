@@ -16,37 +16,23 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#pragma once
 
-#include <QObject>
+#include "context.h"
 
 #include <QWebSocket>
 #include <QLocalSocket>
 #include <QWidget>
 
-// Handles a browser context, either
-// via WebSocket or LocalSocket, which is owns.
-// Lives in main thread, is created by server
-class WebContext: public QObject {
-    Q_OBJECT
 
-public:
-    WebContext(QObject *parent, const QString &origin);
+WebContext::WebContext(QObject *parent, const QString &origin) {
 
-public slots:
-    void processDisconnect(); // WS or LS disconnects abruptly
-    void processMessage(const QVariantMap &message); // Message received from client
+}
 
-private:
-    // message transport
-    QWebSocket *ws;
-    QLocalSocket *ls;
+void WebContext::processDisconnect() {
 
-    // browser context
-    QString msgid;
-    QString origin;
-    
-    // Any running UI widget, associated with the context
-    QWidget *ui = nullptr;
-};
+}
 
+void WebContext::processMessage(const QVariantMap &message) {
+
+
+}

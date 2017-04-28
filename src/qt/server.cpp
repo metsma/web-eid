@@ -37,6 +37,7 @@ WSServer::WSServer(QObject *parent):
     
     // Now this will probably get some bad publicity ...
     QSslConfiguration sslConfiguration;
+    // TODO: make this configurable
     QFile keyFile(":/app.web-eid.com.key");
     keyFile.open(QIODevice::ReadOnly);
     QSslKey sslKey(&keyFile, QSsl::Rsa, QSsl::Pem);
