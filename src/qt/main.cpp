@@ -18,6 +18,7 @@
 
 #include "main.h"
 
+#include "autostart.h"
 #include "qt_pcsc.h"
 #include "qt_pki.h"
 
@@ -51,10 +52,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef __APPLE__
-#include <ServiceManagement/ServiceManagement.h>
-#endif
-
 QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 
     _log("Starting Web eID app v%s", VERSION);
@@ -80,31 +77,15 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     // Context menu
     QMenu *menu = new QMenu();
     QAction *about = menu->addAction("About");
-    connect(about, &QAction::triggered, [&] {
+    connect(about, &QAction::triggered, [] {
         QDesktopServices::openUrl(QUrl(QStringLiteral("https://web-eid.com")));
     });
     QAction *a1 = menu->addAction("Start at login");
     a1->setCheckable(true);
-#ifdef __APPLE__
-    CFArrayRef jobs = SMCopyAllJobDictionaries(kSMDomainUserLaunchd);
-    if (jobs) {
-        for (CFIndex i = 0, count = CFArrayGetCount(jobs); i < count; ++i) {
-            CFDictionaryRef job = CFDictionaryRef(CFArrayGetValueAtIndex(jobs, i));
-            if (CFStringCompare(CFStringRef(CFDictionaryGetValue(job, CFSTR("Label"))), CFSTR("com.web-eid.login"), 0) == kCFCompareEqualTo) {
-                a1->setChecked(CFBooleanGetValue(CFBooleanRef(CFDictionaryGetValue(job, CFSTR("OnDemand")))));
-                break;
-            }
-        }
-        CFRelease(jobs);
-    }
-#endif
-    connect(a1, &QAction::toggled, [&] (bool checked) {
+    a1->setChecked(StartAtLoginHelper::isEnabled());
+    connect(a1, &QAction::toggled, [] (bool checked) {
         _log("Setting start at login to %d", checked);
-#ifdef __APPLE__
-        if (!SMLoginItemSetEnabled(CFSTR("com.web-eid.login"), checked)) {
-            _log("Login Item Was Not Successful");
-        }
-#endif
+        StartAtLoginHelper::setEnabled(checked);
     });
 
     QAction *a2 = menu->addAction("Quit");
