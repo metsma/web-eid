@@ -90,8 +90,8 @@ public:
         });
 
         show();
-//        activateWindow();
-        raise(); // to be always topmost, at least on osx
+        activateWindow(); // to be always topmost and activated, on Linux
+        raise(); // to be always topmost, on macOS
     }
 
 public slots:

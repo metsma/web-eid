@@ -28,7 +28,7 @@ def get_exe():
         return "src/nm-bridge/web-eid-bridge"
     elif sys.platform == "linux2":
         os.environ["WEB_EID_APP"] = "src/web-eid"
-        return "src/nm-bridge/nm-bridge"
+        return "src/nm-bridge/web-eid-bridge"
     elif sys.platform == 'win32':
         if os.path.isfile("src\\debug\\web-eid.exe"):
             return "src\\debug\\web-eid.exe"
