@@ -40,6 +40,9 @@ public:
     WebContext(QObject *parent, QLocalSocket *client);
 
     const QString id = QUuid::createUuid().toString();
+    QString origin; // TODO: access
+
+    QString friendlyOrigin();
 
 public slots:
     void receiveIPC(const InternalMessage &msg);
@@ -49,7 +52,7 @@ signals:
 
 private:
     void processMessage(const QVariantMap &message); // Message received from client
-    void outgoing(QVariantMap &message);
+    void outgoing(QVariantMap message);
     bool terminate();
 
     // message transport
@@ -58,9 +61,10 @@ private:
 
     // browser context
     QString msgid;
-    QString origin;
 
     // Any running UI widget, associated with the context
     QWidget *ui = nullptr;
-};
 
+    // functions to be invoced
+    InternalMessage authenticate(const QVariantMap &data);
+};

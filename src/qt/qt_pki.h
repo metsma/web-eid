@@ -21,10 +21,8 @@
 #include <QObject>
 
 #include "internal.h"
-
 #include "pkcs11module.h"
 
-#include "dialogs/select_cert.h"
 #include "dialogs/pin.h"
 
 #include <vector>
@@ -33,7 +31,6 @@ class QtPKI: public QObject {
     Q_OBJECT
 
 public:
-    QtCertSelect select_dialog;
     QtPINDialog pin_dialog;
 
     static const char *errorName(const CK_RV err);
@@ -43,7 +40,6 @@ public slots:
 
     void authenticate(const QString &origin, const QString &nonce);
     void sign(const QString &origin, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
-    void select_certificate(const QString &origin, CertificatePurpose purpose, bool silent);
 
     void cert_selected(const CK_RV status, const QByteArray &cert, CertificatePurpose purpose);
 
@@ -51,7 +47,7 @@ public slots:
     void login(const CK_RV status, const QString &pin, CertificatePurpose purpose);
     void pkcs11_sign(const CK_RV status);
 
-    void receiveIPC(const InternalMessage &message);
+    void receiveIPC(InternalMessage message);
 
 private:
     void authenticate_with(const CK_RV status, const QByteArray &cert);
@@ -69,7 +65,7 @@ signals:
     void show_pin_dialog(const CK_RV last, P11Token token, const QByteArray &cert, CertificatePurpose purpose);
     void hide_pin_dialog();
 
-    void sendIPC(const InternalMessage &message);
+    void sendIPC(InternalMessage message);
 
 public:
     void clear() {
@@ -82,16 +78,21 @@ public:
     }
 
 private:
+    QMap<QString, MessageType> ongoing; // Keep track of ongoing operations
+
     // Valid for whole session
     PKCS11Module pkcs11;
 
     static QByteArray authenticate_dtbs(const QSslCertificate &cert, const QString &origin, const QString &nonce);
+
+    void select_certificate(const QVariantMap &msg);
 
     // Valid for a single transaction
     QByteArray cert;
     QByteArray hash;
     QString hashalgo; // FIXME: enum
     CertificatePurpose purpose;
+
     // Authentication
     QString origin;
     QString nonce;

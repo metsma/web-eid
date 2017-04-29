@@ -29,7 +29,7 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client) {
         _log("Handling data from local socket");
         quint32 msgsize = 0;
         if (client->read((char*)&msgsize, sizeof(msgsize)) == sizeof(msgsize)) {
-            _log("Reading  message of %d bytes", msgsize);
+            _log("Read message size: %d bytes", msgsize);
             QByteArray msg(int(msgsize), 0);
             if (client->read(msg.data(), msgsize) == msgsize) {
                 _log("Read message of %d bytes", msgsize);
@@ -38,7 +38,7 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client) {
 
                 // re-serialize msg
                 QByteArray response =  QJsonDocument::fromVariant(json).toJson();
-                _log("Read message: %s", response.constData());
+                _log("Read message:\n%s", response.constData());
 
                 // Check for mandatory fields
                 if (!json.contains("origin") || !json.contains("id")) {
@@ -98,7 +98,13 @@ WebContext::WebContext(QObject *parent, QWebSocket *client) {
 
 // Messages from main application. This means
 void WebContext::receiveIPC(const InternalMessage &message) {
-
+    _log("Received message from main");
+    if (message.type == Authenticate) {
+        if (message.error()) {
+            _log("Auth failed");
+            outgoing(message.data);
+        }
+    }
 }
 
 // Process a message from a browsing context
@@ -106,13 +112,7 @@ void WebContext::processMessage(const QVariantMap &message) {
     _log("Processing message");
     QVariantMap resp;
 
-    // FIXME: move to server
-//    if (json.isEmpty() || !json.contains("id")) {
-//        // Do nothing, as we can not reply
-//        resp = {{"error", "protocol"}, {"version", VERSION}};
-//        write(resp);
-//    }
-
+    // Current message ID
     msgid = message.value("id").toString();
 
     // Origin. If unset for context, set
@@ -142,12 +142,6 @@ void WebContext::processMessage(const QVariantMap &message) {
             _log("Failed to load translation");
         }
     */
-//   if (origin != json.value("origin").toString()) {
-//       // Otherwise if already set, it must match
-//       resp = {{"error", "protocol"}};
-//       write(resp);
-//       return shutdown(EXIT_FAILURE);
-//   }
 
     // Command dispatch
     if (message.contains("version")) {
@@ -164,21 +158,24 @@ void WebContext::processMessage(const QVariantMap &message) {
     } else if (message.contains("cert")) {
 //        emit select_certificate(origin, Signing, false);
     } else if (message.contains("auth")) {
-        // We need to have a certificate
-        return emit sendIPC({MessageType::SelectCertificate, {{"PKI", "blah"}}});
-//        emit authenticate(origin, message.value("auth").toMap().value("nonce").toString());
+        return emit sendIPC(authenticate(message));
     } else {
         resp = {{"error", "protocol"}};
     }
     if (!resp.empty()) {
         outgoing(resp);
     }
+    // Otherwise wait for a response from other threads
 }
 
 
-void WebContext::outgoing(QVariantMap &message) {
-    QByteArray response =  QJsonDocument::fromVariant(message).toJson(QJsonDocument::Compact);
-    _log("Sending outgoing message %s", response.constData());
+void WebContext::outgoing(QVariantMap message) {
+    message["id"] = msgid;
+    msgid.clear();
+
+    QByteArray response = QJsonDocument::fromVariant(message).toJson(QJsonDocument::Compact);
+    QByteArray logmsg = QJsonDocument::fromVariant(message).toJson();
+    _log("Sending outgoing message:\n%s", logmsg.constData());
     if (this->ls) {
         quint32 msgsize = response.size();
         ls->write((char *)&msgsize, sizeof(msgsize));
@@ -196,4 +193,24 @@ bool WebContext::terminate() {
     } else if(ls) {
         ls->abort();
     }
+}
+
+QString WebContext::friendlyOrigin() {
+
+    QUrl url(origin);
+
+    if (url.scheme() == "file") {
+        return "localhost";
+    } else {
+        return url.host();
+    }
+
+}
+
+// Messages
+InternalMessage WebContext::authenticate(const QVariantMap &data) {
+    InternalMessage m;
+    m.type = Authenticate;
+    m.data = data;
+    return m;
 }

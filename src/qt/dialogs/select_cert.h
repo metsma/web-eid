@@ -18,9 +18,13 @@
 
 #pragma once
 
+#include "Logger.h"
 #include "Common.h"
 #include "util.h"
 #include "pkcs11.h"
+#include "qt_pki.h"
+#include "context.h"
+
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QHeaderView>
@@ -35,39 +39,7 @@ class QtCertSelect: public QDialog {
 
 public:
 
-    void getCert(const std::vector<std::vector<unsigned char>> &certs, const QString &origin, CertificatePurpose type) {
-        std::vector<unsigned char> result;
-        table->clear();
-        // Construct the list that is shown to the user.
-        for (const std::vector<unsigned char> &c: certs) {
-            QSslCertificate cert = v2cert(c);
-            // filter out expired certificates
-            // TODO: not here
-            if (QDateTime::currentDateTime() >= cert.expiryDate())
-                continue;
-            table->insertTopLevelItem(0, new QTreeWidgetItem(table, QStringList{
-                cert.subjectInfo(QSslCertificate::CommonName).at(0),
-                cert.subjectInfo(QSslCertificate::Organization).at(0),
-                cert.expiryDate().toString("dd.MM.yyyy"),
-                QString::number(&c - &certs[0])})); // Index of certs list
-        }
-
-        table->setCurrentIndex(table->model()->index(0, 0));
-
-        setWindowTitle(tr("Select certificate for %1 on %2").arg(type == Signing?tr("signing"):tr("authentication")).arg(origin));
-        message->setText(tr("Selected certificate will be forwarded to the remote website"));
-        show();
-        // Make sure window is in foreground and focus
-        raise();
-        activateWindow();
-        if (exec() == 0) {
-            return emit cert_selected(CKR_FUNCTION_CANCELED, 0, type);
-        }
-        emit cert_selected(CKR_OK, v2ba(certs[table->currentItem()->text(3).toUInt()]), type);
-    }
-
-
-    QtCertSelect():
+    QtCertSelect(WebContext *ctx, CertificatePurpose type, const std::vector<std::vector<unsigned char>> &certs):
         layout(new QVBoxLayout(this)),
         message(new QLabel(this)),
         table(new QTreeWidget(this)),
@@ -82,6 +54,11 @@ public:
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) &
                        ~(Qt::WindowMaximizeButtonHint|Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint));
 
+        setAttribute(Qt::WA_DeleteOnClose);
+
+        setWindowTitle(tr("Select certificate for %1 on %2").arg(type == Signing?tr("signing"):tr("authentication")).arg(ctx->friendlyOrigin()));
+        message->setText(tr("Selected certificate will be forwarded to the remote website"));
+
         table->setColumnCount(3);
         table->setRootIsDecorated(false);
         table->setHeaderLabels({tr("Certificate"), tr("Type"), tr("Valid to")});
@@ -90,22 +67,59 @@ public:
         table->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
         QPushButton *ok = buttons->addButton(tr("Select"), QDialogButtonBox::AcceptRole);
+        ok->setEnabled(false);
+
         buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-        connect(table, &QTreeWidget::clicked, [=] {
+        connect(table, &QTreeWidget::clicked, [&] {
             ok->setEnabled(true);
         });
+
+        connect(this, &QDialog::finished, [this, ctx] (int code) {
+            _log("Dialog is finished");
+            if (code == QDialog::Rejected) {
+                _log("Dialog was cancelled");
+                // TODO: send message to ... where?
+                // TO toPKI
+                return emit sendIPC({CertificateSelected, {{"id", ctx->id}, {"error", QtPKI::errorName(CKR_FUNCTION_CANCELED)}}});
+
+            }
+//            _log("Selected %d for a status of %d", table->currentItem()->text(3).toUInt(), code);
+//            v2ba(certs[table->currentItem()->text(3).toUInt()]);
+        });
+
+        show();
+//        activateWindow();
+        raise(); // to be always topmost, at least on osx
+    }
+
+public slots:
+    // Called from PKI after QtPKI::refresh() when a card has been inserted and certificate list changes.
+    void cert_list_updated(const std::vector<std::vector<unsigned char>> &certs) {
+        _log("Updating certificate list in window.");
+        for (const std::vector<unsigned char> &c: certs) {
+            QSslCertificate cert = v2cert(c);
+            // filter out expired certificates
+            // TODO: not here
+            if (QDateTime::currentDateTime() >= cert.expiryDate())
+                continue;
+            table->insertTopLevelItem(0, new QTreeWidgetItem(table, QStringList{
+                cert.subjectInfo(QSslCertificate::CommonName).at(0),
+                cert.subjectInfo(QSslCertificate::Organization).at(0),
+                cert.expiryDate().toString("dd.MM.yyyy"),
+                QString::number(&c - &certs[0])})); // Index of certs list
+        }
+        table->setCurrentIndex(table->model()->index(0, 0));
     }
 
 signals:
-    void cert_selected(CK_RV status, QByteArray cert, CertificatePurpose purpose);
+    void sendIPC(InternalMessage msg);
 
 private:
     QVBoxLayout *layout;
     QLabel *message;
     QTreeWidget *table;
     QDialogButtonBox *buttons;
-
 };
 

@@ -20,7 +20,7 @@
 
 #include "autostart.h"
 #include "qt_pcsc.h"
-#include "qt_pki.h"
+#include "qt/qt_pki.h"
 
 #include "util.h"
 #include "Logger.h" // TODO: rename
@@ -196,7 +196,6 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     connect(this, &QtHost::authenticate, &PKI, &QtPKI::authenticate, Qt::QueuedConnection);
     connect(&PKI, &QtPKI::authentication_done, this, &QtHost::authentication_done, Qt::QueuedConnection);
 
-    connect(this, &QtHost::select_certificate, &PKI, &QtPKI::select_certificate, Qt::QueuedConnection);
     connect(&PKI, &QtPKI::select_certificate_done, this, &QtHost::select_certificate_done, Qt::QueuedConnection);
 
     connect(this, &QtHost::sign, &PKI, &QtPKI::sign, Qt::QueuedConnection);
@@ -204,7 +203,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 
     // PKI related dialogs
     connect(&PKI, &QtPKI::show_cert_select, this, &QtHost::show_cert_select, Qt::QueuedConnection);
-    connect(&PKI.select_dialog, &QtCertSelect::cert_selected, &PKI, &QtPKI::cert_selected, Qt::QueuedConnection);
+//    connect(&PKI.select_dialog, &QtCertSelect::cert_selected, &PKI, &QtPKI::cert_selected, Qt::QueuedConnection);
 
     // When PIN dialog needs to be shown for PKCS#11
     connect(&PKI, &QtPKI::show_pin_dialog, this, &QtHost::show_pin_dialog, Qt::QueuedConnection);
@@ -241,12 +240,26 @@ void QtHost::processConnectLocal() {
         contexts.remove(ctx->id);
     });
 
-    // Context needs something from PKI or PCSC
+    // When context needs something from PKI or PCSC
     connect(ctx, &WebContext::sendIPC, this, &QtHost::dispatchIPC, Qt::DirectConnection);
 }
 
-void QtHost::receiveIPC(const InternalMessage &message) {
-    // Called from another thread (PKI, PCSC)
+
+// Called from another thread (PKI, PCSC)
+void QtHost::receiveIPC(InternalMessage message) {
+
+    // TODO: handle disconnected context
+
+    // Handle dialog requests
+    if (message.type == ShowSelectCertificate) {
+        _log("Showing certificate selection window");
+        QtCertSelect *dialog = new QtCertSelect(contexts[message.data["id"].toString()], Authentication, {});
+        // Signal result back to PKI
+        connect(dialog, &QtCertSelect::sendIPC, &PKI, &QtPKI::receiveIPC, Qt::QueuedConnection);
+        return;
+    }
+
+
     // Message contains context id, which we look up and dispatch directly
     QString id = message.data["id"].toString();
 
@@ -261,9 +274,14 @@ void QtHost::dispatchIPC(const InternalMessage &message) {
     WebContext *ctx = qobject_cast<WebContext *>(sender());
     _log("Dispatching for %s", qPrintable(ctx->id));
 
-    switch (message.type) {
-    case MessageType::SelectCertificate:
-        return emit toPKI(message);
+    // Make a copy
+    InternalMessage m = message;
+    // Send the context id as a simple prameter
+    m.data["id"] = ctx->id;
+
+    switch (m.type) {
+    case MessageType::Authenticate:
+        return emit toPKI(m);
     default:
         _log("Don't know how to process message");
     }
@@ -330,7 +348,7 @@ void QtHost::select_certificate_done(const CK_RV status, const QByteArray &certi
 void QtHost::show_cert_select(const QString origin, std::vector<std::vector<unsigned char>> certs, CertificatePurpose purpose) {
     _log("Showign cert select dialog");
     // Trigger dialog
-    PKI.select_dialog.getCert(certs, "FIXME", purpose); // FIXME: signature (use Q)
+//    PKI.select_dialog.getCert(certs, "FIXME", purpose); // FIXME: signature (use Q)
 }
 
 void QtHost::show_pin_dialog(const CK_RV last, P11Token token, QByteArray cert, CertificatePurpose purpose) {

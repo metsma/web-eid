@@ -48,6 +48,7 @@ SOURCES += \
     qt/qt_pki.cpp \
     qt/autostart.cpp \
     qt/context.cpp
+INCLUDEPATH += qt
 HEADERS += $$files(*.h) $$files(qt/*.h) $$files(qt/dialogs/*.h)
 RESOURCES += qt/web-eid.qrc qt/translations/strings.qrc
 TRANSLATIONS = qt/translations/strings_et.ts qt/translations/strings_ru.ts

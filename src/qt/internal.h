@@ -33,4 +33,12 @@ enum MessageType {
 struct InternalMessage {
     MessageType type;
     QVariantMap data;
+
+    const QString contextId() const {
+        return data["id"].toString();
+    }
+
+    const bool error() const {
+        return data.contains("error");
+    }
 };

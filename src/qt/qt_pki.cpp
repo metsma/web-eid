@@ -43,16 +43,43 @@
 #endif
 
 
-void QtPKI::receiveIPC(const InternalMessage &message) {
+void QtPKI::receiveIPC(InternalMessage message) {
     // Receive messages from main thread
     // Message must contain the context id (internal to app)
-    if (message.type == MessageType::SelectCertificate) {
-        _log("IPC: Selecting certificate");
+    if (message.type == MessageType::Authenticate) {
+        // If we have just one active certificate, fire up signing procedure at once.
+        // Otherwise choose a certificate
+        // If no
+        _log("IPC: Authenticating");
+        ongoing[message.contextId()] = message.type;
+        select_certificate(message.data); // TODO: signature
+    } else if (message.type == CertificateSelected) {
+        _log("IPC: cert dialog closed");
+        // Fail TODO: remove from ongoing
+        if (message.error())
+            return emit sendIPC({ongoing[message.contextId()], message.data});
+
+        if (ongoing[message.contextId()] == Authenticate) {
+
+        }
+//       return emit sendIPC({}) // how to know which message to resolve?
+        // possibly dispatch back to main thread that "user canceled"
     }
 }
 
 void QtPKI::refresh() {
-    _log("Card inserted, refreshing available certificates");
+    _log("Card inserted or removed refreshing available certificates");
+}
+
+
+// asks main thread to show a certificate selection window
+// with the currently available certificates. If the list of certificates
+// changes, dialog shall be signalled by QtPKI::certificateListChange() signal
+void QtPKI::select_certificate(const QVariantMap &msg) {
+    // TODO: if there are no reades connected and we
+    // have no certificates to choose from (Windows only) and timeout is > 0
+    // show a "connect a reader" dialog instead.
+    return emit sendIPC({ShowSelectCertificate, msg}); // FIXME: empty list currently
 }
 
 
@@ -141,7 +168,7 @@ void QtPKI::authenticate(const QString &origin, const QString &nonce) {
     this->origin = origin;
     this->nonce = nonce;
     // Get certificate // FIXME: silent handling
-    select_certificate(origin, Authentication, true);
+    //select_certificate(origin, Authentication, true);
 }
 
 void QtPKI::authenticate_with(const CK_RV status, const QByteArray &cert) {
@@ -162,6 +189,7 @@ void QtPKI::authenticate_with(const CK_RV status, const QByteArray &cert) {
 
 // Selects a certificate for the PKI context.
 // Called from web or internally (for authenticate)
+/*
 void QtPKI::select_certificate(const QString &origin, CertificatePurpose purpose, bool silent) {
     _log("PKI: selecting certificate");
 
@@ -196,6 +224,7 @@ void QtPKI::select_certificate(const QString &origin, CertificatePurpose purpose
         }
     }
 }
+*/
 
 void QtPKI::cert_selected(const CK_RV status, const QByteArray &cert, CertificatePurpose purpose) {
     _log("Certificate was selected %s", errorName(status));

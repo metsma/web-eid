@@ -19,12 +19,15 @@
 #pragma once
 
 #include "pkcs11module.h"
+#include "context.h"
+
 #include "qt_pcsc.h"
 #include "qt_pki.h"
-#include "context.h"
 
 #include "internal.h"
 
+// Dialogs
+#include "dialogs/select_cert.h"
 
 #include <QApplication>
 #include <QSystemTrayIcon>
@@ -56,7 +59,7 @@ public:
 
     // TODO: It is currently assumed that all invocations from one origin
     // go to the same PKCS#11 module
-    PKCS11Module pkcs11;
+//    PKCS11Module pkcs11;
 
     // And the chosen signing certificate can not change either
     // Only with a new cert message
@@ -96,7 +99,8 @@ public slots:
     void cancel_insert(const SCARDCONTEXT ctx); // TODO: move to PCSC and call directly from dialog
 
     // From different threads and subsystems, dispatched to contexts
-    void receiveIPC(const InternalMessage &message);
+    void receiveIPC(InternalMessage message);
+
     // From contexts, in same thread, direct connection
     void dispatchIPC(const InternalMessage &message);
 
@@ -111,8 +115,8 @@ signals:
     void send_apdu(const QByteArray &apdu);
     void disconnect_reader();
 
-    void toPKI(const InternalMessage &message);
-    void toPCSC(const InternalMessage &message);
+    void toPKI(InternalMessage message);
+    void toPCSC(InternalMessage message);
 
 private:
     QSystemTrayIcon tray;
