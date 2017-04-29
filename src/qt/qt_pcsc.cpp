@@ -31,6 +31,32 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 
+void QtPCSC::receiveIPC(InternalMessage message) {
+    // Receive messages from main thread
+    // Message must contain the context id (internal to app)
+    if (message.type == MessageType::Authenticate) {
+        // If we have just one active certificate, fire up signing procedure at once.
+        // Otherwise choose a certificate
+        // If no readers or cards are connected and timeout permits, ask the user to connect a reader
+        _log("IPC: Authenticating");
+        ongoing[message.contextId()] = message.type;
+        // select_certificate(message.data); // TODO: signature
+    } else if (message.type == CertificateSelected) {
+        _log("IPC: cert dialog closed");
+        // Fail TODO: remove from ongoing
+        if (message.error()) {
+            return emit sendIPC({ongoing[message.contextId()], message.data});
+        }
+        if (ongoing[message.contextId()] == Authenticate) {
+            // sign with the certificate
+        }
+    } else {
+        _log("Unknown message: %d", message.type);
+    }
+}
+
+
+
 
 void QtPCSC::reader_selected(const LONG status, const QString &reader, const QString &protocol) {
     if (status != SCARD_S_SUCCESS) {

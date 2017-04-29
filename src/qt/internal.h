@@ -38,7 +38,7 @@ struct InternalMessage {
         return data["id"].toString();
     }
 
-    const bool error() const {
+    bool error() const {
         return data.contains("error");
     }
 };

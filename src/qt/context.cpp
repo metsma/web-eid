@@ -143,6 +143,9 @@ void WebContext::processMessage(const QVariantMap &message) {
         }
     */
 
+    // Check if timeout specified
+    timer.setSingleShot(true);
+    timer.start(5000); // 5 seconds
     // Command dispatch
     if (message.contains("version")) {
         resp = {{"id", msgid}, {"version", VERSION}}; // TODO: add something here

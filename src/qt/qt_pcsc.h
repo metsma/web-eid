@@ -22,6 +22,7 @@
 #include <QObject>
 
 #include "pcsc.h"
+#include "internal.h"
 
 #include <vector>
 
@@ -51,6 +52,7 @@ public slots:
 
     void reader_selected(const LONG status, const QString &reader, const QString &protocol);
     void cancel_reader(); // Signalled from QtReaderInUse dialog
+    void receiveIPC(InternalMessage message);
 
 signals:
     void reader_connected(LONG status, const QString &reader, const QString &protocol, const QByteArray &atr);
@@ -59,9 +61,16 @@ signals:
     void show_insert_card(bool show, const QString &name, const SCARDCONTEXT ctx);
     void show_select_reader(const QString &protocol);
 
+    // Generic messaging
+    void sendIPC(InternalMessage message);
+
+    // Usefil signals
     void cardInserted(); // emitted when a new card is inserted. Forces PKI to refresh cert list
+    void cardRemoved();
 
 private:
+    QMap<QString, MessageType> ongoing; // Keep track of ongoing operations
+
     PCSC pcsc;
     LONG error = SCARD_S_SUCCESS;
 };

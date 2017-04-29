@@ -26,6 +26,7 @@
 #include <QLocalSocket>
 #include <QWidget>
 #include <QUuid>
+#include <QTimer>
 
 
 // Handles a browser context, either
@@ -44,6 +45,7 @@ public:
 
     QString friendlyOrigin();
 
+    QTimer timer;
 public slots:
     void receiveIPC(const InternalMessage &msg);
 

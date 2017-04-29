@@ -97,6 +97,11 @@ public:
 public slots:
     // Called from PKI after QtPKI::refresh() when a card has been inserted and certificate list changes.
     void cert_list_updated(const std::vector<std::vector<unsigned char>> &certs) {
+        // Change from some to none, interpret as implicit cancel
+        // TODO: what about chaning cards?
+        if (certs.empty())
+            return reject();
+
         _log("Updating certificate list in window.");
         for (const std::vector<unsigned char> &c: certs) {
             QSslCertificate cert = v2cert(c);
@@ -111,6 +116,10 @@ public slots:
                 QString::number(&c - &certs[0])})); // Index of certs list
         }
         table->setCurrentIndex(table->model()->index(0, 0));
+    }
+
+    void reject() {
+        done(QDialog::Rejected);
     }
 
 signals:

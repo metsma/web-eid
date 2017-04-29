@@ -49,28 +49,32 @@ void QtPKI::receiveIPC(InternalMessage message) {
     if (message.type == MessageType::Authenticate) {
         // If we have just one active certificate, fire up signing procedure at once.
         // Otherwise choose a certificate
-        // If no
+        // If no readers or cards are connected and timeout permits, ask the user to connect a reader
         _log("IPC: Authenticating");
         ongoing[message.contextId()] = message.type;
         select_certificate(message.data); // TODO: signature
     } else if (message.type == CertificateSelected) {
         _log("IPC: cert dialog closed");
         // Fail TODO: remove from ongoing
-        if (message.error())
+        if (message.error()) {
             return emit sendIPC({ongoing[message.contextId()], message.data});
-
-        if (ongoing[message.contextId()] == Authenticate) {
-
         }
-//       return emit sendIPC({}) // how to know which message to resolve?
-        // possibly dispatch back to main thread that "user canceled"
+        if (ongoing[message.contextId()] == Authenticate) {
+            // sign with the certificate
+        }
+    } else {
+        _log("Unknown message: %d", message.type);
     }
 }
 
 void QtPKI::refresh() {
-    _log("Card inserted or removed refreshing available certificates");
-}
+    _log("Card inserted or removed, refreshing available certificates");
+    std::vector<std::vector<unsigned char>> atrs = PCSC::atrList();
+    std::vector<std::string> modules = P11Modules::getPaths(atrs);
 
+    pkcs11.load(modules[0]);
+    std::vector<std::vector<unsigned char>> certs = pkcs11.getCerts();
+}
 
 // asks main thread to show a certificate selection window
 // with the currently available certificates. If the list of certificates
@@ -194,8 +198,6 @@ void QtPKI::select_certificate(const QString &origin, CertificatePurpose purpose
     _log("PKI: selecting certificate");
 
     // FIXME: single place where this happens
-    std::vector<std::vector<unsigned char>> atrs = PCSC::atrList();
-    std::vector<std::string> modules = P11Modules::getPaths(atrs);
 
     std::vector<unsigned char> cert;
 

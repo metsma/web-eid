@@ -174,49 +174,13 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     qRegisterMetaType<P11Token>();
     qRegisterMetaType<InternalMessage>();
 
-    // From host process to PCSC and vice versa
-    connect(this, &QtHost::connect_reader, &PCSC, &QtPCSC::connect_reader, Qt::QueuedConnection);
-    connect(&PCSC, &QtPCSC::reader_connected, this, &QtHost::reader_connected, Qt::QueuedConnection);
-
-    connect(this, &QtHost::send_apdu, &PCSC, &QtPCSC::send_apdu, Qt::QueuedConnection);
-    connect(&PCSC, &QtPCSC::apdu_sent, this, &QtHost::apdu_sent, Qt::QueuedConnection);
-
-    connect(this, &QtHost::disconnect_reader, &PCSC, &QtPCSC::disconnect_reader, Qt::QueuedConnection);
-    connect(&PCSC, &QtPCSC::reader_disconnected, this, &QtHost::reader_disconnected, Qt::QueuedConnection);
-
-    // PCSC related dialogs
-    connect(&PCSC, &QtPCSC::show_insert_card, this, &QtHost::show_insert_card, Qt::QueuedConnection);
-    connect(&PCSC, &QtPCSC::show_select_reader, this, &QtHost::show_select_reader, Qt::QueuedConnection);
-
-    // Wire up signals for reader dialogs
-    connect(&PCSC.inuse_dialog, &QDialog::rejected, &PCSC, &QtPCSC::cancel_reader, Qt::QueuedConnection);
-    connect(&PCSC.insert_dialog, &QtInsertCard::cancel_insert, this, &QtHost::cancel_insert, Qt::QueuedConnection);
-
-    // From host to PKI and vice versa
-    connect(this, &QtHost::authenticate, &PKI, &QtPKI::authenticate, Qt::QueuedConnection);
-    connect(&PKI, &QtPKI::authentication_done, this, &QtHost::authentication_done, Qt::QueuedConnection);
-
-    connect(&PKI, &QtPKI::select_certificate_done, this, &QtHost::select_certificate_done, Qt::QueuedConnection);
-
-    connect(this, &QtHost::sign, &PKI, &QtPKI::sign, Qt::QueuedConnection);
-    connect(&PKI, &QtPKI::sign_done, this, &QtHost::sign_done, Qt::QueuedConnection);
-
-    // PKI related dialogs
-    connect(&PKI, &QtPKI::show_cert_select, this, &QtHost::show_cert_select, Qt::QueuedConnection);
-//    connect(&PKI.select_dialog, &QtCertSelect::cert_selected, &PKI, &QtPKI::cert_selected, Qt::QueuedConnection);
-
-    // When PIN dialog needs to be shown for PKCS#11
-    connect(&PKI, &QtPKI::show_pin_dialog, this, &QtHost::show_pin_dialog, Qt::QueuedConnection);
-    connect(&PKI, &QtPKI::hide_pin_dialog, this, &QtHost::hide_pin_dialog, Qt::QueuedConnection);
-    connect(&PKI.pin_dialog, &QtPINDialog::login, &PKI, &QtPKI::login, Qt::QueuedConnection);
-
-    connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QtPKI::refresh, Qt::QueuedConnection);
-
     // TODO: remove other signals, only keep these.
     connect(this, &QtHost::toPKI, &PKI, &QtPKI::receiveIPC, Qt::QueuedConnection);
     connect(&PKI, &QtPKI::sendIPC, this, &QtHost::receiveIPC, Qt::QueuedConnection);
 
     // TODO: same for PCSC. Both subsystems can emit other signals that dialogs for example can react to.
+    connect(this, &QtHost::toPCSC, &PCSC, &QtPCSC::receiveIPC, Qt::QueuedConnection);
+    connect(&PCSC, &QtPCSC::sendIPC, this, &QtHost::receiveIPC, Qt::QueuedConnection);
 
     // Start worker threads
     pki_thread = new QThread;
@@ -247,25 +211,24 @@ void QtHost::processConnectLocal() {
 
 // Called from another thread (PKI, PCSC)
 void QtHost::receiveIPC(InternalMessage message) {
-
     // TODO: handle disconnected context
+    WebContext *ctx = contexts[message.data["id"].toString()];
 
     // Handle dialog requests
-    if (message.type == ShowSelectCertificate) {
+    if (message.type == ShowSelectCertificate) { 
         _log("Showing certificate selection window");
-        QtCertSelect *dialog = new QtCertSelect(contexts[message.data["id"].toString()], Authentication, {});
+        QtCertSelect *dialog = new QtCertSelect(ctx, Authentication, {});
         // Signal result back to PKI
         connect(dialog, &QtCertSelect::sendIPC, &PKI, &QtPKI::receiveIPC, Qt::QueuedConnection);
+        // Timeout dialog
+        if (ctx->timer.isActive()) {
+            connect(&ctx->timer, &QTimer::timeout, dialog, &QDialog::reject);
+        }
         return;
+    } else {
+        // Dispatch to context
+        ctx->receiveIPC(message);
     }
-
-
-    // Message contains context id, which we look up and dispatch directly
-    QString id = message.data["id"].toString();
-
-    // Get the target context.
-    WebContext *ctx = contexts[id];
-    ctx->receiveIPC(message);
 }
 
 
@@ -314,105 +277,6 @@ void QtHost::shutdown(int exitcode) {
     exit(exitcode);
 }
 
-
-// Callback from PKI
-void QtHost::authentication_done(const CK_RV status, const QString &token) {
-    _log("authentication done");
-    if (status == CKR_OK) {
-        outgoing({{"token", token}});
-    } else {
-        outgoing({{"error", QtPKI::errorName(status)}});
-    }
-}
-
-void QtHost::sign_done(const CK_RV status, const QByteArray &signature) {
-    _log("sign done");
-    if (status == CKR_OK) {
-        outgoing({{"signature", signature.toBase64()}});
-    } else {
-        outgoing({{"error", QtPKI::errorName(status)}});
-    }
-}
-
-void QtHost::select_certificate_done(const CK_RV status, const QByteArray &certificate) {
-    _log("select done: %s", certificate.toBase64().toStdString().c_str());
-    if (status != CKR_OK) {
-        outgoing({{"error", QtPKI::errorName(status)}});
-    } else {
-        outgoing({{"cert", certificate.toBase64()}});
-    }
-}
-
-// Show certificate selection dialog and emit the chosen dialog
-// TODO: emit straight from dialog, removing signal from this object
-void QtHost::show_cert_select(const QString origin, std::vector<std::vector<unsigned char>> certs, CertificatePurpose purpose) {
-    _log("Showign cert select dialog");
-    // Trigger dialog
-//    PKI.select_dialog.getCert(certs, "FIXME", purpose); // FIXME: signature (use Q)
-}
-
-void QtHost::show_pin_dialog(const CK_RV last, P11Token token, QByteArray cert, CertificatePurpose purpose) {
-    _log("Show pin dialog");
-    PKI.pin_dialog.showit(last, token, ba2v(cert), "FIXME origin", purpose);
-}
-
-// Called after pinpad login has returned
-void QtHost::hide_pin_dialog() {
-    PKI.pin_dialog.hide();
-}
-
-// Callbacks from PCSC
-void QtHost::reader_connected(LONG status, const QString &reader, const QString &protocol, const QByteArray &atr) {
-    if (status == SCARD_S_SUCCESS) {
-        _log("HOST: reader connected");
-        PCSC.inuse_dialog.showit("FIXME", reader);
-        outgoing({{"reader", reader},
-            {"atr", atr.toHex()},
-            {"protocol", protocol}
-        });
-    } else {
-        _log("HOST: reader NOT connected: %s", PCSC::errorName(status));
-        outgoing({{"error", PCSC::errorName(status)}});
-    }
-}
-
-void QtHost::apdu_sent(LONG status, const QByteArray &response) {
-    _log("HOST: APDU sent");
-    if (status == SCARD_S_SUCCESS) {
-        outgoing({{"bytes", response.toHex()}});
-    } else {
-        outgoing({{"error", PCSC::errorName(status)}});
-    }
-}
-
-void QtHost::show_insert_card(bool show, const QString &name, const SCARDCONTEXT ctx) {
-    if (show) {
-        PCSC.insert_dialog.showit("FIXME", name, ctx);
-    } else {
-        PCSC.insert_dialog.hide();
-    }
-}
-
-void QtHost::show_select_reader(const QString &protocol) {
-    PCSC.select_dialog.showit("FIXME", protocol, PCSC::readerList());
-}
-
-
-// Called from the "insert card" dialog in the main thread to cancel
-// SCardGetStatusChange in the PC/SC thread
-void QtHost::cancel_insert(const SCARDCONTEXT ctx) {
-    _log("HOST: Canceling ongoing PC/SC calls");
-    PCSC::cancel(ctx);
-}
-
-// Called from the PC/SC thread to close the "Reader in use" dialog
-void QtHost::reader_disconnected() {
-    _log("HOST: reader disconnected");
-    PCSC.inuse_dialog.hide();
-    outgoing({}); // FIXME: why this here?
-}
-
-
 int main(int argc, char *argv[]) {
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
     QString lockfile_folder = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
@@ -427,9 +291,4 @@ int main(int argc, char *argv[]) {
     }
 
     return QtHost(argc, argv).exec();
-}
-
-
-void QtHost::outgoing(const QVariantMap &resp) {
-    // FIXME: dummy
 }
