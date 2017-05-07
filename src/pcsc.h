@@ -43,6 +43,7 @@ public:
     static std::vector<PCSCReader> readerList(SCARDCONTEXT ctx = 0);
     static LONG cancel(SCARDCONTEXT ctx);
 
+    LONG block();
     LONG connect(const std::string &reader, const std::string &protocol = "*");
     LONG wait(const std::string &reader, const std::string &protocol = "*");
     LONG transmit(const std::vector<unsigned char> &apdu, std::vector<unsigned char> &response);
@@ -54,8 +55,13 @@ public:
     static const char *errorName(LONG err);
     DWORD protocol = SCARD_PROTOCOL_UNDEFINED; // XXX: maybe not public
 private:
+
+    LONG establish();
+
     bool established = false;
     bool connected = false;
+    bool pnp = true;
+
     SCARDCONTEXT context;
     SCARDHANDLE card;
     PCSCReader status;

@@ -21,10 +21,18 @@
 #include <QVariantMap>
 
 enum MessageType {
+    // Dialog related
+    ShowDialog, // Show a dialog
+    HideDialog, // Hide a dialog from outside
     SelectCertificate, //resolves once the certificate has been selected.
     ShowSelectCertificate, // asks main thread to show a Qt cert selection window
     CertificateSelected, // signalled from cert selection window when certificate is chosen by user
 
+    // PCSC related
+    WaitForReaderEvents,
+    CardConnect,
+
+    // Context related
     Authenticate, // resolves with token or error
     Sign // resolves with signature or error
 };

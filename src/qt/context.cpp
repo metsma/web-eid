@@ -107,6 +107,23 @@ void WebContext::receiveIPC(const InternalMessage &message) {
     }
 }
 
+// Messages
+static InternalMessage authenticate(const QVariantMap &data) {
+    InternalMessage m;
+    m.type = Authenticate;
+    m.data = data;
+    return m;
+}
+
+static InternalMessage SCardConnect(const QVariantMap &data) {
+    InternalMessage m;
+    m.type = CardConnect;
+    m.data = data;
+    return m;
+}
+
+
+
 // Process a message from a browsing context
 void WebContext::processMessage(const QVariantMap &message) {
     _log("Processing message");
@@ -150,7 +167,7 @@ void WebContext::processMessage(const QVariantMap &message) {
     if (message.contains("version")) {
         resp = {{"id", msgid}, {"version", VERSION}}; // TODO: add something here
     } else if (message.contains("SCardConnect")) {
-//        emit connect_reader(message.value("SCardConnect").toMap().value("protocol").toString());
+        return emit sendIPC(SCardConnect(message.value("SCardConnect").toMap()));
     } else if (message.contains("SCardDisconnect")) {
 //        emit disconnect_reader();
     } else if (message.contains("SCardTransmit")) {
@@ -201,19 +218,10 @@ bool WebContext::terminate() {
 QString WebContext::friendlyOrigin() {
 
     QUrl url(origin);
-
     if (url.scheme() == "file") {
         return "localhost";
     } else {
         return url.host();
     }
-
 }
 
-// Messages
-InternalMessage WebContext::authenticate(const QVariantMap &data) {
-    InternalMessage m;
-    m.type = Authenticate;
-    m.data = data;
-    return m;
-}

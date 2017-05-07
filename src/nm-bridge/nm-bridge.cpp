@@ -78,7 +78,7 @@ public:
         // /run/user/1000/webeid-socket
         serverName = QDir(QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation)).filePath("webeid-socket");
 #else
-    #error "Unsupported platform"
+#error "Unsupported platform"
 #endif
         // Override, for testing purposes
         if (qEnvironmentVariableIsSet("WEB_EID_APP"))

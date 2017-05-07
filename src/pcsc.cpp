@@ -42,6 +42,8 @@ LONG SCCall(const char *fun, const char *file, int line, const char *function, F
 } while(0)
 
 
+#define PNP_READER_NAME "\\\\?PnP?\\Notification"
+
 const PCSCReader *from_name(const std::string &name, const std::vector<PCSCReader> &readers) {
     for (const auto &reader: readers) {
         if (reader.name == name) {
@@ -49,6 +51,23 @@ const PCSCReader *from_name(const std::string &name, const std::vector<PCSCReade
         }
     }
     return nullptr;
+}
+
+
+LONG PCSC::establish() {
+    if (!established) {
+        check_SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
+        established = true;
+        // Check for PnP support
+        SCARD_READERSTATE state;
+        state.dwCurrentState = SCARD_STATE_UNAWARE;
+        state.szReader = PNP_READER_NAME;
+        check_SCard(GetStatusChange, context, 0, &state, DWORD(1));
+        if (state.dwEventState & SCARD_STATE_UNKNOWN) {
+            _log("No PnP support");
+            pnp = false;
+        }
+    }
 }
 
 // XXX
@@ -66,10 +85,7 @@ LONG PCSC::connect(const std::string &reader, const std::string &protocol) {
     LONG err = SCARD_S_SUCCESS;
 
     // Create context, if not yet connected
-    if (!established) {
-        check_SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
-        established = true;
-    }
+    establish();
 
     // Quick query. XXX: glitch ? if the reader has not been listed in this context,
     // connect on Linux sometimes fails with SCARD_E_REDER_UNAVAILABLE ?
@@ -130,8 +146,55 @@ LONG PCSC::connect(const std::string &reader, const std::string &protocol) {
     connected = true;
     return err;
 }
-LONG PCSC::wait(const std::string &reader, const std::string &protocol) {
 
+
+// Block until a card or reader is inserted or removed
+LONG PCSC::block() {
+    establish();
+
+    // List currently known readers
+    std::vector<PCSCReader> list = readerList();
+
+    // Add PnP, if supported
+    std::vector<SCARD_READERSTATE> statuses(list.size() + pnp); // pnp will be either 0 or 1
+
+    // Add known readers
+    for (size_t i = 0; i < list.size(); i++) {
+        statuses[i].szReader = list[i].name.c_str();
+        statuses[i].dwCurrentState = list[i].state.dwEventState; // XXX
+    }
+
+    // Add PnP, if supported
+    if (pnp) {
+        statuses[list.size()].szReader = PNP_READER_NAME;
+        statuses[list.size()].dwCurrentState = SCARD_STATE_UNAWARE;
+    }
+
+    // Query statuses, blocking forever
+    check_SCard(GetStatusChange, context, INFINITE, statuses.data(), DWORD(statuses.size()));
+
+    // Construct reader names list
+    for (auto &i: statuses) {
+        std::string reader(i.szReader);
+        if (!(i.dwEventState & SCARD_STATE_CHANGED))
+            continue;
+
+        bool inuse = i.dwEventState & SCARD_STATE_INUSE;
+        bool exclusive = i.dwEventState & SCARD_STATE_EXCLUSIVE;
+        bool mute = i.dwEventState & SCARD_STATE_MUTE;
+        _log("reader: %s", reader.c_str());
+        _log("  exclusive:%s inuse:%s mute:%s", exclusive?"true":"false", inuse?"true":"false", mute?"true":"false");
+        std::vector<unsigned char> atr(i.rgbAtr, i.rgbAtr + i.cbAtr);
+        if (!atr.empty()) {
+            _log("  atr:%s", toHex(atr).c_str());
+        }
+        //result.push_back({reader, atr, inuse, exclusive, i});
+    }
+    return SCARD_S_SUCCESS;
+}
+
+// Returns if there are card insertions/removals
+LONG PCSC::wait(const std::string &reader, const std::string &protocol) {
     // FIXME: copypaste
     // Quick query
     std::vector<PCSCReader> readers = readerList();
@@ -302,49 +365,50 @@ std::vector<PCSCReader> PCSC::readerList(SCARDCONTEXT ctx) {
 
 // List taken from pcsc-lite source
 const char *PCSC::errorName(LONG err) {
-    #define CASE(X) case LONG(X): return #X
+#define CASE(X) case LONG(X): return #X
     switch (err)
     {
-    CASE(SCARD_S_SUCCESS);
-    CASE(SCARD_E_CANCELLED);
-    CASE(SCARD_E_CANT_DISPOSE);
-    CASE(SCARD_E_INSUFFICIENT_BUFFER);
-    CASE(SCARD_E_INVALID_ATR);
-    CASE(SCARD_E_INVALID_HANDLE);
-    CASE(SCARD_E_INVALID_PARAMETER);
-    CASE(SCARD_E_INVALID_TARGET);
-    CASE(SCARD_E_INVALID_VALUE);
-    CASE(SCARD_E_NO_MEMORY);
-    CASE(SCARD_F_COMM_ERROR);
-    CASE(SCARD_F_INTERNAL_ERROR);
-    CASE(SCARD_F_UNKNOWN_ERROR);
-    CASE(SCARD_F_WAITED_TOO_LONG);
-    CASE(SCARD_E_UNKNOWN_READER);
-    CASE(SCARD_E_TIMEOUT);
-    CASE(SCARD_E_SHARING_VIOLATION);
-    CASE(SCARD_E_NO_SMARTCARD);
-    CASE(SCARD_E_UNKNOWN_CARD);
-    CASE(SCARD_E_PROTO_MISMATCH);
-    CASE(SCARD_E_NOT_READY);
-    CASE(SCARD_E_SYSTEM_CANCELLED);
-    CASE(SCARD_E_NOT_TRANSACTED);
-    CASE(SCARD_E_READER_UNAVAILABLE);
-    CASE(SCARD_W_UNSUPPORTED_CARD);
-    CASE(SCARD_W_UNRESPONSIVE_CARD);
-    CASE(SCARD_W_UNPOWERED_CARD);
-    CASE(SCARD_W_RESET_CARD);
-    CASE(SCARD_W_REMOVED_CARD);
+        CASE(SCARD_S_SUCCESS);
+        CASE(SCARD_E_CANCELLED);
+        CASE(SCARD_E_CANT_DISPOSE);
+        CASE(SCARD_E_INSUFFICIENT_BUFFER);
+        CASE(SCARD_E_INVALID_ATR);
+        CASE(SCARD_E_INVALID_HANDLE);
+        CASE(SCARD_E_INVALID_PARAMETER);
+        CASE(SCARD_E_INVALID_TARGET);
+        CASE(SCARD_E_INVALID_VALUE);
+        CASE(SCARD_E_NO_MEMORY);
+        CASE(SCARD_F_COMM_ERROR);
+        CASE(SCARD_F_INTERNAL_ERROR);
+        CASE(SCARD_F_UNKNOWN_ERROR);
+        CASE(SCARD_F_WAITED_TOO_LONG);
+        CASE(SCARD_E_UNKNOWN_READER);
+        CASE(SCARD_E_TIMEOUT);
+        CASE(SCARD_E_SHARING_VIOLATION);
+        CASE(SCARD_E_NO_SMARTCARD);
+        CASE(SCARD_E_UNKNOWN_CARD);
+        CASE(SCARD_E_PROTO_MISMATCH);
+        CASE(SCARD_E_NOT_READY);
+        CASE(SCARD_E_SYSTEM_CANCELLED);
+        CASE(SCARD_E_NOT_TRANSACTED);
+        CASE(SCARD_E_READER_UNAVAILABLE);
+        CASE(SCARD_W_UNSUPPORTED_CARD);
+        CASE(SCARD_W_UNRESPONSIVE_CARD);
+        CASE(SCARD_W_UNPOWERED_CARD);
+        CASE(SCARD_W_RESET_CARD);
+        CASE(SCARD_W_REMOVED_CARD);
 #ifdef SCARD_W_INSERTED_CARD
-    CASE(SCARD_W_INSERTED_CARD);
+        CASE(SCARD_W_INSERTED_CARD);
 #endif
-    CASE(SCARD_E_UNSUPPORTED_FEATURE);
-    CASE(SCARD_E_PCI_TOO_SMALL);
-    CASE(SCARD_E_READER_UNSUPPORTED);
-    CASE(SCARD_E_DUPLICATE_READER);
-    CASE(SCARD_E_CARD_UNSUPPORTED);
-    CASE(SCARD_E_NO_SERVICE);
-    CASE(SCARD_E_SERVICE_STOPPED);
-    CASE(SCARD_E_NO_READERS_AVAILABLE);
-    default: return "UNKNOWN";
+        CASE(SCARD_E_UNSUPPORTED_FEATURE);
+        CASE(SCARD_E_PCI_TOO_SMALL);
+        CASE(SCARD_E_READER_UNSUPPORTED);
+        CASE(SCARD_E_DUPLICATE_READER);
+        CASE(SCARD_E_CARD_UNSUPPORTED);
+        CASE(SCARD_E_NO_SERVICE);
+        CASE(SCARD_E_SERVICE_STOPPED);
+        CASE(SCARD_E_NO_READERS_AVAILABLE);
+    default:
+        return "UNKNOWN";
     };
 }

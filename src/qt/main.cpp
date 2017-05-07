@@ -174,11 +174,9 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     qRegisterMetaType<P11Token>();
     qRegisterMetaType<InternalMessage>();
 
-    // TODO: remove other signals, only keep these.
     connect(this, &QtHost::toPKI, &PKI, &QtPKI::receiveIPC, Qt::QueuedConnection);
     connect(&PKI, &QtPKI::sendIPC, this, &QtHost::receiveIPC, Qt::QueuedConnection);
 
-    // TODO: same for PCSC. Both subsystems can emit other signals that dialogs for example can react to.
     connect(this, &QtHost::toPCSC, &PCSC, &QtPCSC::receiveIPC, Qt::QueuedConnection);
     connect(&PCSC, &QtPCSC::sendIPC, this, &QtHost::receiveIPC, Qt::QueuedConnection);
 
@@ -190,12 +188,15 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 
     PCSC.moveToThread(pcsc_thread);
     PKI.moveToThread(pki_thread);
+
+    // Get reader states
+    emit toPCSC({WaitForReaderEvents, {}});
 }
 
 
 void QtHost::processConnectLocal() {
     QLocalSocket *socket = ls->nextPendingConnection();
-    _log("Connection to local socket");
+    _log("New connection to local socket");
 
     // Context cleans up after itself on disconnect
     WebContext *ctx = new WebContext(this, socket);
@@ -204,23 +205,23 @@ void QtHost::processConnectLocal() {
         contexts.remove(ctx->id);
     });
 
-    // When context needs something from PKI or PCSC
+    // When context needs something from PKI or PCSC, dispatch through this
     connect(ctx, &WebContext::sendIPC, this, &QtHost::dispatchIPC, Qt::DirectConnection);
 }
 
 
-// Called from another thread (PKI, PCSC)
+// Invoked from another thread (PKI, PCSC)
 void QtHost::receiveIPC(InternalMessage message) {
     // TODO: handle disconnected context
     WebContext *ctx = contexts[message.data["id"].toString()];
 
     // Handle dialog requests
-    if (message.type == ShowSelectCertificate) { 
+    if (message.type == ShowSelectCertificate) {
         _log("Showing certificate selection window");
         QtCertSelect *dialog = new QtCertSelect(ctx, Authentication, {});
         // Signal result back to PKI
         connect(dialog, &QtCertSelect::sendIPC, &PKI, &QtPKI::receiveIPC, Qt::QueuedConnection);
-        // Timeout dialog
+        // Timeout the dialog, if present
         if (ctx->timer.isActive()) {
             connect(&ctx->timer, &QTimer::timeout, dialog, &QDialog::reject);
         }

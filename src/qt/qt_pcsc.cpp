@@ -31,32 +31,106 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 
+
+template < typename Func, typename... Args>
+LONG SCCall(const char *fun, const char *file, int line, const char *function, Func func, Args... args)
+{
+    // TODO: log parameters
+    LONG err = func(args...);
+    Logger::writeLog(fun, file, line, "%s: %s", function, PCSC::errorName(err));
+    return err;
+}
+#define SCard(API, ...) SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard"#API, SCard##API, __VA_ARGS__)
+
+// return the rv is not CKR_OK
+#define check_SCard(API, ...) do { \
+    LONG _ret = SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard"#API, SCard##API, __VA_ARGS__); \
+    if (_ret != SCARD_S_SUCCESS) { \
+       Logger::writeLog(__FUNCTION__, __FILE__, __LINE__, "returning %s", PCSC::errorName(_ret)); \
+       return _ret; \
+    } \
+} while(0)
+
+
+#define PNP_READER_NAME "\\\\?PnP?\\Notification"
+
+
+
+// List taken from pcsc-lite source
+const char *PCSC::errorName(LONG err) {
+#define CASE(X) case LONG(X): return #X
+    switch (err)
+    {
+        CASE(SCARD_S_SUCCESS);
+        CASE(SCARD_E_CANCELLED);
+        CASE(SCARD_E_CANT_DISPOSE);
+        CASE(SCARD_E_INSUFFICIENT_BUFFER);
+        CASE(SCARD_E_INVALID_ATR);
+        CASE(SCARD_E_INVALID_HANDLE);
+        CASE(SCARD_E_INVALID_PARAMETER);
+        CASE(SCARD_E_INVALID_TARGET);
+        CASE(SCARD_E_INVALID_VALUE);
+        CASE(SCARD_E_NO_MEMORY);
+        CASE(SCARD_F_COMM_ERROR);
+        CASE(SCARD_F_INTERNAL_ERROR);
+        CASE(SCARD_F_UNKNOWN_ERROR);
+        CASE(SCARD_F_WAITED_TOO_LONG);
+        CASE(SCARD_E_UNKNOWN_READER);
+        CASE(SCARD_E_TIMEOUT);
+        CASE(SCARD_E_SHARING_VIOLATION);
+        CASE(SCARD_E_NO_SMARTCARD);
+        CASE(SCARD_E_UNKNOWN_CARD);
+        CASE(SCARD_E_PROTO_MISMATCH);
+        CASE(SCARD_E_NOT_READY);
+        CASE(SCARD_E_SYSTEM_CANCELLED);
+        CASE(SCARD_E_NOT_TRANSACTED);
+        CASE(SCARD_E_READER_UNAVAILABLE);
+        CASE(SCARD_W_UNSUPPORTED_CARD);
+        CASE(SCARD_W_UNRESPONSIVE_CARD);
+        CASE(SCARD_W_UNPOWERED_CARD);
+        CASE(SCARD_W_RESET_CARD);
+        CASE(SCARD_W_REMOVED_CARD);
+#ifdef SCARD_W_INSERTED_CARD
+        CASE(SCARD_W_INSERTED_CARD);
+#endif
+        CASE(SCARD_E_UNSUPPORTED_FEATURE);
+        CASE(SCARD_E_PCI_TOO_SMALL);
+        CASE(SCARD_E_READER_UNSUPPORTED);
+        CASE(SCARD_E_DUPLICATE_READER);
+        CASE(SCARD_E_CARD_UNSUPPORTED);
+        CASE(SCARD_E_NO_SERVICE);
+        CASE(SCARD_E_SERVICE_STOPPED);
+        CASE(SCARD_E_NO_READERS_AVAILABLE);
+    default:
+        return "UNKNOWN";
+    };
+}
+
+
+
+
+
+
 void QtPCSC::receiveIPC(InternalMessage message) {
     // Receive messages from main thread
     // Message must contain the context id (internal to app)
-    if (message.type == MessageType::Authenticate) {
-        // If we have just one active certificate, fire up signing procedure at once.
-        // Otherwise choose a certificate
-        // If no readers or cards are connected and timeout permits, ask the user to connect a reader
-        _log("IPC: Authenticating");
-        ongoing[message.contextId()] = message.type;
-        // select_certificate(message.data); // TODO: signature
-    } else if (message.type == CertificateSelected) {
-        _log("IPC: cert dialog closed");
-        // Fail TODO: remove from ongoing
-        if (message.error()) {
-            return emit sendIPC({ongoing[message.contextId()], message.data});
-        }
-        if (ongoing[message.contextId()] == Authenticate) {
-            // sign with the certificate
-        }
+    if (message.type == MessageType::WaitForReaderEvents) {
+        wait();
     } else {
         _log("Unknown message: %d", message.type);
     }
 }
 
 
-
+void QtPCSC::wait() {
+    _log("Waiting for events");
+    LONG err;
+    do {
+        // Wait for card/reader insertion/removal
+        err = pcsc.block();
+        // TODO: emit events HERE.
+    } while (err == SCARD_S_SUCCESS || err == SCARD_E_TIMEOUT);
+}
 
 void QtPCSC::reader_selected(const LONG status, const QString &reader, const QString &protocol) {
     if (status != SCARD_S_SUCCESS) {
@@ -77,6 +151,8 @@ void QtPCSC::reader_selected(const LONG status, const QString &reader, const QSt
         emit reader_connected(err, reader, protocol, {0});
     }
 }
+
+
 
 // Process DISCONNECT command
 void QtPCSC::disconnect_reader() {

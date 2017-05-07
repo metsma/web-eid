@@ -66,7 +66,4 @@ private:
 
     // Any running UI widget, associated with the context
     QWidget *ui = nullptr;
-
-    // functions to be invoced
-    InternalMessage authenticate(const QVariantMap &data);
 };

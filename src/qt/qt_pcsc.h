@@ -64,12 +64,18 @@ signals:
     // Generic messaging
     void sendIPC(InternalMessage message);
 
-    // Usefil signals
+    // Useful signals
     void cardInserted(); // emitted when a new card is inserted. Forces PKI to refresh cert list
     void cardRemoved();
 
+    void readerAttached();
+    void readerRemoved();
+
+    void readerListChanged(); // if any of the above triggered, this will trigger as well
+
 private:
     QMap<QString, MessageType> ongoing; // Keep track of ongoing operations
+    void wait(); // forces the thread to sleep and wait for events
 
     PCSC pcsc;
     LONG error = SCARD_S_SUCCESS;
