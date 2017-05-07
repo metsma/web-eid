@@ -44,6 +44,9 @@ public:
         connect(&this->select_dialog, &QtSelectReader::reader_selected, this, &QtPCSC::reader_selected, Qt::QueuedConnection);
     }
 
+    static const char *errorName(LONG err);
+
+
 
 public slots:
     void connect_reader(const QString &protocol);

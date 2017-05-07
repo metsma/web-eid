@@ -31,13 +31,24 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 
+/*
+ QtPCSC is:
+ - a QObject
+ - lives in a dedicated thread
+ - represents the PC/SC subsystem of a host machine to the app
+ - translates PCSC events to Qt signals.
+
+Connecting to a reader will create another QObject, that owns the connection
+until an error occures or it is closed and provides APDU transport to the reader.
+
+*/
 
 template < typename Func, typename... Args>
 LONG SCCall(const char *fun, const char *file, int line, const char *function, Func func, Args... args)
 {
     // TODO: log parameters
     LONG err = func(args...);
-    Logger::writeLog(fun, file, line, "%s: %s", function, PCSC::errorName(err));
+    Logger::writeLog(fun, file, line, "%s: %s", function, QtPCSC::errorName(err));
     return err;
 }
 #define SCard(API, ...) SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard"#API, SCard##API, __VA_ARGS__)
@@ -46,7 +57,7 @@ LONG SCCall(const char *fun, const char *file, int line, const char *function, F
 #define check_SCard(API, ...) do { \
     LONG _ret = SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard"#API, SCard##API, __VA_ARGS__); \
     if (_ret != SCARD_S_SUCCESS) { \
-       Logger::writeLog(__FUNCTION__, __FILE__, __LINE__, "returning %s", PCSC::errorName(_ret)); \
+       Logger::writeLog(__FUNCTION__, __FILE__, __LINE__, "returning %s", QtPCSC::errorName(_ret)); \
        return _ret; \
     } \
 } while(0)
@@ -54,10 +65,8 @@ LONG SCCall(const char *fun, const char *file, int line, const char *function, F
 
 #define PNP_READER_NAME "\\\\?PnP?\\Notification"
 
-
-
 // List taken from pcsc-lite source
-const char *PCSC::errorName(LONG err) {
+const char *QtPCSC::errorName(LONG err) {
 #define CASE(X) case LONG(X): return #X
     switch (err)
     {
@@ -105,10 +114,6 @@ const char *PCSC::errorName(LONG err) {
         return "UNKNOWN";
     };
 }
-
-
-
-
 
 
 void QtPCSC::receiveIPC(InternalMessage message) {
