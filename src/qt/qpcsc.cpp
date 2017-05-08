@@ -16,7 +16,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include "qt_pcsc.h"
+#include "qpcsc.h"
 
 #include "Logger.h"
 #include "util.h"
@@ -114,6 +114,14 @@ const char *QtPCSC::errorName(LONG err) {
         return "UNKNOWN";
     };
 }
+
+void QPCSCReader::disconnect() {
+    // Disconnect a reader
+}
+void QPCSCReader::send_apdu(const QByteArray &apdu) {
+   // send APDU
+}
+
 
 
 void QtPCSC::receiveIPC(InternalMessage message) {

@@ -19,7 +19,6 @@
 #include "main.h"
 
 #include "autostart.h"
-#include "qt_pcsc.h"
 #include "qt/qt_pki.h"
 
 #include "util.h"

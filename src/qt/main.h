@@ -21,7 +21,7 @@
 #include "pkcs11module.h"
 #include "context.h"
 
-#include "qt_pcsc.h"
+#include "qpcsc.h"
 #include "qt_pki.h"
 
 #include "internal.h"
