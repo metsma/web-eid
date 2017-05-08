@@ -70,6 +70,7 @@ public:
     static const char *errorName(LONG err);
 
     QMap<QString, QStringList> getReaders();
+    QPCSCReader connect(const QString &reader);
 
 signals:
     void cardInserted(const QString &reader, const QByteArray &atr);

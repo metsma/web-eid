@@ -104,6 +104,11 @@ void WebContext::receiveIPC(const InternalMessage &message) {
             _log("Auth failed");
             outgoing(message.data);
         }
+    } else if (message.type == CardConnect) {
+        if (message.error()) {
+            _log("connect failed");
+            outgoing(message.data);
+        }
     }
 }
 

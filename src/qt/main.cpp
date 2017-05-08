@@ -185,6 +185,9 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     // Start PC/SC event thread
     PCSC.start();
 
+    // Refresh PKI tokens when a card is inserted
+    connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QtPKI::refresh, Qt::QueuedConnection);
+
     connect(&PCSC, &QtPCSC::readerAttached, [=] (QString name) {
         printf("%s connected\n", name.toStdString().c_str());
 
@@ -265,6 +268,9 @@ void QtHost::dispatchIPC(const InternalMessage &message) {
         ctx->dialog = new QtSelectReader(ctx); // FIXME
         ((QtSelectReader *)ctx->dialog)->update(PCSC.getReaders());
         connect(&PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)ctx->dialog, &QtSelectReader::update, Qt::QueuedConnection);
+        connect((QDialog *)ctx->dialog, &QDialog::rejected, [=] {
+            ctx->receiveIPC({CardConnect, {{"error", "SCARD_E_CANCELLED"}}});
+        });
         return;
     default:
         _log("Don't know how to process message");
