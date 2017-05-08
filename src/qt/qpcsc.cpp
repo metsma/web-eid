@@ -267,7 +267,7 @@ void QtPCSC::run()
                     }
                     continue;
                 }
-                if ((i.dwEventState & SCARD_STATE_PRESENT) && (known[reader] & SCARD_STATE_EMPTY)) {
+                if ((i.dwEventState & SCARD_STATE_PRESENT) && !(known[reader] & SCARD_STATE_PRESENT)) {
                     if (i.dwEventState & SCARD_STATE_MUTE) {
                         _log("Card in %s is mute", reader.c_str());
                         emit error(SCARD_W_UNRESPONSIVE_CARD); // TODO: add reader name
