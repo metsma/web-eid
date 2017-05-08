@@ -19,6 +19,7 @@
 #pragma once
 
 #include <QThread>
+#include <QMutex>
 
 #ifdef __APPLE__
 #include <PCSC/winscard.h>
@@ -56,7 +57,7 @@ signals:
 private:
     SCARDCONTEXT context; // Only on unix, where it is necessary
     SCARDHANDLE card;
-    DWORD protocol = SCARD_PROTOCOL_UNDEFINED;    
+    DWORD protocol = SCARD_PROTOCOL_UNDEFINED;
 };
 
 // Synthesizes PC/SC events to Qt signals
@@ -68,6 +69,8 @@ public:
     void cancel();
     static const char *errorName(LONG err);
 
+    QMap<QString, QStringList> getReaders();
+
 signals:
     void cardInserted(const QString &reader, const QByteArray &atr);
     void cardRemoved(const QString &reader);
@@ -75,12 +78,14 @@ signals:
     void readerAttached(const QString &name);
     void readerRemoved(const QString &name);
 
-    void readerListChanged(); // if any of the above triggered, this will trigger as well
+    void readerListChanged(const QMap<QString, QStringList> &readers); // if any of the above triggered, this will trigger as well
 
     void error(const QString &reader, const LONG err);
 
 private:
     SCARDCONTEXT context;
+    QMap<std::string, DWORD> known; // Known readers
+    QMutex mutex; // Lock that guards the known readers
     bool pnp = true;
     QStringList stateNames(DWORD state) const;
 };

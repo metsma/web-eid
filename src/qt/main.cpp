@@ -21,6 +21,7 @@
 #include "autostart.h"
 #include "qt/qt_pki.h"
 
+#include "qt/dialogs/select_reader.h"
 #include "util.h"
 #include "Logger.h" // TODO: rename
 
@@ -89,7 +90,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 
     QAction *a2 = menu->addAction("Quit");
     connect(a2, &QAction::triggered, [&] {
-        quit();
+        shutdown(0);
     });
 
     // Initialize listening servers
@@ -205,7 +206,6 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
         printf("error in %s %s\n", qPrintable(reader), QtPCSC::errorName(err));
     });
 
-
 }
 
 
@@ -261,6 +261,11 @@ void QtHost::dispatchIPC(const InternalMessage &message) {
     switch (m.type) {
     case MessageType::Authenticate:
         return emit toPKI(m);
+    case MessageType::CardConnect:
+        ctx->dialog = new QtSelectReader(ctx); // FIXME
+        ((QtSelectReader *)ctx->dialog)->update(PCSC.getReaders());
+        connect(&PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)ctx->dialog, &QtSelectReader::update, Qt::QueuedConnection);
+        return;
     default:
         _log("Don't know how to process message");
     }
@@ -289,6 +294,7 @@ void QtHost::shutdown(int exitcode) {
     pki_thread->wait();
 
     // Send SCardCancel
+    PCSC.cancel();
     PCSC.wait();
     exit(exitcode);
 }

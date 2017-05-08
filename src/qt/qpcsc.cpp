@@ -33,6 +33,7 @@
 #include <QVBoxLayout>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QMutexLocker>
 
 /*
  QtPCSC is:
@@ -145,6 +146,23 @@ void QPCSCReader::send_apdu(const QByteArray &apdu) {
     // send APDU
 }
 
+// Called from main thread.
+void QtPCSC::cancel() {
+    SCard(Cancel, context);
+}
+
+// Called from main thread
+QMap<QString, QStringList> QtPCSC::getReaders() {
+    // FIXME: lock when writing the known map
+    QMutexLocker locker(&mutex);
+
+    QMap<QString, QStringList> result;
+    for (const auto &e: known.keys()) {
+        result[QString::fromStdString(e)] = stateNames(known[e]);
+    }
+    return result;
+}
+
 void QtPCSC::run()
 {
     LONG rv = SCARD_S_SUCCESS;
@@ -166,8 +184,8 @@ void QtPCSC::run()
         pnp = false;
     }
 
-    QMap<std::string, DWORD> known;
     bool list = true;
+    bool change = false; // if a list change signal should be emitted
     std::set<std::string> readernames;
 
     // Wait for events
@@ -203,17 +221,24 @@ void QtPCSC::run()
             // Remove unknown readers
             for (auto &e: known.keys()) {
                 if (readernames.count(e) == 0) {
+                    mutex.lock();
                     known.remove(e);
+                    mutex.unlock();
                     _log("Emitting remove signal");
                     emit readerRemoved(QString::fromStdString(e));
+                    // card removed event was done in previous loop
+                    emit readerListChanged(getReaders());
                 }
             }
             // Add new readers
             for (auto &e: readernames) {
                 if (!known.contains(e)) {
                     // New reader detected
+                    mutex.lock();
                     known[e] = SCARD_STATE_UNAWARE;
+                    mutex.unlock();
                     emit readerAttached(QString::fromStdString(e));
+                    change = true; // after we know the possibly interesting state
                 }
             }
             // Do not list on next round, unless necessary
@@ -264,6 +289,7 @@ void QtPCSC::run()
                     // Also emit card removed signal, if card was present
                     if (known[reader] & SCARD_STATE_PRESENT) {
                         emit cardRemoved(QString::fromStdString(reader));
+                        // reader list change will be in next loop
                     }
                     continue;
                 }
@@ -277,12 +303,21 @@ void QtPCSC::run()
                             _log("  atr:%s", atr.toHex().toStdString().c_str());
                         }
                         emit cardInserted(QString::fromStdString(reader), atr);
+                        change = true;
                     }
                 } else if ((i.dwEventState & SCARD_STATE_EMPTY) && (known[reader] & SCARD_STATE_PRESENT) && !(known[reader] & SCARD_STATE_MUTE)) {
                     emit cardRemoved(QString::fromStdString(reader));
+                    change = true;
                 }
 
+                mutex.lock();
                 known[reader] = i.dwEventState;
+                mutex.unlock();
+            }
+            // card related list change
+            if (change) {
+                emit readerListChanged(getReaders());
+                change = false;
             }
         }
     } while (rv == LONG(SCARD_S_SUCCESS) || rv == LONG(SCARD_E_TIMEOUT));

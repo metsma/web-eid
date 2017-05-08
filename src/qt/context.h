@@ -46,6 +46,9 @@ public:
     QString friendlyOrigin();
 
     QTimer timer;
+
+    // Any running UI widget, associated with the context
+    QWidget *dialog = nullptr;
 public slots:
     void receiveIPC(const InternalMessage &msg);
 
@@ -64,6 +67,5 @@ private:
     // browser context
     QString msgid;
 
-    // Any running UI widget, associated with the context
-    QWidget *ui = nullptr;
+
 };
