@@ -148,8 +148,6 @@ void QPCSCReader::send_apdu(const QByteArray &apdu) {
 void QtPCSC::run()
 {
     LONG rv = SCARD_S_SUCCESS;
-    QMap<std::string, DWORD> known;
-    bool list = true;
 
     // TODO: handle the case where the resource manager is not running.
     rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
@@ -166,10 +164,10 @@ void QtPCSC::run()
     if ((rv == LONG(SCARD_E_TIMEOUT)) && (state.dwEventState & SCARD_STATE_UNKNOWN)) {
         _log("No PnP support");
         pnp = false;
-    } else {
-        _log("Assuming PnP support");
     }
 
+    QMap<std::string, DWORD> known;
+    bool list = true;
     std::set<std::string> readernames;
 
     // Wait for events
@@ -227,18 +225,20 @@ void QtPCSC::run()
         for (auto &r: readernames) {
             statuses.push_back({r.c_str(), nullptr, known[r], SCARD_STATE_UNAWARE, 0, 0});
         }
-
         // Append PnP, if supported
         if (pnp) {
             statuses.push_back({PNP_READER_NAME, nullptr, SCARD_STATE_UNAWARE, SCARD_STATE_UNAWARE, 0, 0});
         }
+
+        // Debug
         for (auto &r: statuses) {
             _log("Querying %s: %s", r.szReader, stateNames(r.dwCurrentState).join(" ").toStdString().c_str());
         }
+
         // Query statuses
         rv = SCard(GetStatusChange, context, INFINITE, &statuses[0], DWORD(statuses.size()));
         if (rv == SCARD_E_UNKNOWN_READER) {
-            // List changed, try again
+            // List changed while in air, try again
             list = true;
             continue;
         }
@@ -258,8 +258,6 @@ void QtPCSC::run()
                     continue;
                 }
 
-
-                DWORD change = i.dwEventState ^ known[reader];
                 if (i.dwEventState & SCARD_STATE_UNKNOWN) {
                     _log("reader removed: %s", reader.c_str());
                     list = true;
@@ -269,7 +267,7 @@ void QtPCSC::run()
                     }
                     continue;
                 }
-                if (i.dwEventState & SCARD_STATE_PRESENT) {
+                if ((i.dwEventState & SCARD_STATE_PRESENT) && (known[reader] & SCARD_STATE_EMPTY)) {
                     if (i.dwEventState & SCARD_STATE_MUTE) {
                         _log("Card in %s is mute", reader.c_str());
                         emit error(SCARD_W_UNRESPONSIVE_CARD); // TODO: add reader name
