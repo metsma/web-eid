@@ -22,6 +22,9 @@
 #include "util.h"
 #include "pcsc.h"
 
+#include <set>
+#include <map>
+
 #include <QDialogButtonBox>
 #include <QHeaderView>
 #include <QLabel>
@@ -43,7 +46,7 @@ until an error occures or it is closed and provides APDU transport to the reader
 
 */
 
-template < typename Func, typename... Args>
+template <typename Func, typename... Args>
 LONG SCCall(const char *fun, const char *file, int line, const char *function, Func func, Args... args)
 {
     // TODO: log parameters
@@ -51,25 +54,27 @@ LONG SCCall(const char *fun, const char *file, int line, const char *function, F
     Logger::writeLog(fun, file, line, "%s: %s", function, QtPCSC::errorName(err));
     return err;
 }
-#define SCard(API, ...) SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard"#API, SCard##API, __VA_ARGS__)
+#define SCard(API, ...) SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard" #API, SCard##API, __VA_ARGS__)
 
 // return the rv is not CKR_OK
-#define check_SCard(API, ...) do { \
-    LONG _ret = SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard"#API, SCard##API, __VA_ARGS__); \
-    if (_ret != SCARD_S_SUCCESS) { \
-       Logger::writeLog(__FUNCTION__, __FILE__, __LINE__, "returning %s", QtPCSC::errorName(_ret)); \
-       return _ret; \
-    } \
-} while(0)
-
+#define check_SCard(API, ...)                                                                            \
+    do                                                                                                   \
+    {                                                                                                    \
+        LONG _ret = SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard" #API, SCard##API, __VA_ARGS__);     \
+        if (_ret != SCARD_S_SUCCESS)                                                                     \
+        {                                                                                                \
+            Logger::writeLog(__FUNCTION__, __FILE__, __LINE__, "returning %s", QtPCSC::errorName(_ret)); \
+            return _ret;                                                                                 \
+        }                                                                                                \
+    } while (0)
 
 #define PNP_READER_NAME "\\\\?PnP?\\Notification"
 
 // List taken from pcsc-lite source
-const char *QtPCSC::errorName(LONG err) {
+const char *QtPCSC::errorName(LONG err)
+{
 #define CASE(X) case LONG(X): return #X
-    switch (err)
-    {
+    switch (err) {
         CASE(SCARD_S_SUCCESS);
         CASE(SCARD_E_CANCELLED);
         CASE(SCARD_E_CANT_DISPOSE);
@@ -115,93 +120,175 @@ const char *QtPCSC::errorName(LONG err) {
     };
 }
 
-void QPCSCReader::disconnect() {
+QStringList QtPCSC::stateNames(DWORD state) const
+{
+    QStringList result;
+#define STATE(X) if( state & SCARD_STATE_##X ) result << #X
+    STATE(IGNORE);
+    STATE(CHANGED);
+    STATE(UNKNOWN);
+    STATE(UNAVAILABLE);
+    STATE(EMPTY);
+    STATE(PRESENT);
+    STATE(ATRMATCH);
+    STATE(EXCLUSIVE);
+    STATE(INUSE);
+    STATE(MUTE);
+    return result;
+}
+
+void QPCSCReader::disconnect() { // Add PnP, if supported
+
     // Disconnect a reader
 }
 void QPCSCReader::send_apdu(const QByteArray &apdu) {
-   // send APDU
+    // send APDU
 }
 
+void QtPCSC::run()
+{
+    LONG rv = SCARD_S_SUCCESS;
+    QMap<std::string, DWORD> known;
+    bool list = true;
 
-
-void QtPCSC::receiveIPC(InternalMessage message) {
-    // Receive messages from main thread
-    // Message must contain the context id (internal to app)
-    if (message.type == MessageType::WaitForReaderEvents) {
-        wait();
-    } else {
-        _log("Unknown message: %d", message.type);
+    // TODO: handle the case where the resource manager is not running.
+    rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
+    if (rv != SCARD_S_SUCCESS) {
+        emit error(rv);
     }
-}
 
+    // Check if PnP is NOT supported
+    SCARD_READERSTATE state;
+    state.dwCurrentState = SCARD_STATE_UNAWARE;
+    state.szReader = PNP_READER_NAME;
+    rv = SCard(GetStatusChange, context, 0, &state, DWORD(1));
 
-void QtPCSC::wait() {
-    _log("Waiting for events");
-    LONG err;
+    if ((rv == LONG(SCARD_E_TIMEOUT)) && (state.dwEventState & SCARD_STATE_UNKNOWN)) {
+        _log("No PnP support");
+        pnp = false;
+    } else {
+        _log("Assuming PnP support");
+    }
+
+    std::set<std::string> readernames;
+
+    // Wait for events
     do {
-        // Wait for card/reader insertion/removal
-        err = pcsc.block();
-        // TODO: emit events HERE.
-    } while (err == SCARD_S_SUCCESS || err == SCARD_E_TIMEOUT);
+        std::vector<SCARD_READERSTATE> statuses;
+
+        if (list)  {
+            // List readers
+            readernames.clear();
+            DWORD size;
+            rv = SCard(ListReaders, context, nullptr, nullptr, &size);
+            if (rv != SCARD_S_SUCCESS || !size) {
+                _log("SCardListReaders(size): %s %d", errorName(rv), size);
+                return emit error(rv);
+            }
+
+            std::string readers(size, 0);
+            rv = SCard(ListReaders, context, nullptr, &readers[0], &size);
+            if (rv != SCARD_S_SUCCESS) {
+                _log("SCardListReaders: %s", errorName(rv));
+                return emit error(rv);
+            }
+            readers.resize(size);
+            // Extract reader names
+            for (std::string::const_iterator i = readers.begin(); i != readers.end(); ++i) {
+                std::string name(&*i);
+                i += name.size();
+                if (name.empty())
+                    continue;
+                readernames.insert(name);
+                _log("Listed %s", name.c_str());
+            }
+            // Remove unknown readers
+            for (auto &e: known.keys()) {
+                if (readernames.count(e) == 0) {
+                    known.remove(e);
+                    _log("Emitting remove signal");
+                    emit readerRemoved(QString::fromStdString(e));
+                }
+            }
+            // Add new readers
+            for (auto &e: readernames) {
+                if (!known.contains(e)) {
+                    // New reader detected
+                    known[e] = SCARD_STATE_UNAWARE;
+                    emit readerAttached(QString::fromStdString(e));
+                }
+            }
+            // Do not list on next round, unless necessary
+            list = false;
+        }
+
+        // Construct status query vector
+        statuses.resize(0);
+        for (auto &r: readernames) {
+            statuses.push_back({r.c_str(), nullptr, known[r], SCARD_STATE_UNAWARE, 0, 0});
+        }
+
+        // Append PnP, if supported
+        if (pnp) {
+            statuses.push_back({PNP_READER_NAME, nullptr, SCARD_STATE_UNAWARE, SCARD_STATE_UNAWARE, 0, 0});
+        }
+        for (auto &r: statuses) {
+            _log("Querying %s: %s", r.szReader, stateNames(r.dwCurrentState).join(" ").toStdString().c_str());
+        }
+        // Query statuses
+        rv = SCard(GetStatusChange, context, INFINITE, &statuses[0], DWORD(statuses.size()));
+        if (rv == SCARD_E_UNKNOWN_READER) {
+            // List changed, try again
+            list = true;
+            continue;
+        }
+        if (rv == SCARD_E_TIMEOUT || rv == SCARD_S_SUCCESS) {
+            // Check if PnP event, always remove from vector
+            if (pnp) {
+                if (statuses.back().dwEventState & SCARD_STATE_CHANGED) {
+                    list = true;
+                }
+                statuses.pop_back();
+            }
+            for (auto &i: statuses) {
+                std::string reader(i.szReader);
+                _log("%s: %s", reader.c_str(), stateNames(i.dwEventState).join(" ").toStdString().c_str());
+                if (!(i.dwEventState & SCARD_STATE_CHANGED)) {
+                    _log("No change on %s", reader.c_str());
+                    continue;
+                }
+
+
+                DWORD change = i.dwEventState ^ known[reader];
+                if (i.dwEventState & SCARD_STATE_UNKNOWN) {
+                    _log("reader removed: %s", reader.c_str());
+                    list = true;
+                    // Also emit card removed signal, if card was present
+                    if (known[reader] & SCARD_STATE_PRESENT) {
+                        emit cardRemoved(QString::fromStdString(reader));
+                    }
+                    continue;
+                }
+                if (i.dwEventState & SCARD_STATE_PRESENT) {
+                    if (i.dwEventState & SCARD_STATE_MUTE) {
+                        _log("Card in %s is mute", reader.c_str());
+                        emit error(SCARD_W_UNRESPONSIVE_CARD); // TODO: add reader name
+                    } else {
+                        std::vector<unsigned char> atr(i.rgbAtr, i.rgbAtr + i.cbAtr);
+                        if (!atr.empty()) {
+                            _log("  atr:%s", toHex(atr).c_str());
+                        }
+                        emit cardInserted(QString::fromStdString(reader), 0); // FIXME: atr
+                    }
+                } else if ((i.dwEventState & SCARD_STATE_EMPTY) && (known[reader] & SCARD_STATE_PRESENT) && !(known[reader] & SCARD_STATE_MUTE)) {
+                    emit cardRemoved(QString::fromStdString(reader));
+                }
+
+
+                known[reader] = i.dwEventState;
+            }
+        }
+    } while (rv == SCARD_S_SUCCESS || rv == SCARD_E_TIMEOUT);
+    _log("Quitting PCSC thread");
+    SCard(ReleaseContext, context);
 }
-
-void QtPCSC::reader_selected(const LONG status, const QString &reader, const QString &protocol) {
-    if (status != SCARD_S_SUCCESS) {
-        return emit reader_connected(status, reader, protocol, {0});
-    }
-    _log("PCSC: using reader %s", reader.toStdString().c_str());
-    LONG err = pcsc.connect(reader.toStdString(), protocol.toStdString());
-    // XXX: this should be more logical with a single call to PC/SC
-    // If empty at first, wait for insertion, with a dialog
-    if (err == LONG(SCARD_E_NO_SMARTCARD) || err == LONG(SCARD_W_REMOVED_CARD)) {
-        emit show_insert_card(true, reader, pcsc.getContext());
-        err = pcsc.wait(reader.toStdString(), protocol.toStdString());
-        emit show_insert_card(false, reader, pcsc.getContext());
-    }
-    if (err == SCARD_S_SUCCESS) {
-        emit reader_connected(err, reader, pcsc.protocol == SCARD_PROTOCOL_T0 ? "T=0" : "T=1", v2ba(pcsc.getStatus().atr));
-    } else {
-        emit reader_connected(err, reader, protocol, {0});
-    }
-}
-
-
-
-// Process DISCONNECT command
-void QtPCSC::disconnect_reader() {
-    _log("PCSC: disconnecting reader");
-    pcsc.disconnect();
-    emit reader_disconnected();
-}
-
-// Reader access cancelled from the "reader in use" dialog
-void QtPCSC::cancel_reader() {
-    _log("PCSC: cancel reader access");
-    // FIXME: maybe not a good idea, only give a notification with the possibility of removing card?
-    error = SCARD_E_CANCELLED;
-    pcsc.disconnect();
-    // Note: nothing is emitted here, ongoing APDU is transmitted
-    // and above error returned on next call
-}
-
-// Process CONNECT command
-void QtPCSC::connect_reader(const QString &protocol) {
-    _log("PCSC: connecting to reader");
-    return emit show_select_reader(protocol);
-}
-
-// Process APDU command
-void QtPCSC::send_apdu(const QByteArray &apdu) {
-    std::vector<unsigned char> response;
-    // When the dialog is cancelled, set a local error and use it here for next invocation
-    if (error != SCARD_S_SUCCESS) {
-        emit apdu_sent(error, 0);
-        error = SCARD_S_SUCCESS; // set back to normal
-        return;
-    }
-    response.resize(4096); // More than most APDU buffers on cards
-    _log("PCSC: sending APDU: %s", apdu.toHex().toStdString().c_str());
-    LONG err = pcsc.transmit(ba2v(apdu), response);
-    emit apdu_sent(err, v2ba(response));
-}
-

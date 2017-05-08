@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <QObject>
+#include <QThread>
 
 #ifdef __APPLE__
 #include <PCSC/winscard.h>
@@ -60,54 +60,25 @@ private:
 };
 
 // Synthesizes PC/SC events to Qt signals
-class QtPCSC: public QObject {
+class QtPCSC: public QThread {
     Q_OBJECT
 
 public:
-    // Ongoing dialogs of PCSC subsystem
-    QtInsertCard insert_dialog; // FIXME: remove 
-    QtReaderInUse inuse_dialog; // FIXME: remove 
-    QtSelectReader select_dialog; // FIXME: remove 
-
-    QtPCSC() {
-        connect(&this->select_dialog, &QtSelectReader::reader_selected, this, &QtPCSC::reader_selected, Qt::QueuedConnection);
-    }
-
+    void run();
     static const char *errorName(LONG err);
 
-public slots:
-    void connect_reader(const QString &protocol);
-    void send_apdu(const QByteArray &apdu);
-    void disconnect_reader();
-
-    void reader_selected(const LONG status, const QString &reader, const QString &protocol);
-    void cancel_reader(); // Signalled from QtReaderInUse dialog
-    void receiveIPC(InternalMessage message);
-
 signals:
-    // Useful signals
-    void cardInserted(); // emitted when a new card is inserted. Forces PKI to refresh cert list
-    void cardRemoved();
+    void cardInserted(const QString &reader, const QByteArray &atr);
+    void cardRemoved(const QString &reader);
 
-    void readerAttached();
-    void readerRemoved();
+    void readerAttached(const QString &name);
+    void readerRemoved(const QString &name);
 
     void readerListChanged(); // if any of the above triggered, this will trigger as well
 
-    // Old slots. remove.
-    void reader_connected(LONG status, const QString &reader, const QString &protocol, const QByteArray &atr);
-    void apdu_sent(LONG status, const QByteArray &response);
-    void reader_disconnected();
-    void show_insert_card(bool show, const QString &name, const SCARDCONTEXT ctx);
-    void show_select_reader(const QString &protocol);
-
-    // Generic messaging
-    void sendIPC(InternalMessage message);
-
+    void error(LONG err);
 private:
-    QMap<QString, MessageType> ongoing; // Keep track of ongoing operations
-    void wait(); // forces the thread to sleep and wait for events
-
-    PCSC pcsc;
-    LONG error = SCARD_S_SUCCESS;
+    SCARDCONTEXT context;
+    bool pnp = true;
+    QStringList stateNames(DWORD state) const;
 };

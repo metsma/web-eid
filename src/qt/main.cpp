@@ -176,20 +176,36 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     connect(this, &QtHost::toPKI, &PKI, &QtPKI::receiveIPC, Qt::QueuedConnection);
     connect(&PKI, &QtPKI::sendIPC, this, &QtHost::receiveIPC, Qt::QueuedConnection);
 
-    connect(this, &QtHost::toPCSC, &PCSC, &QtPCSC::receiveIPC, Qt::QueuedConnection);
-    connect(&PCSC, &QtPCSC::sendIPC, this, &QtHost::receiveIPC, Qt::QueuedConnection);
-
     // Start worker threads
     pki_thread = new QThread;
-    pcsc_thread = new QThread;
     pki_thread->start();
-    pcsc_thread->start();
-
-    PCSC.moveToThread(pcsc_thread);
     PKI.moveToThread(pki_thread);
 
-    // Get reader states
-    emit toPCSC({WaitForReaderEvents, {}});
+    // Start PC/SC event thread
+    PCSC.start();
+
+    connect(&PCSC, &QtPCSC::readerAttached, [=] (QString name) {
+        printf("%s connected\n", name.toStdString().c_str());
+
+    });
+    connect(&PCSC, &QtPCSC::readerRemoved, [=] (QString name) {
+        printf("%s removed\n", name.toStdString().c_str());
+
+    });
+
+    connect(&PCSC, &QtPCSC::cardRemoved, [=] (QString name) {
+        printf("card removed from %s\n", name.toStdString().c_str());
+    });
+
+    connect(&PCSC, &QtPCSC::cardInserted, [=] (QString name, QByteArray atr) {
+        printf("card inserted to %s\n", name.toStdString().c_str());
+    });
+
+     connect(&PCSC, &QtPCSC::error, [=] (LONG err) {
+        printf("error %s\n", QtPCSC::errorName(err));
+    });
+
+
 }
 
 
@@ -269,11 +285,11 @@ void QtHost::processConnect() {
 
 void QtHost::shutdown(int exitcode) {
     _log("Exiting with %d", exitcode);
-    pcsc_thread->exit(0);
     pki_thread->exit(0);
-    pcsc_thread->wait();
     pki_thread->wait();
 
+    // Send SCardCancel
+    PCSC.wait();
     exit(exitcode);
 }
 

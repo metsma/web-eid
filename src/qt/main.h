@@ -60,7 +60,6 @@ public:
     QtPKI PKI;
 
     // both in a separate thread
-    QThread *pcsc_thread;
     QThread *pki_thread;
 
 public slots:
