@@ -201,8 +201,8 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
         printf("card inserted to %s\n", name.toStdString().c_str());
     });
 
-     connect(&PCSC, &QtPCSC::error, [=] (LONG err) {
-        printf("error %s\n", QtPCSC::errorName(err));
+    connect(&PCSC, &QtPCSC::error, [=] (QString reader, LONG err) {
+        printf("error in %s %s\n", qPrintable(reader), QtPCSC::errorName(err));
     });
 
 

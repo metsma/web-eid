@@ -65,6 +65,7 @@ class QtPCSC: public QThread {
 
 public:
     void run();
+    void cancel();
     static const char *errorName(LONG err);
 
 signals:
@@ -76,7 +77,8 @@ signals:
 
     void readerListChanged(); // if any of the above triggered, this will trigger as well
 
-    void error(LONG err);
+    void error(const QString &reader, const LONG err);
+
 private:
     SCARDCONTEXT context;
     bool pnp = true;

@@ -152,7 +152,7 @@ void QtPCSC::run()
     // TODO: handle the case where the resource manager is not running.
     rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
     if (rv != SCARD_S_SUCCESS) {
-        emit error(rv);
+        return emit error("", rv);
     }
 
     // Check if PnP is NOT supported
@@ -181,14 +181,14 @@ void QtPCSC::run()
             rv = SCard(ListReaders, context, nullptr, nullptr, &size);
             if (rv != SCARD_S_SUCCESS || !size) {
                 _log("SCardListReaders(size): %s %d", errorName(rv), size);
-                return emit error(rv);
+                return emit error("", rv);
             }
 
             std::string readers(size, 0);
             rv = SCard(ListReaders, context, nullptr, &readers[0], &size);
             if (rv != SCARD_S_SUCCESS) {
                 _log("SCardListReaders: %s", errorName(rv));
-                return emit error(rv);
+                return emit error("", rv);
             }
             readers.resize(size);
             // Extract reader names
@@ -223,11 +223,11 @@ void QtPCSC::run()
         // Construct status query vector
         statuses.resize(0);
         for (auto &r: readernames) {
-            statuses.push_back({r.c_str(), nullptr, known[r], SCARD_STATE_UNAWARE, 0, 0});
+            statuses.push_back({r.c_str(), nullptr, known[r], SCARD_STATE_UNAWARE, 0, {0}});
         }
         // Append PnP, if supported
         if (pnp) {
-            statuses.push_back({PNP_READER_NAME, nullptr, SCARD_STATE_UNAWARE, SCARD_STATE_UNAWARE, 0, 0});
+            statuses.push_back({PNP_READER_NAME, nullptr, SCARD_STATE_UNAWARE, SCARD_STATE_UNAWARE, 0, {0}});
         }
 
         // Debug
@@ -237,12 +237,12 @@ void QtPCSC::run()
 
         // Query statuses
         rv = SCard(GetStatusChange, context, INFINITE, &statuses[0], DWORD(statuses.size()));
-        if (rv == SCARD_E_UNKNOWN_READER) {
+        if (rv == LONG(SCARD_E_UNKNOWN_READER)) {
             // List changed while in air, try again
             list = true;
             continue;
         }
-        if (rv == SCARD_E_TIMEOUT || rv == SCARD_S_SUCCESS) {
+        if (rv == LONG(SCARD_E_TIMEOUT) || rv == LONG(SCARD_S_SUCCESS)) {
             // Check if PnP event, always remove from vector
             if (pnp) {
                 if (statuses.back().dwEventState & SCARD_STATE_CHANGED) {
@@ -254,7 +254,7 @@ void QtPCSC::run()
                 std::string reader(i.szReader);
                 _log("%s: %s", reader.c_str(), stateNames(i.dwEventState).join(" ").toStdString().c_str());
                 if (!(i.dwEventState & SCARD_STATE_CHANGED)) {
-                    _log("No change on %s", reader.c_str());
+                    _log("No change: %s", reader.c_str());
                     continue;
                 }
 
@@ -270,23 +270,22 @@ void QtPCSC::run()
                 if ((i.dwEventState & SCARD_STATE_PRESENT) && !(known[reader] & SCARD_STATE_PRESENT)) {
                     if (i.dwEventState & SCARD_STATE_MUTE) {
                         _log("Card in %s is mute", reader.c_str());
-                        emit error(SCARD_W_UNRESPONSIVE_CARD); // TODO: add reader name
+                        emit error(QString::fromStdString(reader), SCARD_W_UNRESPONSIVE_CARD);
                     } else {
-                        std::vector<unsigned char> atr(i.rgbAtr, i.rgbAtr + i.cbAtr);
-                        if (!atr.empty()) {
-                            _log("  atr:%s", toHex(atr).c_str());
+                        QByteArray atr = QByteArray::fromRawData((const char *)i.rgbAtr, i.cbAtr);
+                        if (!atr.isEmpty()) {
+                            _log("  atr:%s", atr.toHex().toStdString().c_str());
                         }
-                        emit cardInserted(QString::fromStdString(reader), 0); // FIXME: atr
+                        emit cardInserted(QString::fromStdString(reader), atr);
                     }
                 } else if ((i.dwEventState & SCARD_STATE_EMPTY) && (known[reader] & SCARD_STATE_PRESENT) && !(known[reader] & SCARD_STATE_MUTE)) {
                     emit cardRemoved(QString::fromStdString(reader));
                 }
 
-
                 known[reader] = i.dwEventState;
             }
         }
-    } while (rv == SCARD_S_SUCCESS || rv == SCARD_E_TIMEOUT);
+    } while (rv == LONG(SCARD_S_SUCCESS) || rv == LONG(SCARD_E_TIMEOUT));
     _log("Quitting PCSC thread");
     SCard(ReleaseContext, context);
 }
