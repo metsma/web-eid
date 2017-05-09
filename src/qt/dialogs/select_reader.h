@@ -77,7 +77,7 @@ public:
 
         connect(this, &QDialog::accepted, [=] {
             _log("Selected reader %s", qPrintable(table->currentItem()->text(0)));
-            emit reader_selected(table->currentItem()->text(0));
+            emit readerSelected(table->currentItem()->text(0));
         });
         show();
         activateWindow(); // to be always topmost and activated, on Linux
@@ -119,7 +119,7 @@ public slots:
     }
 
 signals:
-    void reader_selected(const QString &reader);
+    void readerSelected(const QString &reader);
 
 private:
     QVBoxLayout *layout;

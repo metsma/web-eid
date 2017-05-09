@@ -31,10 +31,10 @@ class TestPCSC(ChromeTest):
       cmd = {"SCardDisconnect": {}, "origin": "https://example.com/"}
       resp = self.transact(cmd)
 
-  def test_pcsc_card_removal(self):
-     self.instruct("Select a reader, insert card, remove during apdu-s")
-     cmd = {"SCardConnect": {"protocol": "*"}, "origin": "https://example.com/"}
-     resp = self.transact(cmd)
+#  def test_pcsc_card_removal(self):
+#     self.instruct("Select a reader, insert card, remove during apdu-s")
+#     cmd = {"SCardConnect": {"protocol": "*"}, "origin": "https://example.com/"}
+#     resp = self.transact(cmd)
 
 if __name__ == '__main__':
     # run tests

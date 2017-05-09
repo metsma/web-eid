@@ -22,7 +22,7 @@ macx {
 }
 unix:!macx: {
     PKGCONFIG += libpcsclite
-    CONFIG += link_pkgconfig
+    CONFIG += link_pkgconfig debug
     TARGET = "web-eid"
 }
 unix {

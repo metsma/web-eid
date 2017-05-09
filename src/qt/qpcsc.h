@@ -29,30 +29,29 @@
 #include <winscard.h>
 #endif
 
-#include "pcsc.h"
 #include "internal.h"
 
 #include <vector>
 
-#include "dialogs/insert_card.h"
-#include "dialogs/reader_in_use.h"
-#include "dialogs/select_reader.h"
-
-
 // Represents a connection to a reader and a card.
+// It lives in main thread but has a worker thread
 class QPCSCReader: public QObject {
     Q_OBJECT
-
 public:
+    QPCSCReader(QObject *parent) {
+
+    }
     QWidget *dialog; // "Reader is in use by ..." dialog
 
 public slots:
+    void connect(const QString &reader, const QString &protocol);
     void send_apdu(const QByteArray &apdu);
     void disconnect();
 
 signals:
     void apdu_received(const QByteArray &apdu);
     void disconnected();
+    void connected(const QString &protocol, const QByteArray &atr);
 
 private:
     SCARDCONTEXT context; // Only on unix, where it is necessary

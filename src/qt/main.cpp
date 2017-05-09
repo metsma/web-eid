@@ -188,12 +188,12 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     connect(&PCSC, &QtPCSC::cardRemoved, &PKI, &QPKI::cardRemoved, Qt::QueuedConnection);
 
     connect(&PKI, &QPKI::certificateListChanged, [=] (QVector<QByteArray> certs) {
-        printf("Certificate list changed, contains %d entries\n", certs.size());
+        _log("Certificate list changed, contains %d entries\n", certs.size());
     });
 
     // TODO: show UI on severe errors
     connect(&PCSC, &QtPCSC::error, [=] (QString reader, LONG err) {
-        printf("error in %s %s\n", qPrintable(reader), QtPCSC::errorName(err));
+        _log("error in %s %s\n", qPrintable(reader), QtPCSC::errorName(err));
     });
 
 }
@@ -202,13 +202,22 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 void QtHost::processConnectLocal() {
     QLocalSocket *socket = ls->nextPendingConnection();
     _log("New connection to local socket");
-
-    // Context cleans up after itself on disconnect
     WebContext *ctx = new WebContext(this, socket);
+    newConnection(ctx);
+}
+
+void QtHost::processConnect() {
+    QWebSocket *client = ws->nextPendingConnection(); // FIXME: v6 vs v4
+    _log("Connection to %s from %s:%d (%s)", qPrintable(client->requestUrl().toString()), qPrintable(client->peerAddress().toString()), client->peerPort(), qPrintable(client->origin()));
+    WebContext *ctx = new WebContext(this, client);
+    newConnection(ctx);
+}
+
+void QtHost::newConnection(WebContext *ctx) {
     contexts[ctx->id] = ctx;
-    connect(ctx, &QObject::destroyed, [this, ctx] {
-        // TODO: uniform context disconnect handling
+    connect(ctx, &WebContext::disconnected, [this, ctx] {
         contexts.remove(ctx->id);
+        ctx->deleteLater();
         if (contexts.size() == 0) {
             shutdown(0);
         }
@@ -217,7 +226,6 @@ void QtHost::processConnectLocal() {
     // When context needs something from PKI or PCSC, dispatch through this
     connect(ctx, &WebContext::sendIPC, this, &QtHost::dispatchIPC, Qt::DirectConnection);
 }
-
 
 // Invoked from another thread (PKI, PCSC)
 void QtHost::receiveIPC(InternalMessage message) {
@@ -276,16 +284,6 @@ void QtHost::dispatchIPC(const InternalMessage &message) {
     // TODO: document message signatures and necessary enum-s
 
 }
-
-void QtHost::processConnect() {
-    QWebSocket *client = ws->nextPendingConnection(); // FIXME: v6 vs v4
-    _log("Connection to %s from %s:%d (%s)", qPrintable(client->requestUrl().toString()), qPrintable(client->peerAddress().toString()), client->peerPort(), qPrintable(client->origin()));
-
-    // Context cleans up after itself on disconnect
-    WebContext *ctx = new WebContext(this, client);
-    contexts[ctx->id] = ctx;
-}
-
 
 void QtHost::shutdown(int exitcode) {
     _log("Exiting with %d", exitcode);

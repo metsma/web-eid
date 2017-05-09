@@ -79,6 +79,7 @@ signals:
     void toPCSC(InternalMessage message);
 
 private:
+    void newConnection(WebContext *ctx);
     QSystemTrayIcon tray;
 
     QWebSocketServer *ws; // IPv4

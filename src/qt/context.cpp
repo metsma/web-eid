@@ -23,6 +23,10 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 
+#include "main.h" // for parent
+
+#include "dialogs/select_reader.h"
+
 WebContext::WebContext(QObject *parent, QLocalSocket *client) {
     this->ls = client;
     connect(client, &QLocalSocket::readyRead, [this, client] {
@@ -72,8 +76,11 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client) {
     });
     connect(client, &QLocalSocket::disconnected, [this, client] {
         _log("Local client disconnected (%s)", qPrintable(this->origin));
-        deleteLater();
+        emit disconnected();
     });
+    // Save references to PKI and PCSC
+    PCSC = &((QtHost *)parent)->PCSC;
+    PKI = &((QtHost *)parent)->PKI;
 }
 
 WebContext::WebContext(QObject *parent, QWebSocket *client) {
@@ -96,8 +103,12 @@ WebContext::WebContext(QObject *parent, QWebSocket *client) {
     });
     connect(client, &QWebSocket::disconnected, [this, client] {
         _log("%s disconnected", qPrintable(client->origin()));
-        deleteLater();
+        emit disconnected();
     });
+
+    // Save references to PKI and PCSC
+    PCSC = &((QtHost *)parent)->PCSC;
+    PKI = &((QtHost *)parent)->PKI;
 }
 
 
@@ -149,7 +160,9 @@ void WebContext::processMessage(const QVariantMap &message) {
     if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost" || url.scheme() == "moz-extension" || url.scheme() == "chrome-extension") {
         origin = message.value("origin").toString();
     } else {
-        // FIXME: response ? Drop connection?
+       _log("Dropping connection");
+       terminate();
+       return;
     }
 
     // TODO: have lanagueg in app settings
@@ -170,14 +183,24 @@ void WebContext::processMessage(const QVariantMap &message) {
         }
     */
 
-    // Check if timeout specified
+    // FIXME: Check if timeout specified
     timer.setSingleShot(true);
     timer.start(5000); // 5 seconds
     // Command dispatch
     if (message.contains("version")) {
         resp = {{"id", msgid}, {"version", VERSION}}; // TODO: add something here
     } else if (message.contains("SCardConnect")) {
-        return emit sendIPC(SCardConnect(message.value("SCardConnect").toMap()));
+        // Show reader selection or confirmation dialog
+        dialog = new QtSelectReader(this); // FIXME
+        ((QtSelectReader *)dialog)->update(PCSC->getReaders());
+        connect(PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)dialog, &QtSelectReader::update, Qt::QueuedConnection);
+        connect(PCSC, &QtPCSC::cardInserted, (QtSelectReader *)dialog, &QtSelectReader::inserted, Qt::QueuedConnection);
+
+        connect(dialog, &QDialog::rejected, [=] {
+            outgoing({{"error", "SCARD_E_CANCELLED"}}); // FIXME: destringify
+        });
+        // Connect to the reader once the reader name is known
+        connect((QtSelectReader *)dialog, &QtSelectReader::readerSelected, this, &WebContext::connectReader);
     } else if (message.contains("SCardDisconnect")) {
 //        emit disconnect_reader();
     } else if (message.contains("SCardTransmit")) {
@@ -198,6 +221,11 @@ void WebContext::processMessage(const QVariantMap &message) {
     // Otherwise wait for a response from other threads
 }
 
+void WebContext::connectReader(const QString &reader) {
+    // Show a "insert card" dialog, if it happens to be empty
+    _log("connecting to reader %s", qPrintable(reader));
+    outgoing({{"reader", reader}, {"protocol", "T=1"}});
+}
 
 void WebContext::outgoing(QVariantMap message) {
     message["id"] = msgid;

@@ -20,7 +20,6 @@
 
 #include "Logger.h"
 #include "util.h"
-#include "pcsc.h"
 
 #include <set>
 #include <map>
@@ -136,14 +135,6 @@ QStringList QtPCSC::stateNames(DWORD state) const
     STATE(INUSE);
     STATE(MUTE);
     return result;
-}
-
-void QPCSCReader::disconnect() { // Add PnP, if supported
-
-    // Disconnect a reader
-}
-void QPCSCReader::send_apdu(const QByteArray &apdu) {
-    // send APDU
 }
 
 // Called from main thread.
@@ -327,3 +318,21 @@ void QtPCSC::run()
     _log("Quitting PCSC thread");
     SCard(ReleaseContext, context);
 }
+
+// Reader
+
+void QPCSCReader::connect(const QString &reader, const QString &protocol) {
+    //QPCSCReader * result = new QPCSCReader();
+    // if windows
+}
+
+void QPCSCReader::disconnect() {
+    // Disconnect a reader
+}
+
+void QPCSCReader::send_apdu(const QByteArray &apdu) {
+    // send APDU
+}
+
+
+

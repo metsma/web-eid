@@ -22,9 +22,12 @@
 
 #include <QObject>
 
+#include "qpcsc.h"
+#include "qpki.h"
+
 #include <QWebSocket>
 #include <QLocalSocket>
-#include <QWidget>
+#include <QDialog>
 #include <QUuid>
 #include <QTimer>
 
@@ -36,7 +39,6 @@ class WebContext: public QObject {
     Q_OBJECT
 
 public:
-    WebContext(QObject *parent, const QString &origin);
     WebContext(QObject *parent, QWebSocket *client);
     WebContext(QObject *parent, QLocalSocket *client);
 
@@ -48,12 +50,15 @@ public:
     QTimer timer;
 
     // Any running UI widget, associated with the context
-    QWidget *dialog = nullptr;
+    QDialog *dialog = nullptr;
+
 public slots:
     void receiveIPC(const InternalMessage &msg);
+    void connectReader(const QString &reader);
 
 signals:
     void sendIPC(const InternalMessage &msg);
+    void disconnected();
 
 private:
     void processMessage(const QVariantMap &message); // Message received from client
@@ -66,6 +71,7 @@ private:
 
     // browser context
     QString msgid;
-
-
+    QPKI *PKI;
+    QtPCSC *PCSC;
+    //QThread worker;
 };
