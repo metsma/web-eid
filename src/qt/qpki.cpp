@@ -87,6 +87,11 @@ void QPKI::cardInserted(const QString &reader, const QByteArray &atr) {
                 refresh();
             }
         }
+    } else {
+#ifdef Q_OS_WINDOWS
+    // fetch store certs
+#endif
+
     }
 }
 

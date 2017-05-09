@@ -26,15 +26,7 @@
 
 #include <vector>
 
-enum TokenType {
-    CAPI,
-    PKCS11
-};
 
-struct PKIToken {
-    TokenType type;
-    QString module; // if PKCS#11
-};
 
 
 /*
@@ -47,6 +39,15 @@ class QPKI: public QObject {
     Q_OBJECT
 
 public:
+    enum TokenType {
+    CAPI,
+    PKCS11
+};
+
+    struct PKIToken {
+        TokenType tktype;
+        QString module; // if PKCS#11
+    };
     static const char *errorName(const CK_RV err);
     QVector<QByteArray> getCertificates();
 
