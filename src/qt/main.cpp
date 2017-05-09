@@ -189,20 +189,20 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QtPKI::refresh, Qt::QueuedConnection);
 
     connect(&PCSC, &QtPCSC::readerAttached, [=] (QString name) {
-        printf("%s connected\n", name.toStdString().c_str());
+        printf("%s connected\n", qPrintable(name));
 
     });
     connect(&PCSC, &QtPCSC::readerRemoved, [=] (QString name) {
-        printf("%s removed\n", name.toStdString().c_str());
+        printf("%s removed\n", qPrintable(name));
 
     });
 
     connect(&PCSC, &QtPCSC::cardRemoved, [=] (QString name) {
-        printf("card removed from %s\n", name.toStdString().c_str());
+        printf("card removed from %s\n", qPrintable(name));
     });
 
     connect(&PCSC, &QtPCSC::cardInserted, [=] (QString name, QByteArray atr) {
-        printf("card inserted to %s\n", name.toStdString().c_str());
+        printf("card inserted to %s\n", qPrintable(name));
     });
 
     connect(&PCSC, &QtPCSC::error, [=] (QString reader, LONG err) {

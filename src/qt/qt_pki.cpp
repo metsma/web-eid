@@ -71,9 +71,10 @@ void QtPKI::refresh() {
     _log("Card inserted or removed, refreshing available certificates");
     std::vector<std::vector<unsigned char>> atrs = PCSC::atrList();
     std::vector<std::string> modules = P11Modules::getPaths(atrs);
-
-    pkcs11.load(modules[0]);
-    std::vector<std::vector<unsigned char>> certs = pkcs11.getCerts();
+    if (modules.size() > 0) {
+        pkcs11.load(modules[0]);
+        std::vector<std::vector<unsigned char>> certs = pkcs11.getCerts();
+    }
 }
 
 // asks main thread to show a certificate selection window
