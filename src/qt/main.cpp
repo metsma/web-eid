@@ -57,14 +57,12 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     _log("Starting Web eID app v%s", VERSION);
 
     QCommandLineParser parser;
-    QCommandLineOption pwindow("parent-window");
-    pwindow.setValueName("handle");
-    parser.addOption(pwindow);
+    QCommandLineOption debug("debug");
+    parser.addOption(debug);
     parser.process(arguments());
-    if (parser.isSet(pwindow)) {
-        // XXX: we can not actually utilize the window handle, as it is always 0
-        // See issue #12
-        _log("Parent window handle: %d", stoi(parser.value(pwindow).toStdString()));
+    if (parser.isSet(debug)) {
+        once = true;
+        // TODO: set debug mode
     }
 
     // Construct tray icon and related menu
@@ -220,7 +218,11 @@ void QtHost::processConnectLocal() {
     WebContext *ctx = new WebContext(this, socket);
     contexts[ctx->id] = ctx;
     connect(ctx, &QObject::destroyed, [this, ctx] {
+        // TODO: uniform context disconnect handling
         contexts.remove(ctx->id);
+        if (contexts.size() == 0) {
+            shutdown(0);
+        }
     });
 
     // When context needs something from PKI or PCSC, dispatch through this
@@ -268,6 +270,8 @@ void QtHost::dispatchIPC(const InternalMessage &message) {
         ctx->dialog = new QtSelectReader(ctx); // FIXME
         ((QtSelectReader *)ctx->dialog)->update(PCSC.getReaders());
         connect(&PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)ctx->dialog, &QtSelectReader::update, Qt::QueuedConnection);
+        connect(&PCSC, &QtPCSC::cardInserted, (QtSelectReader *)ctx->dialog, &QtSelectReader::inserted, Qt::QueuedConnection);
+
         connect((QDialog *)ctx->dialog, &QDialog::rejected, [=] {
             ctx->receiveIPC({CardConnect, {{"error", "SCARD_E_CANCELLED"}}});
         });

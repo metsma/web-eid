@@ -46,14 +46,11 @@ public:
         buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-        connect(table, &QTreeWidget::currentItemChanged, [=] (QTreeWidgetItem *item, QTreeWidgetItem *previous) {
+        connect(table, &QTreeWidget::currentItemChanged, [=] (QTreeWidgetItem *item, QTreeWidgetItem *previous = 0) {
             // TODO: only if reader can be used
             if (item) {
                 selected = item->text(0);
                 ok->setEnabled(true);
-            } else {
-                selected.clear();
-                ok->setEnabled(false);
             }
         });
 
@@ -82,19 +79,22 @@ public slots:
         }
         for (const auto &r: readers.keys()) {
             QTreeWidgetItem *item = new QTreeWidgetItem(table, QStringList {r});
-            // TODO: nicer UI
-            //if (r.exclusive) {
-            //    item->setFlags(Qt::NoItemFlags);
-            //    item->setForeground(0, QBrush(Qt::darkRed));
-            //}
-            //if (r.atr.empty()) {
-            //    item->setForeground(0, QBrush(Qt::darkGreen));
-            //}
+            if (readers[r].contains("EXCLUSIVE")) {
+                item->setFlags(Qt::NoItemFlags);
+                item->setForeground(0, QBrush(Qt::darkRed));
+            } else if (readers[r].contains("EMPTY")) {
+                item->setForeground(0, QBrush(Qt::darkGreen));
+            }
             table->insertTopLevelItem(0, item);
             if (selected == r) {
-                item->setSelected(true);
+                table->setCurrentItem(item);
             }
         }
+    }
+
+    void inserted(const QString &reader, const QByteArray &atr) {
+        // If a card is inserted while the dialog is open, we select the reader by default
+        selected = reader;
     }
 
 signals:

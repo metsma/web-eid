@@ -272,7 +272,8 @@ void QtPCSC::run()
             if (pnp) {
                 if (statuses.back().dwEventState & SCARD_STATE_CHANGED) {
                     _log("PnP event: %s (0x%x)", qPrintable(stateNames(statuses.back().dwEventState).join(" ")), statuses.back().dwEventState);
-                    pnpstate = statuses.back().dwEventState;
+                    // Windows has the number of connected readers in the high word of the status
+                    pnpstate = statuses.back().dwEventState & ~SCARD_STATE_CHANGED;
                     list = true;
                 }
                 statuses.pop_back();

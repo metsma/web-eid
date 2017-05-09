@@ -90,4 +90,5 @@ private:
 
     void shutdown(int exitcode);
     QTranslator translator;
+    bool once = false;
 };
