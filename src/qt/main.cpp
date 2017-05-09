@@ -264,14 +264,14 @@ void QtHost::dispatchIPC(const InternalMessage &message) {
     case MessageType::Authenticate:
         return emit toPKI(m);
     case MessageType::CardConnect:
-        ctx->dialog = new QtSelectReader(ctx); // FIXME
-        ((QtSelectReader *)ctx->dialog)->update(PCSC.getReaders());
-        connect(&PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)ctx->dialog, &QtSelectReader::update, Qt::QueuedConnection);
-        connect(&PCSC, &QtPCSC::cardInserted, (QtSelectReader *)ctx->dialog, &QtSelectReader::inserted, Qt::QueuedConnection);
-
-        connect((QDialog *)ctx->dialog, &QDialog::rejected, [=] {
-            ctx->receiveIPC({CardConnect, {{"error", "SCARD_E_CANCELLED"}}});
-        });
+//        ctx->dialog = new QtSelectReader(ctx); // FIXME
+//        ((QtSelectReader *)ctx->dialog)->update(PCSC.getReaders());
+//        connect(&PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)ctx->dialog, &QtSelectReader::update, Qt::QueuedConnection);
+//        connect(&PCSC, &QtPCSC::cardInserted, (QtSelectReader *)ctx->dialog, &QtSelectReader::inserted, Qt::QueuedConnection);
+//
+//        connect((QDialog *)ctx->dialog, &QDialog::rejected, [=] {
+//            ctx->receiveIPC({CardConnect, {{"error", "SCARD_E_CANCELLED"}}});
+//        });
         return;
     default:
         _log("Don't know how to process message");

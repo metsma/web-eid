@@ -194,7 +194,8 @@ void WebContext::processMessage(const QVariantMap &message) {
         dialog = new QtSelectReader(this); // FIXME
         ((QtSelectReader *)dialog)->update(PCSC->getReaders());
         connect(PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)dialog, &QtSelectReader::update, Qt::QueuedConnection);
-        connect(PCSC, &QtPCSC::cardInserted, (QtSelectReader *)dialog, &QtSelectReader::inserted, Qt::QueuedConnection);
+        connect(PCSC, &QtPCSC::cardInserted, (QtSelectReader *)dialog, &QtSelectReader::cardInserted, Qt::QueuedConnection);
+        connect(PCSC, &QtPCSC::readerAttached, (QtSelectReader *)dialog, &QtSelectReader::readerAttached, Qt::QueuedConnection);
 
         connect(dialog, &QDialog::rejected, [=] {
             outgoing({{"error", "SCARD_E_CANCELLED"}}); // FIXME: destringify

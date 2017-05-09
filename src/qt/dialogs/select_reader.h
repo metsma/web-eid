@@ -41,8 +41,8 @@ public:
         table(new QTreeWidget(this)),
         buttons(new QDialogButtonBox(this))
     {
-        layout->addWidget(table);
         layout->addWidget(message);
+        layout->addWidget(table);
         layout->addWidget(buttons);
 
         setWindowFlags(Qt::WindowStaysOnTopHint);
@@ -119,8 +119,13 @@ public slots:
         raise(); // to be always topmost, on macOS
     }
 
-    void inserted(const QString &reader, const QByteArray &atr) {
+    void cardInserted(const QString &reader, const QByteArray &atr) {
         // If a card is inserted while the dialog is open, we select the reader by default
+        selected = reader;
+    }
+
+    void readerAttached(const QString &reader) {
+        // If a new reader is attached while the dialog is open, we select it by default
         selected = reader;
     }
 
