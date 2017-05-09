@@ -30,8 +30,8 @@
 
 
 // Handles a browser context, either
-// via WebSocket or LocalSocket, which is owns.
-// Lives in main thread, is created by server
+// via WebSocket or LocalSocket, which it owns.
+// Lives in main thread, is created by main.cpp
 class WebContext: public QObject {
     Q_OBJECT
 

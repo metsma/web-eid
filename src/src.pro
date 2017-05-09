@@ -45,6 +45,7 @@ SOURCES += \
     pkcs11module.cpp \
     qt/main.cpp \
     qt/qpcsc.cpp \
+    qt/qpki.cpp \
     qt/qt_pki.cpp \
     qt/autostart.cpp \
     qt/context.cpp

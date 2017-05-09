@@ -172,8 +172,8 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     qRegisterMetaType<P11Token>();
     qRegisterMetaType<InternalMessage>();
 
-    connect(this, &QtHost::toPKI, &PKI, &QtPKI::receiveIPC, Qt::QueuedConnection);
-    connect(&PKI, &QtPKI::sendIPC, this, &QtHost::receiveIPC, Qt::QueuedConnection);
+    connect(this, &QtHost::toPKI, &PKI, &QPKI::receiveIPC, Qt::QueuedConnection);
+    connect(&PKI, &QPKI::sendIPC, this, &QtHost::receiveIPC, Qt::QueuedConnection);
 
     // Start worker threads
     pki_thread = new QThread;
@@ -184,25 +184,14 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     PCSC.start();
 
     // Refresh PKI tokens when a card is inserted
-    //connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QtPKI::refresh, Qt::QueuedConnection);
+    connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QPKI::cardInserted, Qt::QueuedConnection);
+    connect(&PCSC, &QtPCSC::cardRemoved, &PKI, &QPKI::cardRemoved, Qt::QueuedConnection);
 
-    connect(&PCSC, &QtPCSC::readerAttached, [=] (QString name) {
-        printf("%s connected\n", qPrintable(name));
-
-    });
-    connect(&PCSC, &QtPCSC::readerRemoved, [=] (QString name) {
-        printf("%s removed\n", qPrintable(name));
-
+    connect(&PKI, &QPKI::certificateListChanged, [=] (QVector<QByteArray> certs) {
+        printf("Certificate list changed, contains %d entries\n", certs.size());
     });
 
-    connect(&PCSC, &QtPCSC::cardRemoved, [=] (QString name) {
-        printf("card removed from %s\n", qPrintable(name));
-    });
-
-    connect(&PCSC, &QtPCSC::cardInserted, [=] (QString name, QByteArray atr) {
-        printf("card inserted to %s\n", qPrintable(name));
-    });
-
+    // TODO: show UI on severe errors
     connect(&PCSC, &QtPCSC::error, [=] (QString reader, LONG err) {
         printf("error in %s %s\n", qPrintable(reader), QtPCSC::errorName(err));
     });
@@ -240,7 +229,7 @@ void QtHost::receiveIPC(InternalMessage message) {
         _log("Showing certificate selection window");
         QtCertSelect *dialog = new QtCertSelect(ctx, Authentication, {});
         // Signal result back to PKI
-        connect(dialog, &QtCertSelect::sendIPC, &PKI, &QtPKI::receiveIPC, Qt::QueuedConnection);
+        connect(dialog, &QtCertSelect::sendIPC, &PKI, &QPKI::receiveIPC, Qt::QueuedConnection);
         // Timeout the dialog, if present
         if (ctx->timer.isActive()) {
             connect(&ctx->timer, &QTimer::timeout, dialog, &QDialog::reject);

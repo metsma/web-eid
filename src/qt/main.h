@@ -22,7 +22,7 @@
 #include "context.h"
 
 #include "qpcsc.h"
-#include "qt_pki.h"
+#include "qpki.h"
 
 #include "internal.h"
 
@@ -57,7 +57,7 @@ public:
 
     // PCSC and PKI subsystems
     QtPCSC PCSC;
-    QtPKI PKI;
+    QPKI PKI;
 
     // both in a separate thread
     QThread *pki_thread;

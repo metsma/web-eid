@@ -42,7 +42,7 @@
  - represents the PC/SC subsystem of a host machine to the app
  - translates PCSC events to Qt signals.
 
-Connecting to a reader will create another QObject, that owns the connection
+Connecting to a reader will create another QObject, living in a separat thread, that owns the connection
 until an error occures or it is closed and provides APDU transport to the reader.
 
 */

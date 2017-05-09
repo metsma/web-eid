@@ -232,6 +232,7 @@ QString WebContext::friendlyOrigin() {
     if (url.scheme() == "file") {
         return "localhost";
     } else {
+        // FIXME: port, if not standard
         return url.host();
     }
 }

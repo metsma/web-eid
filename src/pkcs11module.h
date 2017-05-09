@@ -45,6 +45,8 @@ public:
     CK_RV login(const std::vector<unsigned char> &cert, const char *pin);
     CK_RV sign(const std::vector<unsigned char> &cert, const std::vector<unsigned char> &hash, std::vector<unsigned char> &result);
 
+    CK_RV refresh();
+
     bool isLoaded() {
         return !certs.empty();
     }

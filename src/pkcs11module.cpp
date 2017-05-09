@@ -27,6 +27,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <map>
+#include <set>
 #include <vector>
 
 #include <QSslCertificate>
@@ -188,6 +189,11 @@ CK_RV PKCS11Module::load(const std::string &module) {
         initialized = rv != CKR_CRYPTOKI_ALREADY_INITIALIZED;
     }
 
+    return refresh();
+}
+
+// See if tokens have appeared or disappeared
+CK_RV PKCS11Module::refresh() {
     // Locate all slots with tokens
     std::vector<CK_SLOT_ID> slots_with_tokens;
     CK_ULONG slotCount = 0;
@@ -195,12 +201,32 @@ CK_RV PKCS11Module::load(const std::string &module) {
     _log("slotCount = %i", slotCount);
     slots_with_tokens.resize(slotCount);
     check_C(GetSlotList, CK_TRUE, slots_with_tokens.data(), &slotCount);
-    for (auto slot: slots_with_tokens) {
+    // Remove any certificates that were in tokens that do not exist any more
+    std::set<std::vector<unsigned char>> leftovers;
+    for (auto &c: certs) {
+        auto sid = c.second.first.slot;
+        bool found = false;
+        for (auto &t: slots_with_tokens) {
+            if (t == sid) {
+                _log("Still present");
+                found = true;
+                break;
+            }
+        }
+        // remove
+        if (!found) {
+            leftovers.insert(c.first);
+        }
+    }
+    for (const auto &l: leftovers) {
+        certs.erase(l);
+    }
+    for (auto &slot: slots_with_tokens) {
         // Check the content of the slot
         CK_TOKEN_INFO token;
         CK_SESSION_HANDLE sid = 0;
         _log("Checking slot %u", slot);
-        rv = C(GetTokenInfo, slot, &token);
+        CK_RV rv = C(GetTokenInfo, slot, &token);
         if (rv != CKR_OK) {
             _log("Could not get token info, skipping slot %u", slot);
             continue;
@@ -236,6 +262,7 @@ CK_RV PKCS11Module::load(const std::string &module) {
         _log("certificate: %s in slot %d with id %s", x509subject(cpairs.first).c_str(), location.first.slot, toHex(location.second).c_str());
     }
     return CKR_OK;
+
 }
 
 std::vector<std::vector <unsigned char>> PKCS11Module::getCerts(CertificatePurpose type) {

@@ -27,6 +27,13 @@
 
 #include <vector>
 
+
+/*
+PKI keeps track of available certificates
+- lives in a separate thread
+- listens to pcsc events, updates state, emits pki events
+- keeps track of loaded pkcs11 modules
+*/
 class QtPKI: public QObject {
     Q_OBJECT
 
@@ -36,7 +43,7 @@ public:
     static const char *errorName(const CK_RV err);
 
 public slots:
-    void refresh(); //refresh available certificates. Triggered by PCSC on cardInserted()
+    void refresh(const QString &reader, const QByteArray &atr); //refresh available certificates. Triggered by PCSC on cardInserted()
 
     void authenticate(const QString &origin, const QString &nonce);
     void sign(const QString &origin, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);

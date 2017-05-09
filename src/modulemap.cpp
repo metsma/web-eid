@@ -83,7 +83,7 @@ static std::vector<ModuleATR> createMap() {
         // Then add some last resort wildcards
         {"OpenSC fallback", {"*"}, {"/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so"}},
 #ifdef __linux__
-        {"p11-kit fallback", {"*"}, {"p11-kit-proxy.so"}},
+        //{"p11-kit fallback", {"*"}, {"p11-kit-proxy.so"}},
 #endif
     };
 
