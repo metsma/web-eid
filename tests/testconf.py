@@ -30,10 +30,11 @@ def get_exe():
         os.environ["WEB_EID_APP"] = "src/web-eid"
         return "src/nm-bridge/web-eid-bridge"
     elif sys.platform == 'win32':
-        if os.path.isfile("src\\debug\\web-eid.exe"):
-            return "src\\debug\\web-eid.exe"
+        os.environ["WEB_EID_APP"] = "src/release/Web-eID.exe"
+        if os.path.isfile("src\\debug\\web-eid-bridge.exe"):
+            return "src\\debug\\web-eid-bridge.exe"
         else:
-            return "src\\release\\web-eid.exe"
+            return "src\\release\\web-eid-bridge.exe"
     else:
         print("Unsupported platform: %s" % sys.platform)
         sys.exit(1)

@@ -27,11 +27,16 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client) {
     this->ls = client;
     connect(client, &QLocalSocket::readyRead, [this, client] {
         _log("Handling data from local socket");
+        _log("Available: %d", client->bytesAvailable());
         quint32 msgsize = 0;
+        if (client->bytesAvailable() < sizeof(msgsize) + 1) {
+            return;
+        }
         if (client->read((char*)&msgsize, sizeof(msgsize)) == sizeof(msgsize)) {
             _log("Read message size: %d bytes", msgsize);
             QByteArray msg(int(msgsize), 0);
-            if (client->read(msg.data(), msgsize) == msgsize) {
+            quint64 numread = client->read(msg.data(), msgsize);
+            if (numread == msgsize) {
                 _log("Read message of %d bytes", msgsize);
                 // Make JSON
                 QVariantMap json = QJsonDocument::fromJson(msg).toVariant().toMap();
@@ -57,7 +62,7 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client) {
                 }
                 processMessage(json);
             } else {
-                _log("Could not read message");
+                _log("Could not read message, read %d of %d", numread, msgsize);
                 terminate();
             }
         } else {
@@ -218,6 +223,7 @@ bool WebContext::terminate() {
     } else if(ls) {
         ls->abort();
     }
+    return true;
 }
 
 QString WebContext::friendlyOrigin() {

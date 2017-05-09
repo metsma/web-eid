@@ -93,6 +93,7 @@ public:
         connect(sock, static_cast<void(QLocalSocket::*)(QLocalSocket::LocalSocketError)>(&QLocalSocket::error), [this] (QLocalSocket::LocalSocketError socketError) {
             if (socketError == QLocalSocket::PeerClosedError) {
                 _log("QLocalSocket::PeerClosedError");
+                quit();
                 // We no like it, try connecting again
                 // QTimer::singleShot(500, [this] {sock->connectToServer(serverName);});
                 return;
@@ -151,7 +152,7 @@ public slots:
             _log("Handling message from application");
             _log("%d bytes available from app", sock->bytesAvailable());
             quint32 msgsize = 0;
-            if (sock->bytesAvailable() < sizeof(msgsize)) {
+            if (sock->bytesAvailable() < sizeof(msgsize) + 1) {
                 _log("Not enought data available %d, waiting for next update", sock->bytesAvailable());
                 return;
             }

@@ -187,7 +187,7 @@ void QtPCSC::run()
     bool list = true;
     bool change = false; // if a list change signal should be emitted
     std::set<std::string> readernames;
-
+    DWORD pnpstate = SCARD_STATE_UNAWARE;
     // Wait for events
     do {
         std::vector<SCARD_READERSTATE> statuses;
@@ -252,16 +252,16 @@ void QtPCSC::run()
         }
         // Append PnP, if supported
         if (pnp) {
-            statuses.push_back({PNP_READER_NAME, nullptr, SCARD_STATE_UNAWARE, SCARD_STATE_UNAWARE, 0, {0}});
+            statuses.push_back({PNP_READER_NAME, nullptr, pnpstate, SCARD_STATE_UNAWARE, 0, {0}});
         }
 
         // Debug
         for (auto &r: statuses) {
-            _log("Querying %s: %s", r.szReader, stateNames(r.dwCurrentState).join(" ").toStdString().c_str());
+            _log("Querying %s: %s (0x%x)", r.szReader, stateNames(r.dwCurrentState).join(" ").toStdString().c_str(), r.dwCurrentState);
         }
 
         // Query statuses
-        rv = SCard(GetStatusChange, context, INFINITE, &statuses[0], DWORD(statuses.size()));
+        rv = SCard(GetStatusChange, context, 600000, &statuses[0], DWORD(statuses.size()));
         if (rv == LONG(SCARD_E_UNKNOWN_READER)) {
             // List changed while in air, try again
             list = true;
@@ -271,13 +271,15 @@ void QtPCSC::run()
             // Check if PnP event, always remove from vector
             if (pnp) {
                 if (statuses.back().dwEventState & SCARD_STATE_CHANGED) {
+                    _log("PnP event: %s (0x%x)", qPrintable(stateNames(statuses.back().dwEventState).join(" ")), statuses.back().dwEventState);
+                    pnpstate = statuses.back().dwEventState;
                     list = true;
                 }
                 statuses.pop_back();
             }
             for (auto &i: statuses) {
                 std::string reader(i.szReader);
-                _log("%s: %s", reader.c_str(), stateNames(i.dwEventState).join(" ").toStdString().c_str());
+                _log("%s: %s (0x%x)", reader.c_str(), qPrintable(stateNames(i.dwEventState).join(" ")), i.dwEventState);
                 if (!(i.dwEventState & SCARD_STATE_CHANGED)) {
                     _log("No change: %s", reader.c_str());
                     continue;
@@ -311,7 +313,7 @@ void QtPCSC::run()
                 }
 
                 mutex.lock();
-                known[reader] = i.dwEventState;
+                known[reader] = i.dwEventState & ~SCARD_STATE_CHANGED;
                 mutex.unlock();
             }
             // card related list change

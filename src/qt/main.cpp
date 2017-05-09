@@ -186,7 +186,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     PCSC.start();
 
     // Refresh PKI tokens when a card is inserted
-    connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QtPKI::refresh, Qt::QueuedConnection);
+    //connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QtPKI::refresh, Qt::QueuedConnection);
 
     connect(&PCSC, &QtPCSC::readerAttached, [=] (QString name) {
         printf("%s connected\n", qPrintable(name));
