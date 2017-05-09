@@ -79,9 +79,7 @@ public:
             _log("Selected reader %s", qPrintable(table->currentItem()->text(0)));
             emit readerSelected(table->currentItem()->text(0));
         });
-        show();
-        activateWindow(); // to be always topmost and activated, on Linux
-        raise(); // to be always topmost, on macOS
+
     }
 
 
@@ -90,7 +88,12 @@ public slots:
         if (readers.size() == 0) {
             // No readers FIXME UX
             // FIXME: if started with empty list
-            return reject();
+            if (table->topLevelItemCount() > 0) {
+                // if previous list had some
+                return reject();
+            } else {
+                message->setText("Please connect a smart card reader!");
+            }
         }
         table->clear();
         // set ok enabled only if previously selected reader is still in list.
@@ -111,6 +114,9 @@ public slots:
                 table->setCurrentItem(item);
             }
         }
+        show();
+        activateWindow(); // to be always topmost and activated, on Linux
+        raise(); // to be always topmost, on macOS
     }
 
     void inserted(const QString &reader, const QByteArray &atr) {

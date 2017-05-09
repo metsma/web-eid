@@ -243,6 +243,9 @@ void QtPCSC::run()
         }
         // Append PnP, if supported
         if (pnp) {
+#ifdef Q_OS_MAC
+            pnpstate = SCARD_STATE_UNAWARE;
+#endif
             statuses.push_back({PNP_READER_NAME, nullptr, pnpstate, SCARD_STATE_UNAWARE, 0, {0}});
         }
 
