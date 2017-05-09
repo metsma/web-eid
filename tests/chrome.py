@@ -62,7 +62,7 @@ class ChromeTest(unittest.TestCase):
 
   def setUp(self):
       should_close_fds = sys.platform.startswith('win32') == False;
-      self.p = subprocess.Popen([testconf.get_exe(), "chrome-extension://fmpfihjoladdfajbnkdfocnbcehjpogi"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=should_close_fds, stderr=None)
+      self.p = subprocess.Popen([testconf.get_exe(), "chrome-extension://fmpfihjoladdfajbnkdfocnbcehjpogi", "--debug"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=should_close_fds, stderr=None)
       print("\nRunning %s on PID %d" % (testconf.get_exe(), self.p.pid))
       if "HWDEBUG" in os.environ:
         self.instruct("Start testing")
