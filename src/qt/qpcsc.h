@@ -68,7 +68,6 @@ class QPCSCReader: public QObject {
     Q_OBJECT
 public:
     QPCSCReader(QObject *parent, const QString &name, const QString &proto): QObject(parent), reader(name), protocol(proto) {};
-    QWidget *dialog; // "Reader is in use by ..." dialog
 
     // FIXME: is this necessary?
     ~QPCSCReader() {
@@ -86,6 +85,8 @@ public slots:
     void open();
     void transmit(const QByteArray &apdu);
     void disconnect();
+    
+    void showDialog();
 
 signals:
     // command signals

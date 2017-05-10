@@ -34,6 +34,8 @@
 #include <QJsonDocument>
 #include <QMutexLocker>
 
+#include "qt/dialogs/reader_in_use.h"
+
 /*
  QtPCSC is:
  - a QObject
@@ -327,6 +329,7 @@ void QPCSCReader::open() {
     // Start the thread
     thread.start();
     worker.moveToThread(&thread);
+
     // control signals
     connect(this, &QPCSCReader::connectCard, &worker, &QPCSCReaderWorker::connectCard, Qt::QueuedConnection);
     connect(this, &QPCSCReader::disconnectCard, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
@@ -334,11 +337,22 @@ void QPCSCReader::open() {
 
     // proxy signals
     connect(&worker, &QPCSCReaderWorker::disconnected, this, &QPCSCReader::disconnected, Qt::QueuedConnection);
-    connect(&worker, &QPCSCReaderWorker::received, this, &QPCSCReader::received, Qt::QueuedConnection);
     connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::connected, Qt::QueuedConnection);
+    connect(&worker, &QPCSCReaderWorker::received, this, &QPCSCReader::received, Qt::QueuedConnection);
+    
+    // In use dialog. Lambda would be in the worker thread.
+    connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::showDialog, Qt::QueuedConnection);
 
     // connect in thread
     emit connectCard(reader, protocol);
+}
+
+void QPCSCReader::showDialog() {
+    QtReaderInUse *d = new QtReaderInUse("foo", "bar"); // FIXME
+    // Disconnect the reader from dialog
+    connect(d, &QDialog::rejected, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
+    // And close the dialog on disconnect
+    connect(&worker, &QPCSCReaderWorker::disconnected, d, &QDialog::reject, Qt::QueuedConnection);
 }
 
 void QPCSCReader::disconnect() {
@@ -354,19 +368,26 @@ void QPCSCReader::transmit(const QByteArray &apdu) {
 QPCSCReaderWorker::~QPCSCReaderWorker() {
     if (card)
         SCard(Disconnect, card, SCARD_LEAVE_CARD);
+#if defined(Q_OS_LINUX) || defined (Q_OS_MAC)
     if (context) {
         SCard(ReleaseContext, context);
     }
+#endif
 }
 
+// FIXME: have the "connect" function as part of QtPCSC so that access to existing context
+// would be there. Hide the QPCSCReader constructor
+// Handle the empty reader + UI case
 void QPCSCReaderWorker::connectCard(const QString &reader, const QString &protocol) {
     LONG rv = SCARD_S_SUCCESS;
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
     // Context per thread
     rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
     if (rv != SCARD_S_SUCCESS) {
         return emit disconnected(rv);
     }
+#else
+    context = 0; // FIXME
 #endif
     // protocol
     DWORD proto = SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1;

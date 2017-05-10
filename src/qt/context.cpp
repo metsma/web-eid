@@ -205,31 +205,48 @@ void WebContext::processMessage(const QVariantMap &message) {
             QPCSCReader *r = new QPCSCReader(this, name, message.value("SCardConnect").toMap().value("protocol", "*").toString());
             readers[name] = r;
             r->open();
-            connect(r, &QPCSCReader::disconnected, [&] (LONG err) {
+            connect(r, &QPCSCReader::disconnected, [this, name] (LONG err) {
                 _log("Disconnected: %s", QtPCSC::errorName(err));
-                QPCSCReader *rd = readers.take(name);
-                if (err != SCARD_S_SUCCESS) {
-                    outgoing({{"error", QtPCSC::errorName(err)}});
-                } else {
-                    outgoing({});
+                if (readers.contains(name)) {
+                    QPCSCReader *rd = readers.take(name);
+                    // If disconnect happens in between of messages (eg dialog cancel)
+                    // error will be given on next incoming message
+                    if (!msgid.isEmpty()) {
+                        if (err != SCARD_S_SUCCESS) {
+                            outgoing({{"error", QtPCSC::errorName(err)}});
+                        } else {
+                            outgoing({});
+                        }
+                    } else {
+                        // TODO: store lasterror
+                    }
+                    rd->deleteLater();
                 }
-                rd->deleteLater();
             });
-            connect(r, &QPCSCReader::connected, [&] (QByteArray atr, QString proto) {
+            connect(r, &QPCSCReader::connected, [=] (QByteArray atr, QString proto) {
                 _log("connected: %s", qPrintable(proto));
-                outgoing({{"reader", name}, {"protocol", proto}, {"atr", atr.toHex()}});
+                outgoing({{"reader", name}, {"protocol", proto}});
             });
-            connect(r, &QPCSCReader::received, [&] (QByteArray apdu) {
+            connect(r, &QPCSCReader::received, [=] (QByteArray apdu) {
                 _log("Rreceived apdu");
                 outgoing({{"bytes", apdu.toHex()}});
             });
         });
     } else if (message.contains("SCardDisconnect")) {
-        QPCSCReader *r = readers.first(); // FIXME
-        r->disconnect();
+        if (!readers.isEmpty()) {
+            QPCSCReader *r = readers.first(); // FIXME
+            r->disconnect();
+        } else {
+            // Already disconnected
+            outgoing({});
+        }
     } else if (message.contains("SCardTransmit")) {
-        QPCSCReader *r = readers.first(); // FIXME
-        r->transmit(QByteArray::fromHex(message.value("SCardTransmit").toMap().value("bytes").toString().toLatin1()));
+        if (!readers.isEmpty()) {
+            QPCSCReader *r = readers.first(); // FIXME
+            r->transmit(QByteArray::fromHex(message.value("SCardTransmit").toMap().value("bytes").toString().toLatin1()));
+        } else {
+            outgoing({{"error", QtPCSC::errorName(SCARD_E_NO_SMARTCARD)}});
+        }
     } else if (message.contains("sign")) {
         QVariantMap sign = message.value("sign").toMap();
 //        emit sign(origin, QByteArray::fromBase64(sign.value("cert").toString().toLatin1()), QByteArray::fromBase64(sign.value("hash").toString().toLatin1()), sign.value("hashalgo").toString());
