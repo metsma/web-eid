@@ -360,9 +360,10 @@ QPCSCReaderWorker::~QPCSCReaderWorker() {
 }
 
 void QPCSCReaderWorker::connectCard(const QString &reader, const QString &protocol) {
+    LONG rv = SCARD_S_SUCCESS;
 #ifdef Q_OS_LINUX
     // Context per thread
-    LONG rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
+    rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
     if (rv != SCARD_S_SUCCESS) {
         return emit disconnected(rv);
     }

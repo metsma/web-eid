@@ -73,5 +73,6 @@ private:
     QPKI *PKI;
     QtPCSC *PCSC;
 
-    QPCSCReader *reader = nullptr;
+    // Used readers
+    QMap<QString, QPCSCReader *> readers;
 };
