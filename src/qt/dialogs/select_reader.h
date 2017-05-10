@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "pcsc.h"
+#include "qpcsc.h"
 #include "Logger.h"
 #include "context.h"
 

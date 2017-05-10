@@ -139,7 +139,7 @@ QStringList QtPCSC::stateNames(DWORD state) const
 
 // Called from main thread.
 void QtPCSC::cancel() {
-    SCard(Cancel, context);
+    SCard(Cancel, getContext());
 }
 
 // Called from main thread
@@ -323,19 +323,120 @@ void QtPCSC::run()
 }
 
 // Reader
+void QPCSCReader::open() {
+    // Start the thread
+    thread.start();
+    worker.moveToThread(&thread);
+    // control signals
+    connect(this, &QPCSCReader::connectCard, &worker, &QPCSCReaderWorker::connectCard, Qt::QueuedConnection);
+    connect(this, &QPCSCReader::disconnectCard, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
+    connect(this, &QPCSCReader::transmitBytes, &worker, &QPCSCReaderWorker::transmit, Qt::QueuedConnection);
 
-void QPCSCReader::connect(const QString &reader, const QString &protocol) {
-    //QPCSCReader * result = new QPCSCReader();
-    // if windows
+    // proxy signals
+    connect(&worker, &QPCSCReaderWorker::disconnected, this, &QPCSCReader::disconnected, Qt::QueuedConnection);
+    connect(&worker, &QPCSCReaderWorker::received, this, &QPCSCReader::received, Qt::QueuedConnection);
+    connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::connected, Qt::QueuedConnection);
+
+    // connect in thread
+    emit connectCard(reader, protocol);
 }
 
 void QPCSCReader::disconnect() {
-    // Disconnect a reader
+    emit disconnectCard();
 }
 
-void QPCSCReader::send_apdu(const QByteArray &apdu) {
-    // send APDU
+void QPCSCReader::transmit(const QByteArray &apdu) {
+    emit transmitBytes(apdu);
 }
 
+// Worker
 
+QPCSCReaderWorker::~QPCSCReaderWorker() {
+    if (card)
+        SCard(Disconnect, card, SCARD_LEAVE_CARD);
+    if (context) {
+        SCard(ReleaseContext, context);
+    }
+}
 
+void QPCSCReaderWorker::connectCard(const QString &reader, const QString &protocol) {
+#ifdef Q_OS_LINUX
+    // Context per thread
+    LONG rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
+    if (rv != SCARD_S_SUCCESS) {
+        return emit disconnected(rv);
+    }
+#endif
+    // protocol
+    DWORD proto = SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1;
+    if (protocol == "T=0") {
+        proto = SCARD_PROTOCOL_T0;
+    } else if (protocol == "T=1") {
+        proto = SCARD_PROTOCOL_T1;
+    } else if (protocol == "*") {
+        // do nothing, default
+    } else {
+        return emit disconnected(SCARD_E_INVALID_PARAMETER);
+    }
+
+    // TODO: Windows and exclusive access
+    // Connect
+    DWORD mode = SCARD_SHARE_SHARED;
+    if (true) { // FIXME
+#ifdef _WIN32
+        return disconnected(SCARD_E_SHARING_VIOLATION); // FIXME: lots of UX love here
+#endif
+        _log("Connecting in shared mode");
+        rv = SCard(Connect, context, reader.toLatin1().data(), SCARD_SHARE_SHARED, proto, &card, &this->protocol);
+    } else {
+        _log("Reader is not in use, assuming exclusive access is possible");
+        mode = SCARD_SHARE_EXCLUSIVE;
+        // Try to connect multiple times, a freshly inserted card is often probed by other software as well
+        int i = 0;
+        do {
+            rv = SCard(Connect, context, reader.toLatin1().data(), mode, proto, &card, &this->protocol);
+            if (rv != LONG(SCARD_E_SHARING_VIOLATION))
+                break;
+            QThread::currentThread()->usleep(300); // FIXME: windows only?
+            i++;
+        } while (i < 3);
+    }
+    // Check
+    if (rv != SCARD_S_SUCCESS) {
+        return emit disconnected(rv);
+    }
+
+#ifndef _WIN32
+    rv = SCard(BeginTransaction, card);
+    if (rv != SCARD_S_SUCCESS) {
+        return emit disconnected(rv);
+    }
+#endif
+
+    _log("Connected to %s in %s mode, protocol %s", qPrintable(reader), mode == SCARD_SHARE_EXCLUSIVE ? "exclusive" : "shared", this->protocol == SCARD_PROTOCOL_T0 ? "T=0" : "T=1");
+    emit connected({0}, this->protocol == SCARD_PROTOCOL_T0 ? "T=0" : "T=1");
+}
+
+void QPCSCReaderWorker::disconnectCard() {
+#ifndef _WIN32
+    // No transactions on Windows due to the "5 second rule"
+    SCard(EndTransaction, card, SCARD_LEAVE_CARD);
+#endif
+    emit disconnected(SCard(Disconnect, card, SCARD_RESET_CARD));
+}
+
+void QPCSCReaderWorker::transmit(const QByteArray &apdu) {
+    SCARD_IO_REQUEST req;
+    std::vector<unsigned char> response(4096, 0); // Should be enough
+    req.dwProtocol = protocol;
+    req.cbPciLength = sizeof(req);
+    DWORD rlen = response.size();
+    LONG err = SCard(Transmit, card, &req, (const unsigned char *)apdu.data(), DWORD(apdu.size()), &req, response.data(), &rlen);
+    if (err != SCARD_S_SUCCESS) {
+        response.resize(0);
+        SCard(Disconnect, card, SCARD_RESET_CARD);
+        return emit disconnected(err);
+    }
+    response.resize(rlen);
+    emit received(QByteArray((const char*)response.data(), int(response.size())));
+}

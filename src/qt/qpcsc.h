@@ -33,30 +33,77 @@
 
 #include <vector>
 
-// Represents a connection to a reader and a card.
-// It lives in main thread but has a worker thread
-class QPCSCReader: public QObject {
+// Lives in a separate thread because of possibly blocking
+// transmits, that owns the context and card handles
+class QPCSCReaderWorker: public QObject {
     Q_OBJECT
-public:
-    QPCSCReader(QObject *parent) {
 
-    }
-    QWidget *dialog; // "Reader is in use by ..." dialog
+public:
+    ~QPCSCReaderWorker();
 
 public slots:
-    void connect(const QString &reader, const QString &protocol);
-    void send_apdu(const QByteArray &apdu);
-    void disconnect();
+    // establish context in thread and connect to reader
+    void connectCard(const QString &reader, const QString &protocol);
+    void transmit(const QByteArray &bytes);
+    void disconnectCard();
 
 signals:
-    void apdu_received(const QByteArray &apdu);
-    void disconnected();
-    void connected(const QString &protocol, const QByteArray &atr);
+    // When the connection has been established
+    void connected(const QByteArray &atr, const QString &protocol);
+    // When reader is disconnected, either implicitly during connect or transmit
+    // or explicitly via disconnect()
+    void disconnected(const LONG err);
+    // bytes received from the card after transmit()
+    void received(const QByteArray &bytes);
 
 private:
     SCARDCONTEXT context; // Only on unix, where it is necessary
     SCARDHANDLE card;
     DWORD protocol = SCARD_PROTOCOL_UNDEFINED;
+};
+
+// Represents a connection to a reader and a card.
+// It lives in main thread but has a worker thread
+class QPCSCReader: public QObject {
+    Q_OBJECT
+public:
+    QPCSCReader(QObject *parent, const QString &name, const QString &proto): QObject(parent), reader(name), protocol(proto) {};
+    QWidget *dialog; // "Reader is in use by ..." dialog
+
+    // FIXME: is this necessary?
+    ~QPCSCReader() {
+        if (thread.isRunning()) {
+            thread.quit();
+            thread.wait();
+        }
+    }
+
+    bool isConnected() {
+        return isOpen;
+    };
+
+public slots:
+    void open();
+    void transmit(const QByteArray &apdu);
+    void disconnect();
+
+signals:
+    // command signals
+    void connectCard(const QString &reader, const QString &protocol);
+    void disconnectCard();
+    void transmitBytes(const QByteArray &bytes);
+
+    // Proxied signals
+    void received(const QByteArray &apdu);
+    void disconnected(const LONG err);
+    void connected(const QByteArray &atr, const QString &protocol);
+
+private:
+    bool isOpen = false;
+    QString reader;
+    QString protocol;
+    QThread thread;
+    QPCSCReaderWorker worker;
 };
 
 // Synthesizes PC/SC events to Qt signals
@@ -69,7 +116,10 @@ public:
     static const char *errorName(LONG err);
 
     QMap<QString, QStringList> getReaders();
-    QPCSCReader connect(const QString &reader);
+    SCARDCONTEXT getContext() {
+        QMutexLocker locker(&mutex);
+        return context;
+    };
 
 signals:
     void cardInserted(const QString &reader, const QByteArray &atr);

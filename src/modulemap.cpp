@@ -18,7 +18,6 @@
 
 #include "modulemap.h"
 #include "Logger.h"
-#include "pcsc.h"
 #include "util.h"
 
 #include <sstream>

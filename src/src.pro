@@ -41,7 +41,6 @@ DEFINES += VERSION=\\\"$$VERSION\\\"
 SOURCES += \
     Logger.cpp \
     modulemap.cpp \
-    pcsc.cpp \
     pkcs11module.cpp \
     qt/main.cpp \
     qt/qpcsc.cpp \

@@ -27,7 +27,7 @@
 
 #include "dialogs/select_reader.h"
 
-WebContext::WebContext(QObject *parent, QLocalSocket *client) {
+WebContext::WebContext(QObject *parent, QLocalSocket *client): QObject(parent)  {
     this->ls = client;
     connect(client, &QLocalSocket::readyRead, [this, client] {
         _log("Handling data from local socket");
@@ -83,7 +83,7 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client) {
     PKI = &((QtHost *)parent)->PKI;
 }
 
-WebContext::WebContext(QObject *parent, QWebSocket *client) {
+WebContext::WebContext(QObject *parent, QWebSocket *client): QObject(parent) {
     this->ws = client;
     this->origin = client->origin();
     connect(client, &QWebSocket::textMessageReceived, [this, client] (QString message) {
@@ -160,9 +160,9 @@ void WebContext::processMessage(const QVariantMap &message) {
     if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost" || url.scheme() == "moz-extension" || url.scheme() == "chrome-extension") {
         origin = message.value("origin").toString();
     } else {
-       _log("Dropping connection");
-       terminate();
-       return;
+        _log("Dropping connection");
+        terminate();
+        return;
     }
 
     // TODO: have lanagueg in app settings
@@ -188,7 +188,7 @@ void WebContext::processMessage(const QVariantMap &message) {
     timer.start(5000); // 5 seconds
     // Command dispatch
     if (message.contains("version")) {
-        resp = {{"id", msgid}, {"version", VERSION}}; // TODO: add something here
+        return outgoing({{"id", msgid}, {"version", VERSION}});
     } else if (message.contains("SCardConnect")) {
         // Show reader selection or confirmation dialog
         dialog = new QtSelectReader(this); // FIXME
@@ -198,14 +198,33 @@ void WebContext::processMessage(const QVariantMap &message) {
         connect(PCSC, &QtPCSC::readerAttached, (QtSelectReader *)dialog, &QtSelectReader::readerAttached, Qt::QueuedConnection);
 
         connect(dialog, &QDialog::rejected, [=] {
-            outgoing({{"error", "SCARD_E_CANCELLED"}}); // FIXME: destringify
+            outgoing({{"error", QtPCSC::errorName(SCARD_E_CANCELLED)}});
         });
         // Connect to the reader once the reader name is known
-        connect((QtSelectReader *)dialog, &QtSelectReader::readerSelected, this, &WebContext::connectReader);
+        connect((QtSelectReader *)dialog, &QtSelectReader::readerSelected, [this] (QString name) {
+            this->reader = new QPCSCReader(this, name, QStringLiteral("*")); // FIXME
+            this->reader->open();
+            connect(this->reader, &QPCSCReader::disconnected, [=] (LONG err) {
+                _log("Disconnected: %s", QtPCSC::errorName(err));
+                if (err != SCARD_S_SUCCESS) {
+                    outgoing({{"error", QtPCSC::errorName(err)}});
+                } else {
+                    outgoing({});
+                }
+            });
+            connect(this->reader, &QPCSCReader::connected, [&] (QByteArray atr, QString proto) {
+                _log("connected: %s", qPrintable(proto));
+                outgoing({{"reader", name}, {"protocol", proto}});
+            });
+            connect(this->reader, &QPCSCReader::received, [&] (QByteArray apdu) {
+                _log("Rreceived apdu");
+                outgoing({{"bytes", apdu.toHex()}});
+            });
+        });
     } else if (message.contains("SCardDisconnect")) {
-//        emit disconnect_reader();
+        this->reader->disconnect();
     } else if (message.contains("SCardTransmit")) {
-//        emit send_apdu(QByteArray::fromHex(message.value("SCardTransmit").toMap().value("bytes").toString().toLatin1()));
+        this->reader->transmit(QByteArray::fromHex(message.value("SCardTransmit").toMap().value("bytes").toString().toLatin1()));
     } else if (message.contains("sign")) {
         QVariantMap sign = message.value("sign").toMap();
 //        emit sign(origin, QByteArray::fromBase64(sign.value("cert").toString().toLatin1()), QByteArray::fromBase64(sign.value("hash").toString().toLatin1()), sign.value("hashalgo").toString());
@@ -214,18 +233,8 @@ void WebContext::processMessage(const QVariantMap &message) {
     } else if (message.contains("auth")) {
         return emit sendIPC(authenticate(message));
     } else {
-        resp = {{"error", "protocol"}};
+        outgoing({{"error", "protocol"}});
     }
-    if (!resp.empty()) {
-        outgoing(resp);
-    }
-    // Otherwise wait for a response from other threads
-}
-
-void WebContext::connectReader(const QString &reader) {
-    // Show a "insert card" dialog, if it happens to be empty
-    _log("connecting to reader %s", qPrintable(reader));
-    outgoing({{"reader", reader}, {"protocol", "T=1"}});
 }
 
 void WebContext::outgoing(QVariantMap message) {

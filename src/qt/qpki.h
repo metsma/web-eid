@@ -40,9 +40,9 @@ class QPKI: public QObject {
 
 public:
     enum TokenType {
-    CAPI,
-    PKCS11
-};
+        CAPI,
+        PKCS11
+    };
 
     struct PKIToken {
         TokenType tktype;

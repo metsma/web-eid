@@ -54,7 +54,6 @@ public:
 
 public slots:
     void receiveIPC(const InternalMessage &msg);
-    void connectReader(const QString &reader);
 
 signals:
     void sendIPC(const InternalMessage &msg);
@@ -73,5 +72,6 @@ private:
     QString msgid;
     QPKI *PKI;
     QtPCSC *PCSC;
-    //QThread worker;
+
+    QPCSCReader *reader = nullptr;
 };

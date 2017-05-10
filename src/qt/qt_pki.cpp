@@ -21,7 +21,7 @@
 #include "Common.h"
 #include "Logger.h"
 #include "util.h"
-#include "pcsc.h"
+#include "qpcsc.h"
 
 
 #include "modulemap.h"
