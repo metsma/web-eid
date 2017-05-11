@@ -235,9 +235,9 @@ void QtHost::receiveIPC(InternalMessage message) {
     // Handle dialog requests
     if (message.type == ShowSelectCertificate) {
         _log("Showing certificate selection window");
-        QtCertSelect *dialog = new QtCertSelect(ctx, Authentication, {});
+        QtSelectCertificate *dialog = new QtSelectCertificate(ctx, Authentication);
         // Signal result back to PKI
-        connect(dialog, &QtCertSelect::sendIPC, &PKI, &QPKI::receiveIPC, Qt::QueuedConnection);
+        connect(dialog, &QtSelectCertificate::sendIPC, &PKI, &QPKI::receiveIPC, Qt::QueuedConnection);
         // Timeout the dialog, if present
         if (ctx->timer.isActive()) {
             connect(&ctx->timer, &QTimer::timeout, dialog, &QDialog::reject);

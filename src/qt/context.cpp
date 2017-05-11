@@ -253,7 +253,10 @@ void WebContext::processMessage(const QVariantMap &message) {
     } else if (message.contains("cert")) {
 //        emit select_certificate(origin, Signing, false);
     } else if (message.contains("auth")) {
-        return emit sendIPC(authenticate(message));
+        QtSelectCertificate *d = new QtSelectCertificate(this, Authentication);
+        d->update(PKI->getCertificates());
+        connect(PKI, &QPKI::certificateListChanged, d, &QtSelectCertificate::update, Qt::QueuedConnection);
+        //return emit sendIPC(authenticate(message));
     } else {
         outgoing({{"error", "protocol"}});
     }

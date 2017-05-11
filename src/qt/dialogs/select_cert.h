@@ -34,12 +34,12 @@
 #include <QVBoxLayout>
 
 
-class QtCertSelect: public QDialog {
+class QtSelectCertificate: public QDialog {
     Q_OBJECT
 
 public:
 
-    QtCertSelect(WebContext *ctx, CertificatePurpose type, const std::vector<std::vector<unsigned char>> &certs):
+    QtSelectCertificate(WebContext *ctx, CertificatePurpose type):
         layout(new QVBoxLayout(this)),
         message(new QLabel(this)),
         table(new QTreeWidget(this)),
@@ -89,22 +89,24 @@ public:
 //            v2ba(certs[table->currentItem()->text(3).toUInt()]);
         });
 
-        show();
-        activateWindow(); // to be always topmost and activated, on Linux
-        raise(); // to be always topmost, on macOS
     }
 
 public slots:
     // Called from PKI after QtPKI::refresh() when a card has been inserted and certificate list changes.
-    void cert_list_updated(const std::vector<std::vector<unsigned char>> &certs) {
+    void update(const QVector<QByteArray> &certs) {
         // Change from some to none, interpret as implicit cancel
         // TODO: what about chaning cards?
-        if (certs.empty())
-            return reject();
+        if (certs.empty()) {
+            message->setText("No certificates found, please insert your card!");
+        }
 
+        table->clear();
         _log("Updating certificate list in window.");
-        for (const std::vector<unsigned char> &c: certs) {
-            QSslCertificate cert = v2cert(c);
+        for (const auto &c: certs) {
+            QSslCertificate cert(c, QSsl::Der);
+            if (cert.isNull()) {
+                _log("Could not parse certificate");
+            }
             // filter out expired certificates
             // TODO: not here
             if (QDateTime::currentDateTime() >= cert.expiryDate())
@@ -116,10 +118,11 @@ public slots:
                 QString::number(&c - &certs[0])})); // Index of certs list
         }
         table->setCurrentIndex(table->model()->index(0, 0));
-    }
 
-    void reject() {
-        done(QDialog::Rejected);
+        show();
+        activateWindow(); // to be always topmost and activated, on Linux
+        raise(); // to be always topmost, on macOS
+
     }
 
 signals:
