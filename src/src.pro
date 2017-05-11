@@ -22,7 +22,7 @@ macx {
 }
 unix:!macx: {
     PKGCONFIG += libpcsclite
-    CONFIG += link_pkgconfig debug
+    CONFIG += link_pkgconfig
     TARGET = "web-eid"
 }
 unix {
@@ -31,11 +31,12 @@ unix {
 win32 {
     DEFINES += WIN32_LEAN_AND_MEAN
     LIBS += winscard.lib ncrypt.lib crypt32.lib cryptui.lib Advapi32.lib
-    SOURCES += win/WinCertSelect.cpp win/WinSigner.cpp
-    HEADERS += win/WinCertSelect.h win/WinSigner.h
+    SOURCES += win/WinCertSelect.cpp win/WinSigner.cpp qt/qwincrypt.cpp
+    HEADERS += win/WinCertSelect.h win/WinSigner.h qt/qwincrypt.h
     INCLUDEPATH += win
     QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
     TARGET = "Web-eID"
+    CONFIG += debug
 }
 DEFINES += VERSION=\\\"$$VERSION\\\"
 SOURCES += \

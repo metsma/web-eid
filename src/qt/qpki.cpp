@@ -23,6 +23,7 @@
 #include "util.h"
 
 #include "modulemap.h"
+#include "qwincrypt.h"
 
 #include <QDialogButtonBox>
 #include <QHeaderView>
@@ -88,10 +89,10 @@ void QPKI::cardInserted(const QString &reader, const QByteArray &atr) {
             }
         }
     } else {
-#ifdef Q_OS_WINDOWS
-        // fetch store certs
+#ifdef Q_OS_WIN
+        _log("Still refreshing cert, because on windows");
+        refresh();
 #endif
-
     }
 }
 
@@ -103,6 +104,13 @@ void QPKI::refresh() {
             certs[v2ba(c)] = {PKCS11, m};
         }
     }
+#ifdef Q_OS_WIN
+    _log("WINDOWS ENUM");
+    QVector<QByteArray> wincerts = QWinCrypt::getCertificates();
+    for (const auto &cert: wincerts) {
+        certs[cert] = {CAPI, ""};
+    }
+#endif
     if (certificates.size() != certs.size()) {
         certificates = certs;
         emit certificateListChanged(getCertificates());
