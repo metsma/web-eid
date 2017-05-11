@@ -339,7 +339,7 @@ void QPCSCReader::open() {
     connect(&worker, &QPCSCReaderWorker::disconnected, this, &QPCSCReader::disconnected, Qt::QueuedConnection);
     connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::connected, Qt::QueuedConnection);
     connect(&worker, &QPCSCReaderWorker::received, this, &QPCSCReader::received, Qt::QueuedConnection);
-    
+
     // In use dialog. Lambda would be in the worker thread.
     connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::showDialog, Qt::QueuedConnection);
 

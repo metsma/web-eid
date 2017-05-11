@@ -66,7 +66,7 @@ public:
         table->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
         table->header()->setSectionResizeMode(0, QHeaderView::Stretch);
 
-        QPushButton *ok = buttons->addButton(tr("Select"), QDialogButtonBox::AcceptRole);
+        ok = buttons->addButton(tr("Select"), QDialogButtonBox::AcceptRole);
         ok->setEnabled(false);
 
         buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
@@ -133,5 +133,6 @@ private:
     QLabel *message;
     QTreeWidget *table;
     QDialogButtonBox *buttons;
+    QPushButton *ok;
 };
 

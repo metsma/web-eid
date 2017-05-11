@@ -85,7 +85,7 @@ public slots:
     void open();
     void transmit(const QByteArray &apdu);
     void disconnect();
-    
+
     void showDialog();
 
 signals:
