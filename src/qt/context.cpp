@@ -202,9 +202,8 @@ void WebContext::processMessage(const QVariantMap &message) {
         });
         // Connect to the reader once the reader name is known
         connect((QtSelectReader *)dialog, &QtSelectReader::readerSelected, [this, message] (QString name) {
-            QPCSCReader *r = new QPCSCReader(this, name, message.value("SCardConnect").toMap().value("protocol", "*").toString());
+            QPCSCReader *r = PCSC->connectReader(this, name, message.value("SCardConnect").toMap().value("protocol", "*").toString(), true);
             readers[name] = r;
-            r->open();
             connect(r, &QPCSCReader::disconnected, [this, name] (LONG err) {
                 _log("Disconnected: %s", QtPCSC::errorName(err));
                 if (readers.contains(name)) {

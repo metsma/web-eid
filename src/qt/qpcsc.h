@@ -32,6 +32,7 @@
 #include "internal.h"
 
 #include <vector>
+class QtPCSC;
 
 // Lives in a separate thread because of possibly blocking
 // transmits, that owns the context and card handles
@@ -43,7 +44,7 @@ public:
 
 public slots:
     // establish context in thread and connect to reader
-    void connectCard(const QString &reader, const QString &protocol);
+    void connectCard(const SCARDCONTEXT ctx, const QString &reader, const QString &protocol);
     void transmit(const QByteArray &bytes);
     void disconnectCard();
 
@@ -57,7 +58,8 @@ signals:
     void received(const QByteArray &bytes);
 
 private:
-    SCARDCONTEXT context; // Only on unix, where it is necessary
+    SCARDCONTEXT context = 0; // Only on unix, where it is necessary
+    bool ourContext = true;
     SCARDHANDLE card;
     DWORD protocol = SCARD_PROTOCOL_UNDEFINED;
 };
@@ -67,7 +69,7 @@ private:
 class QPCSCReader: public QObject {
     Q_OBJECT
 public:
-    QPCSCReader(QObject *parent, const QString &name, const QString &proto): QObject(parent), reader(name), protocol(proto) {};
+    QPCSCReader(QObject *parent, QtPCSC *pcsc, SCARDCONTEXT ctx, const QString &name, const QString &proto): QObject(parent), PCSC(pcsc), reader(name), protocol(proto) {};
 
     // FIXME: is this necessary?
     ~QPCSCReader() {
@@ -90,7 +92,7 @@ public slots:
 
 signals:
     // command signals
-    void connectCard(const QString &reader, const QString &protocol);
+    void connectCard(const SCARDCONTEXT ctx, const QString &reader, const QString &protocol);
     void disconnectCard();
     void transmitBytes(const QByteArray &bytes);
 
@@ -101,10 +103,12 @@ signals:
 
 private:
     bool isOpen = false;
+    QtPCSC *PCSC;
     QString reader;
     QString protocol;
     QThread thread;
     QPCSCReaderWorker worker;
+    SCARDCONTEXT context = 0;
 };
 
 // Synthesizes PC/SC events to Qt signals
@@ -114,13 +118,11 @@ class QtPCSC: public QThread {
 public:
     void run();
     void cancel();
-    static const char *errorName(LONG err);
 
     QMap<QString, QStringList> getReaders();
-    SCARDCONTEXT getContext() {
-        QMutexLocker locker(&mutex);
-        return context;
-    };
+    QPCSCReader *connectReader(QObject *parent, const QString &reader, const QString &protocol, bool wait);
+
+    static const char *errorName(LONG err);
 
 signals:
     void cardInserted(const QString &reader, const QByteArray &atr);
@@ -134,7 +136,12 @@ signals:
     void error(const QString &reader, const LONG err);
 
 private:
-    SCARDCONTEXT context;
+    SCARDCONTEXT getContext() {
+        QMutexLocker locker(&mutex);
+        return context;
+    };
+
+    SCARDCONTEXT context = 0;
     QMap<std::string, DWORD> known; // Known readers
     QMutex mutex; // Lock that guards the known readers
     bool pnp = true;

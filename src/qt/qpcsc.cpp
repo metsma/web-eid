@@ -139,23 +139,6 @@ QStringList QtPCSC::stateNames(DWORD state) const
     return result;
 }
 
-// Called from main thread.
-void QtPCSC::cancel() {
-    SCard(Cancel, getContext());
-}
-
-// Called from main thread
-QMap<QString, QStringList> QtPCSC::getReaders() {
-    // FIXME: lock when writing the known map
-    QMutexLocker locker(&mutex);
-
-    QMap<QString, QStringList> result;
-    for (const auto &e: known.keys()) {
-        result[QString::fromStdString(e)] = stateNames(known[e]);
-    }
-    return result;
-}
-
 void QtPCSC::run()
 {
     LONG rv = SCARD_S_SUCCESS;
@@ -324,6 +307,30 @@ void QtPCSC::run()
     SCard(ReleaseContext, context);
 }
 
+// The rest are called from main thread
+void QtPCSC::cancel() {
+    SCard(Cancel, getContext());
+}
+
+QMap<QString, QStringList> QtPCSC::getReaders() {
+    QMutexLocker locker(&mutex);
+
+    QMap<QString, QStringList> result;
+    for (const auto &e: known.keys()) {
+        result[QString::fromStdString(e)] = stateNames(known[e]);
+    }
+    return result;
+}
+
+QPCSCReader *QtPCSC::connectReader(QObject *parent, const QString &reader, const QString &protocol, bool wait) {
+    _log("connecting to %s", qPrintable(reader));
+    QPCSCReader *result = new QPCSCReader(parent, this, 0, reader, protocol); // FIXME: context
+    auto rdrs = getReaders();
+    // check if empty and show dialog. wired to open, or call open directly
+    result->open();
+    return result;
+}
+
 // Reader
 void QPCSCReader::open() {
     // Start the thread
@@ -344,11 +351,11 @@ void QPCSCReader::open() {
     connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::showDialog, Qt::QueuedConnection);
 
     // connect in thread
-    emit connectCard(reader, protocol);
+    emit connectCard(context, reader, protocol);
 }
 
 void QPCSCReader::showDialog() {
-    QtReaderInUse *d = new QtReaderInUse("foo", "bar"); // FIXME
+    QtReaderInUse *d = new QtReaderInUse(reader, "bar"); // FIXME
     // Disconnect the reader from dialog
     connect(d, &QDialog::rejected, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
     // And close the dialog on disconnect
@@ -364,31 +371,31 @@ void QPCSCReader::transmit(const QByteArray &apdu) {
 }
 
 // Worker
-
 QPCSCReaderWorker::~QPCSCReaderWorker() {
     if (card)
         SCard(Disconnect, card, SCARD_LEAVE_CARD);
-#if defined(Q_OS_LINUX) || defined (Q_OS_MAC)
-    if (context) {
+    // pcsc-lite requirements
+    if (ourContext && context) {
         SCard(ReleaseContext, context);
     }
-#endif
 }
 
 // FIXME: have the "connect" function as part of QtPCSC so that access to existing context
 // would be there. Hide the QPCSCReader constructor
 // Handle the empty reader + UI case
-void QPCSCReaderWorker::connectCard(const QString &reader, const QString &protocol) {
+void QPCSCReaderWorker::connectCard(SCARDCONTEXT ctx, const QString &reader, const QString &protocol) {
     LONG rv = SCARD_S_SUCCESS;
-#if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
-    // Context per thread
-    rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
-    if (rv != SCARD_S_SUCCESS) {
-        return emit disconnected(rv);
+    if (!ctx) {
+        // Context per thread, required by pcsc-lite
+        rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
+        if (rv != SCARD_S_SUCCESS) {
+            return emit disconnected(rv);
+        }
+    } else {
+        context = ctx;
+        ourContext = false;
     }
-#else
-    context = 0; // FIXME
-#endif
+
     // protocol
     DWORD proto = SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1;
     if (protocol == "T=0") {
