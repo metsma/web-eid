@@ -10,6 +10,8 @@ c:\Qt\5.8\msvc2015\bin\qmake.exe -config debug || exit /b
 nmake %* || exit /b
 REM copy the interesting files for testing purposes
 REM (installer picks them up from source)
+copy nm-bridge\release\web-eid-bridge.exe debug\
 c:\Qt\5.8\msvc2015\bin\windeployqt debug\web-eid.exe
+c:\Qt\5.8\msvc2015\bin\windeployqt debug\web-eid-bridge.exe
 copy c:\OpenSSL-Win32\bin\libeay32.dll debug\
 copy c:\OpenSSL-Win32\bin\ssleay32.dll debug\
