@@ -36,7 +36,6 @@ win32 {
     INCLUDEPATH += win
     QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
     TARGET = "Web-eID"
-    CONFIG += debug
 }
 DEFINES += VERSION=\\\"$$VERSION\\\"
 SOURCES += \
