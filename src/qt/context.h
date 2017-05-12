@@ -20,17 +20,15 @@
 
 #include "internal.h"
 
-#include <QObject>
-
-#include "qpcsc.h"
-#include "qpki.h"
-
 #include <QWebSocket>
 #include <QLocalSocket>
 #include <QDialog>
 #include <QUuid>
 #include <QTimer>
 
+class QtPCSC;
+class QPCSCReader;
+class QPKI;
 
 // Handles a browser context, either
 // via WebSocket or LocalSocket, which it owns.

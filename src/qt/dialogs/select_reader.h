@@ -79,6 +79,7 @@ public:
             _log("Selected reader %s", qPrintable(table->currentItem()->text(0)));
             emit readerSelected(table->currentItem()->text(0));
         });
+        show();
 
     }
 
@@ -114,7 +115,6 @@ public slots:
                 table->setCurrentItem(item);
             }
         }
-        show();
         activateWindow(); // to be always topmost and activated, on Linux
         raise(); // to be always topmost, on macOS
     }

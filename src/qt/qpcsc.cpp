@@ -33,8 +33,10 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QMutexLocker>
+#include <QTime>
 
 #include "qt/dialogs/reader_in_use.h"
+#include "qt/dialogs/insert_card.h"
 
 /*
  QtPCSC is:
@@ -53,7 +55,7 @@ LONG SCCall(const char *fun, const char *file, int line, const char *function, F
 {
     // TODO: log parameters
     LONG err = func(args...);
-    Logger::writeLog(fun, file, line, "%s: %s", function, QtPCSC::errorName(err));
+    Logger::writeLog(fun, file, line, "%s: %s (0x%08x)", function, QtPCSC::errorName(err), err);
     return err;
 }
 #define SCard(API, ...) SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard" #API, SCard##API, __VA_ARGS__)
@@ -302,7 +304,7 @@ void QtPCSC::run()
                 change = false;
             }
         }
-    } while (rv == LONG(SCARD_S_SUCCESS) || rv == LONG(SCARD_E_TIMEOUT));
+    } while ((rv == LONG(SCARD_S_SUCCESS) || rv == LONG(SCARD_E_TIMEOUT)) && !isInterruptionRequested());
     _log("Quitting PCSC thread");
     SCard(ReleaseContext, context);
 }
@@ -322,12 +324,35 @@ QMap<QString, QStringList> QtPCSC::getReaders() {
     return result;
 }
 
-QPCSCReader *QtPCSC::connectReader(QObject *parent, const QString &reader, const QString &protocol, bool wait) {
+QPCSCReader *QtPCSC::connectReader(WebContext *webcontext, const QString &reader, const QString &protocol, bool wait) {
     _log("connecting to %s", qPrintable(reader));
-    QPCSCReader *result = new QPCSCReader(parent, this, 0, reader, protocol); // FIXME: context
     auto rdrs = getReaders();
     // check if empty and show dialog. wired to open, or call open directly
-    result->open();
+    if (!rdrs.contains(reader)) {
+        _log("%s does not exist", qPrintable(reader));
+        return nullptr;
+    }
+
+    QPCSCReader *result = new QPCSCReader(webcontext, this, 0, reader, protocol);
+
+    connect(this, &QtPCSC::readerRemoved, result, &QPCSCReader::readerRemoved, Qt::QueuedConnection);
+
+    if (!rdrs[reader].contains("PRESENT")) {
+        _log("Showing insert reader dialog");
+        QtInsertCard *d = new QtInsertCard(reader);
+        connect(this, &QtPCSC::cardInserted, result, &QPCSCReader::cardInserted, Qt::QueuedConnection);
+        connect(d, &QDialog::rejected, result, &QPCSCReader::disconnect);
+        // Close if event. TODO: handle MUTE
+        connect(result, &QPCSCReader::connected, [=] {
+            d->accept();
+        });
+        connect(result, &QPCSCReader::disconnected, [=] {
+            // FIXME: reference is lost on success
+            d->accept();
+        });
+    } else {
+        result->open();
+    }
     return result;
 }
 
@@ -347,7 +372,7 @@ void QPCSCReader::open() {
     connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::connected, Qt::QueuedConnection);
     connect(&worker, &QPCSCReaderWorker::received, this, &QPCSCReader::received, Qt::QueuedConnection);
 
-    // In use dialog. Lambda would be in the worker thread.
+    // Open the "in use"" dialog. Separate slot because lambda would be in the worker thread.
     connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::showDialog, Qt::QueuedConnection);
 
     // connect in thread
@@ -356,13 +381,30 @@ void QPCSCReader::open() {
 
 void QPCSCReader::showDialog() {
     QtReaderInUse *d = new QtReaderInUse(reader, "bar"); // FIXME
-    // Disconnect the reader from dialog
+    // Disconnect the reader by canceling dialog
     connect(d, &QDialog::rejected, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
-    // And close the dialog on disconnect
+    // And close the dialog if reader is disconnected
     connect(&worker, &QPCSCReaderWorker::disconnected, d, &QDialog::reject, Qt::QueuedConnection);
 }
 
+void QPCSCReader::cardInserted(const QString &reader, const QByteArray &atr) {
+    if (this->reader == reader) {
+        open();
+    }
+}
+
+void QPCSCReader::readerRemoved(const QString &reader) {
+    if (this->reader == reader) {
+        disconnect();
+    }
+}
+
 void QPCSCReader::disconnect() {
+    // If not yet connected, the slot is activated by 
+    // insert card dialog or reader removal during that dialog
+    if (!isOpen) {
+        return emit(disconnected(SCARD_E_CANCELLED));
+    }
     emit disconnectCard();
 }
 
@@ -372,8 +414,9 @@ void QPCSCReader::transmit(const QByteArray &apdu) {
 
 // Worker
 QPCSCReaderWorker::~QPCSCReaderWorker() {
-    if (card)
+    if (card) {
         SCard(Disconnect, card, SCARD_LEAVE_CARD);
+    }
     // pcsc-lite requirements
     if (ourContext && context) {
         SCard(ReleaseContext, context);
@@ -409,33 +452,37 @@ void QPCSCReaderWorker::connectCard(SCARDCONTEXT ctx, const QString &reader, con
     }
 
     // TODO: Windows and exclusive access
-    // Connect
-    DWORD mode = SCARD_SHARE_SHARED;
-    if (true) { // FIXME
-#ifdef _WIN32
-        return disconnected(SCARD_E_SHARING_VIOLATION); // FIXME: lots of UX love here
+    DWORD mode = SCARD_SHARE_EXCLUSIVE;
+    // Try to connect multiple times, a freshly inserted card is often probed by other software as well
+    int i = 0;
+    qsrand((uint)QTime::currentTime().msec());
+    do {
+        rv = SCard(Connect, context, reader.toLatin1().data(), mode, proto, &card, &this->protocol);
+        if (rv != LONG(SCARD_E_SHARING_VIOLATION))
+            break;
+        
+        int ms = (qrand() % 500) + 100;
+        _log("Sleeping for %d", ms);
+        QTime a = QTime::currentTime();
+        QThread::currentThread()->msleep(ms);  // FIXME: windows only?
+        _log("Slept %d", a.msecsTo(QTime::currentTime()));
+        i++;
+    } while (i < 10);
+    if (rv == LONG(SCARD_E_SHARING_VIOLATION)) {
+        // try schared mode on non-windows
+#if !defined(Q_OS_WIN)
+        mode = SCARD_SHARE_SHARED;
+        rv = SCard(Connect, context, reader.toLatin1().data(), mode, proto, &card, &this->protocol);
 #endif
-        _log("Connecting in shared mode");
-        rv = SCard(Connect, context, reader.toLatin1().data(), SCARD_SHARE_SHARED, proto, &card, &this->protocol);
-    } else {
-        _log("Reader is not in use, assuming exclusive access is possible");
-        mode = SCARD_SHARE_EXCLUSIVE;
-        // Try to connect multiple times, a freshly inserted card is often probed by other software as well
-        int i = 0;
-        do {
-            rv = SCard(Connect, context, reader.toLatin1().data(), mode, proto, &card, &this->protocol);
-            if (rv != LONG(SCARD_E_SHARING_VIOLATION))
-                break;
-            QThread::currentThread()->usleep(300); // FIXME: windows only?
-            i++;
-        } while (i < 3);
     }
+
     // Check
     if (rv != SCARD_S_SUCCESS) {
         return emit disconnected(rv);
     }
 
-#ifndef _WIN32
+#ifndef Q_OS_WIN
+    // Transactions on non-windows machines
     rv = SCard(BeginTransaction, card);
     if (rv != SCARD_S_SUCCESS) {
         return emit disconnected(rv);
@@ -447,11 +494,16 @@ void QPCSCReaderWorker::connectCard(SCARDCONTEXT ctx, const QString &reader, con
 }
 
 void QPCSCReaderWorker::disconnectCard() {
-#ifndef _WIN32
+    LONG rv = SCARD_S_SUCCESS;
+    if (card) {
+#ifndef Q_OS_WIN
     // No transactions on Windows due to the "5 second rule"
-    SCard(EndTransaction, card, SCARD_LEAVE_CARD);
+        SCard(EndTransaction, card, SCARD_LEAVE_CARD);
 #endif
-    emit disconnected(SCard(Disconnect, card, SCARD_RESET_CARD));
+        rv = SCard(Disconnect, card, SCARD_RESET_CARD);
+        card = 0;
+    }
+    emit disconnected(rv);
 }
 
 void QPCSCReaderWorker::transmit(const QByteArray &apdu) {

@@ -30,6 +30,7 @@
 #endif
 
 #include "internal.h"
+#include "context.h"
 
 #include <vector>
 class QtPCSC;
@@ -69,7 +70,7 @@ private:
 class QPCSCReader: public QObject {
     Q_OBJECT
 public:
-    QPCSCReader(QObject *parent, QtPCSC *pcsc, SCARDCONTEXT ctx, const QString &name, const QString &proto): QObject(parent), PCSC(pcsc), reader(name), protocol(proto) {};
+    QPCSCReader(WebContext *webcontext, QtPCSC *pcsc, SCARDCONTEXT ctx, const QString &name, const QString &proto): QObject(webcontext), PCSC(pcsc), reader(name), protocol(proto) {};
 
     // FIXME: is this necessary?
     ~QPCSCReader() {
@@ -89,6 +90,8 @@ public slots:
     void disconnect();
 
     void showDialog();
+    void cardInserted(const QString &reader, const QByteArray &atr);
+    void readerRemoved(const QString &reader);
 
 signals:
     // command signals
@@ -120,7 +123,7 @@ public:
     void cancel();
 
     QMap<QString, QStringList> getReaders();
-    QPCSCReader *connectReader(QObject *parent, const QString &reader, const QString &protocol, bool wait);
+    QPCSCReader *connectReader(WebContext *webcontext, const QString &reader, const QString &protocol, bool wait);
 
     static const char *errorName(LONG err);
 

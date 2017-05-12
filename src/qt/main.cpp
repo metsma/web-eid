@@ -184,9 +184,10 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     PCSC.start();
 
     // Refresh PKI tokens when a card is inserted
-    connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QPKI::cardInserted, Qt::QueuedConnection);
-    connect(&PCSC, &QtPCSC::cardRemoved, &PKI, &QPKI::cardRemoved, Qt::QueuedConnection);
+    //connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QPKI::cardInserted, Qt::QueuedConnection);
+    //connect(&PCSC, &QtPCSC::cardRemoved, &PKI, &QPKI::cardRemoved, Qt::QueuedConnection);
 
+    // Executed in pki thread
     connect(&PKI, &QPKI::certificateListChanged, [=] (QVector<QByteArray> certs) {
         _log("Certificate list changed, contains %d entries\n", certs.size());
     });
