@@ -291,6 +291,6 @@ bool WebContext::isSecureOrigin(const QString &origin) {
         return false;
     if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost" || url.scheme() == "moz-extension" || url.scheme() == "chrome-extension") {
         return true;
-    } 
+    }
     return false;
 }

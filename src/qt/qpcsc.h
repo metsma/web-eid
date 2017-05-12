@@ -74,7 +74,7 @@ private:
 class QPCSCReader: public QObject {
     Q_OBJECT
 public:
-    QPCSCReader(WebContext *webcontext, QtPCSC *pcsc, SCARDCONTEXT ctx, const QString &name, const QString &proto): QObject(webcontext), PCSC(pcsc), reader(name), protocol(proto) {};
+    QPCSCReader(WebContext *webcontext, QtPCSC *pcsc, const QString &name, const QString &proto): QObject(webcontext), PCSC(pcsc), reader(name), protocol(proto) {};
 
     QtReaderInUse inUseDialog;
     QtInsertCard insertCardDialog;
@@ -155,5 +155,4 @@ private:
     QMap<std::string, DWORD> known; // Known readers
     QMutex mutex; // Lock that guards the known readers
     bool pnp = true;
-    QStringList stateNames(DWORD state) const;
 };

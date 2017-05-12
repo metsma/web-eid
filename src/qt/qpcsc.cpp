@@ -122,8 +122,7 @@ const char *QtPCSC::errorName(LONG err)
     };
 }
 
-QStringList QtPCSC::stateNames(DWORD state) const
-{
+static QStringList stateNames(DWORD state) {
     QStringList result;
 #define STATE(X) if( state & SCARD_STATE_##X ) result << #X
     STATE(IGNORE);
@@ -139,6 +138,17 @@ QStringList QtPCSC::stateNames(DWORD state) const
     return result;
 }
 
+static QStringList readerStateNames(DWORD state) {
+    QStringList result;
+#define RSTATE(X) if( state & SCARD_##X ) result << #X
+    RSTATE(ABSENT);
+    RSTATE(PRESENT);
+    RSTATE(SWALLOWED);
+    RSTATE(POWERED);
+    RSTATE(NEGOTIABLE);
+    RSTATE(SPECIFIC);
+    return result;
+}
 void QtPCSC::run()
 {
     LONG rv = SCARD_S_SUCCESS;
@@ -331,11 +341,11 @@ QPCSCReader *QtPCSC::connectReader(WebContext *webcontext, const QString &reader
         return nullptr;
     }
 
-    QPCSCReader *result = new QPCSCReader(webcontext, this, 0, reader, protocol);
+    QPCSCReader *result = new QPCSCReader(webcontext, this, reader, protocol);
 
     connect(this, &QtPCSC::readerRemoved, result, &QPCSCReader::readerRemoved, Qt::QueuedConnection);
 
-    if (!rdrs[reader].contains("PRESENT")) {
+    if (!rdrs[reader].contains("PRESENT") && wait) {
         _log("Showing insert reader dialog");
         result->insertCardDialog.showIt(webcontext->friendlyOrigin(), reader);
         connect(this, &QtPCSC::cardInserted, result, &QPCSCReader::cardInserted, Qt::QueuedConnection);
@@ -382,7 +392,7 @@ void QPCSCReader::showDialog() {
 }
 
 void QPCSCReader::cardInserted(const QString &reader, const QByteArray &atr) {
-    if (this->reader == reader) {
+    if ((this->reader == reader) && (!atr.isEmpty())) {
         open();
     }
 }
@@ -475,6 +485,23 @@ void QPCSCReaderWorker::connectCard(SCARDCONTEXT ctx, const QString &reader, con
         return emit disconnected(rv);
     }
 
+    // Get fresh information
+    QByteArray tmpname(reader.toLatin1().size() + 1, 0);
+    DWORD tmplen = tmpname.size();
+    DWORD tmpstate = 0;
+    DWORD tmpproto = 0;
+    QByteArray atr(33, 0);
+    DWORD atrlen = atr.size();
+    rv = SCard(Status, card, tmpname.data(), &tmplen, &tmpstate, &tmpproto, (unsigned char *) atr.data(), &atrlen);
+
+    if (rv != SCARD_S_SUCCESS) {
+        return emit disconnected(rv);
+    }
+
+    atr.resize(atrlen);
+    tmpname.resize(tmplen);
+    _log("Current state of %s: %s, protocol %d, atr %s", tmpname.data(), qPrintable(readerStateNames(tmpstate).join(",")), tmpproto, qPrintable(atr.toHex()));
+
 #ifndef Q_OS_WIN
     // Transactions on non-windows machines
     rv = SCard(BeginTransaction, card);
@@ -484,7 +511,7 @@ void QPCSCReaderWorker::connectCard(SCARDCONTEXT ctx, const QString &reader, con
 #endif
 
     _log("Connected to %s in %s mode, protocol %s", qPrintable(reader), mode == SCARD_SHARE_EXCLUSIVE ? "exclusive" : "shared", this->protocol == SCARD_PROTOCOL_T0 ? "T=0" : "T=1");
-    emit connected({0}, this->protocol == SCARD_PROTOCOL_T0 ? "T=0" : "T=1");
+    emit connected(atr, this->protocol == SCARD_PROTOCOL_T0 ? "T=0" : "T=1");
 }
 
 void QPCSCReaderWorker::disconnectCard() {

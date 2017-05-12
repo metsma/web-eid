@@ -57,7 +57,7 @@ public:
         table->setHeaderLabels({tr("Reader")});
         table->header()->setStretchLastSection(true);
         table->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-        // table->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+        table->header()->setSectionResizeMode(0, QHeaderView::Stretch);
         table->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
 
 
@@ -80,9 +80,7 @@ public:
             emit readerSelected(table->currentItem()->text(0));
         });
         show();
-
     }
-
 
 public slots:
     void update(QMap<QString, QStringList> readers) {
@@ -115,8 +113,8 @@ public slots:
                 table->setCurrentItem(item);
             }
         }
-        activateWindow(); // to be always topmost and activated, on Linux
-        raise(); // to be always topmost, on macOS
+        activateWindow();
+        raise();
     }
 
     void cardInserted(const QString &reader, const QByteArray &atr) {
