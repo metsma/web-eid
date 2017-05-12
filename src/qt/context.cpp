@@ -220,6 +220,8 @@ void WebContext::processMessage(const QVariantMap &message) {
                         // TODO: store lasterror
                     }
                     rd->deleteLater();
+                } else {
+                    // Not yet connected
                 }
             });
             connect(r, &QPCSCReader::connected, [=] (QByteArray atr, QString proto) {

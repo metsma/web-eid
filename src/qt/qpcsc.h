@@ -33,6 +33,10 @@
 #include "context.h"
 
 #include <vector>
+
+#include "qt/dialogs/reader_in_use.h"
+#include "qt/dialogs/insert_card.h"
+
 class QtPCSC;
 
 // Lives in a separate thread because of possibly blocking
@@ -72,7 +76,9 @@ class QPCSCReader: public QObject {
 public:
     QPCSCReader(WebContext *webcontext, QtPCSC *pcsc, SCARDCONTEXT ctx, const QString &name, const QString &proto): QObject(webcontext), PCSC(pcsc), reader(name), protocol(proto) {};
 
-    // FIXME: is this necessary?
+    QtReaderInUse inUseDialog;
+    QtInsertCard insertCardDialog;
+
     ~QPCSCReader() {
         if (thread.isRunning()) {
             thread.quit();
@@ -105,6 +111,7 @@ signals:
     void connected(const QByteArray &atr, const QString &protocol);
 
 private:
+
     bool isOpen = false;
     QtPCSC *PCSC;
     QString reader;

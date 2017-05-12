@@ -35,8 +35,6 @@
 #include <QMutexLocker>
 #include <QTime>
 
-#include "qt/dialogs/reader_in_use.h"
-#include "qt/dialogs/insert_card.h"
 
 /*
  QtPCSC is:
@@ -339,17 +337,12 @@ QPCSCReader *QtPCSC::connectReader(WebContext *webcontext, const QString &reader
 
     if (!rdrs[reader].contains("PRESENT")) {
         _log("Showing insert reader dialog");
-        QtInsertCard *d = new QtInsertCard(reader);
+        result->insertCardDialog.showIt(webcontext->friendlyOrigin(), reader);
         connect(this, &QtPCSC::cardInserted, result, &QPCSCReader::cardInserted, Qt::QueuedConnection);
-        connect(d, &QDialog::rejected, result, &QPCSCReader::disconnect);
+        connect(&result->insertCardDialog, &QDialog::rejected, result, &QPCSCReader::disconnect);
         // Close if event. TODO: handle MUTE
-        connect(result, &QPCSCReader::connected, [=] {
-            d->accept();
-        });
-        connect(result, &QPCSCReader::disconnected, [=] {
-            // FIXME: reference is lost on success
-            d->accept();
-        });
+        connect(result, &QPCSCReader::connected, &result->insertCardDialog, &QDialog::accept);
+        connect(result, &QPCSCReader::disconnected, &result->insertCardDialog, &QDialog::accept);
     } else {
         result->open();
     }
@@ -380,11 +373,12 @@ void QPCSCReader::open() {
 }
 
 void QPCSCReader::showDialog() {
-    QtReaderInUse *d = new QtReaderInUse(reader, "bar"); // FIXME
+    isOpen = true;
+    inUseDialog.showIt(static_cast<WebContext *>(parent())->friendlyOrigin(), reader);
     // Disconnect the reader by canceling dialog
-    connect(d, &QDialog::rejected, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
+    connect(&inUseDialog, &QDialog::rejected, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
     // And close the dialog if reader is disconnected
-    connect(&worker, &QPCSCReaderWorker::disconnected, d, &QDialog::reject, Qt::QueuedConnection);
+    connect(&worker, &QPCSCReaderWorker::disconnected, &inUseDialog, &QDialog::accept, Qt::QueuedConnection);
 }
 
 void QPCSCReader::cardInserted(const QString &reader, const QByteArray &atr) {

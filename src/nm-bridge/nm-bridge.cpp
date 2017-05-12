@@ -137,6 +137,14 @@ public:
             quit();
         });
         sock->connectToServer(serverName);
+        connect(this, &QCoreApplication::aboutToQuit, [this] {
+#ifdef Q_OS_WIN
+            input->terminate();
+#else
+            close(0);
+            input->wait();
+#endif
+        });
     }
 
 public slots:
@@ -144,8 +152,9 @@ public slots:
         _log("Connected to %s", qPrintable(sock->fullServerName()));
         server_started = 0;
         // Start input reading thread, if not already running
-        if (!input->isRunning())
+        if (!input->isRunning()) {
             input->start();
+        }
 
         connect(sock, &QLocalSocket::readyRead, [this] {
             // Data available from app, read message and pass to browser
@@ -194,9 +203,6 @@ public slots:
     }
 
 private:
-    void shutdown() {
-        input->terminate();
-    }
     // We have a single connection to the server app
     QLocalSocket *sock;
     int server_started = 0;
