@@ -22,8 +22,8 @@
 #include "Common.h"
 #include "util.h"
 #include "pkcs11.h"
-#include "qt_pki.h"
 #include "context.h"
+#include "qpki.h"
 
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -32,6 +32,7 @@
 #include <QPushButton>
 #include <QTreeWidget>
 #include <QVBoxLayout>
+
 
 
 class QtSelectCertificate: public QDialog {
@@ -82,7 +83,7 @@ public:
                 _log("Dialog was cancelled");
                 // TODO: send message to ... where?
                 // TO toPKI
-                return emit sendIPC({CertificateSelected, {{"id", ctx->id}, {"error", QtPKI::errorName(CKR_FUNCTION_CANCELED)}}});
+                return emit sendIPC({CertificateSelected, {{"id", ctx->id}, {"error", QPKI::errorName(CKR_FUNCTION_CANCELED)}}});
 
             }
 //            _log("Selected %d for a status of %d", table->currentItem()->text(3).toUInt(), code);

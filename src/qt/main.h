@@ -67,6 +67,8 @@ public slots:
     void processConnect();
     void processConnectLocal();
 
+    void checkOrigin(QWebSocketCorsAuthenticator *authenticator);
+
     // From different threads and subsystems, dispatched to contexts
     void receiveIPC(InternalMessage message);
 

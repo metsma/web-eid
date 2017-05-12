@@ -19,9 +19,7 @@
 #include "main.h"
 
 #include "autostart.h"
-#include "qt/qt_pki.h"
 
-#include "qt/dialogs/select_reader.h"
 #include "util.h"
 #include "Logger.h" // TODO: rename
 
@@ -119,6 +117,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 
     if (ws6->listen(QHostAddress::LocalHostIPv6, port)) {
         _log("Server running on %s", qPrintable(ws6->serverUrl().toString()));
+        connect(ws6, &QWebSocketServer::originAuthenticationRequired, this, &QtHost::checkOrigin);
         connect(ws6, &QWebSocketServer::newConnection, this, &QtHost::processConnect);
     } else {
         _log("Could not listen on v6 %d", port);
@@ -126,6 +125,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 
     if (ws->listen(QHostAddress::LocalHost, port)) {
         _log("Server running on %s", qPrintable(ws->serverUrl().toString()));
+        connect(ws, &QWebSocketServer::originAuthenticationRequired, this, &QtHost::checkOrigin);
         connect(ws, &QWebSocketServer::newConnection, this, &QtHost::processConnect);
     } else {
         _log("Could not listen on %d", port);
@@ -184,21 +184,28 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     PCSC.start();
 
     // Refresh PKI tokens when a card is inserted
-    //connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QPKI::cardInserted, Qt::QueuedConnection);
-    //connect(&PCSC, &QtPCSC::cardRemoved, &PKI, &QPKI::cardRemoved, Qt::QueuedConnection);
+    connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QPKI::cardInserted, Qt::QueuedConnection);
+    connect(&PCSC, &QtPCSC::cardRemoved, &PKI, &QPKI::cardRemoved, Qt::QueuedConnection);
 
-    // Executed in pki thread
     connect(&PKI, &QPKI::certificateListChanged, [=] (QVector<QByteArray> certs) {
-        _log("Certificate list changed, contains %d entries\n", certs.size());
+        printf("Certificate list changed, contains %d entries\n", certs.size());
     });
 
     // TODO: show UI on severe errors
     connect(&PCSC, &QtPCSC::error, [=] (QString reader, LONG err) {
-        _log("error in %s %s\n", qPrintable(reader), QtPCSC::errorName(err));
+        printf("error in %s %s\n", qPrintable(reader), QtPCSC::errorName(err));
     });
 
 }
 
+void QtHost::checkOrigin(QWebSocketCorsAuthenticator *authenticator) {
+    // TODO: some checks
+    if (WebContext::isSecureOrigin(authenticator->origin())) {
+        authenticator->setAllowed(true);
+    } else {
+        authenticator->setAllowed(false);
+    }
+}
 
 void QtHost::processConnectLocal() {
     QLocalSocket *socket = ls->nextPendingConnection();
@@ -235,14 +242,6 @@ void QtHost::receiveIPC(InternalMessage message) {
 
     // Handle dialog requests
     if (message.type == ShowSelectCertificate) {
-        _log("Showing certificate selection window");
-        QtSelectCertificate *dialog = new QtSelectCertificate(ctx, Authentication);
-        // Signal result back to PKI
-        connect(dialog, &QtSelectCertificate::sendIPC, &PKI, &QPKI::receiveIPC, Qt::QueuedConnection);
-        // Timeout the dialog, if present
-        if (ctx->timer.isActive()) {
-            connect(&ctx->timer, &QTimer::timeout, dialog, &QDialog::reject);
-        }
         return;
     } else {
         // Dispatch to context
@@ -264,16 +263,6 @@ void QtHost::dispatchIPC(const InternalMessage &message) {
     switch (m.type) {
     case MessageType::Authenticate:
         return emit toPKI(m);
-    case MessageType::CardConnect:
-//        ctx->dialog = new QtSelectReader(ctx); // FIXME
-//        ((QtSelectReader *)ctx->dialog)->update(PCSC.getReaders());
-//        connect(&PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)ctx->dialog, &QtSelectReader::update, Qt::QueuedConnection);
-//        connect(&PCSC, &QtPCSC::cardInserted, (QtSelectReader *)ctx->dialog, &QtSelectReader::inserted, Qt::QueuedConnection);
-//
-//        connect((QDialog *)ctx->dialog, &QDialog::rejected, [=] {
-//            ctx->receiveIPC({CardConnect, {{"error", "SCARD_E_CANCELLED"}}});
-//        });
-        return;
     default:
         _log("Don't know how to process message");
     }

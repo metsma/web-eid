@@ -33,7 +33,7 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client): QObject(parent)  
         _log("Handling data from local socket");
         _log("Available: %d", client->bytesAvailable());
         quint32 msgsize = 0;
-        if (client->bytesAvailable() < sizeof(msgsize) + 1) {
+        if (client->bytesAvailable() < qint64(sizeof(msgsize) + 1)) {
             return;
         }
         if (client->read((char*)&msgsize, sizeof(msgsize)) == sizeof(msgsize)) {
@@ -120,11 +120,6 @@ void WebContext::receiveIPC(const InternalMessage &message) {
             _log("Auth failed");
             outgoing(message.data);
         }
-    } else if (message.type == CardConnect) {
-        if (message.error()) {
-            _log("connect failed");
-            outgoing(message.data);
-        }
     }
 }
 
@@ -136,15 +131,6 @@ static InternalMessage authenticate(const QVariantMap &data) {
     return m;
 }
 
-static InternalMessage SCardConnect(const QVariantMap &data) {
-    InternalMessage m;
-    m.type = CardConnect;
-    m.data = data;
-    return m;
-}
-
-
-
 // Process a message from a browsing context
 void WebContext::processMessage(const QVariantMap &message) {
     _log("Processing message");
@@ -155,15 +141,13 @@ void WebContext::processMessage(const QVariantMap &message) {
 
     // Origin. If unset for context, set
     // Check if origin is secure
-    QUrl url(message.value("origin").toString());
-    // https, file or localhost
-    if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost" || url.scheme() == "moz-extension" || url.scheme() == "chrome-extension") {
-        origin = message.value("origin").toString();
-    } else {
-        _log("Dropping connection");
+    QString msgorigin = message.value("origin").toString();
+    if (!isSecureOrigin(msgorigin)) {
+        _log("Insecure origin, dropping connection");
         terminate();
         return;
     }
+    origin = msgorigin;
 
     // TODO: have lanagueg in app settings
     // Setting the language is also a onetime operation, thus do it here.
@@ -299,4 +283,14 @@ QString WebContext::friendlyOrigin() {
         // FIXME: port, if not standard
         return url.host();
     }
+}
+
+bool WebContext::isSecureOrigin(const QString &origin) {
+    QUrl url(origin, QUrl::StrictMode);
+    if (!url.isValid())
+        return false;
+    if (url.scheme() == "https" || url.scheme() == "file" || url.host() == "localhost" || url.scheme() == "moz-extension" || url.scheme() == "chrome-extension") {
+        return true;
+    } 
+    return false;
 }

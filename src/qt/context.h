@@ -41,8 +41,9 @@ public:
     WebContext(QObject *parent, QLocalSocket *client);
 
     const QString id = QUuid::createUuid().toString();
-    QString origin; // TODO: access
 
+    static bool isSecureOrigin(const QString &origin);
+    QString origin; // TODO: access
     QString friendlyOrigin();
 
     QTimer timer;
