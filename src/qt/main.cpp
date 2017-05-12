@@ -199,7 +199,6 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
 }
 
 void QtHost::checkOrigin(QWebSocketCorsAuthenticator *authenticator) {
-    // TODO: some checks
     if (WebContext::isSecureOrigin(authenticator->origin())) {
         authenticator->setAllowed(true);
     } else {
@@ -277,7 +276,7 @@ void QtHost::dispatchIPC(const InternalMessage &message) {
 
 void QtHost::shutdown(int exitcode) {
     _log("Exiting with %d", exitcode);
-    pki_thread->exit(0);
+    pki_thread->quit();
     pki_thread->wait();
 
     // Send SCardCancel
