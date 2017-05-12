@@ -45,7 +45,7 @@ public:
     void showIt(const QString &origin, const QString &reader) {
         setWindowTitle(origin);
         message->setText(tr("Reader %1 is used by %2.\nPress cancel to end access").arg(reader).arg(origin));
-        
+
         show();
         raise();
         activateWindow();

@@ -394,7 +394,7 @@ void QPCSCReader::readerRemoved(const QString &reader) {
 }
 
 void QPCSCReader::disconnect() {
-    // If not yet connected, the slot is activated by 
+    // If not yet connected, the slot is activated by
     // insert card dialog or reader removal during that dialog
     if (!isOpen) {
         return emit(disconnected(SCARD_E_CANCELLED));
@@ -454,7 +454,7 @@ void QPCSCReaderWorker::connectCard(SCARDCONTEXT ctx, const QString &reader, con
         rv = SCard(Connect, context, reader.toLatin1().data(), mode, proto, &card, &this->protocol);
         if (rv != LONG(SCARD_E_SHARING_VIOLATION))
             break;
-        
+
         int ms = (qrand() % 500) + 100;
         _log("Sleeping for %d", ms);
         QTime a = QTime::currentTime();
@@ -491,7 +491,7 @@ void QPCSCReaderWorker::disconnectCard() {
     LONG rv = SCARD_S_SUCCESS;
     if (card) {
 #ifndef Q_OS_WIN
-    // No transactions on Windows due to the "5 second rule"
+        // No transactions on Windows due to the "5 second rule"
         SCard(EndTransaction, card, SCARD_LEAVE_CARD);
 #endif
         rv = SCard(Disconnect, card, SCARD_RESET_CARD);

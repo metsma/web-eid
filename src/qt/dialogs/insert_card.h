@@ -43,7 +43,7 @@ public:
 
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     };
-    
+
     void showIt(const QString &origin, const QString &reader) {
         setWindowTitle(reader);
         message->setText(tr("Insert card into reader %1 to be used on %2").arg(reader).arg(origin));
