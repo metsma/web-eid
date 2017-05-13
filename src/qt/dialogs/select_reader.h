@@ -67,7 +67,8 @@ public:
         buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-        connect(table, &QTreeWidget::currentItemChanged, [=] (QTreeWidgetItem *item, QTreeWidgetItem *previous = 0) {
+        connect(table, &QTreeWidget::currentItemChanged, [=] (QTreeWidgetItem *item, QTreeWidgetItem *previous) {
+            (void)previous;
             // TODO: only if reader can be used
             if (item) {
                 selected = item->text(0);
@@ -118,6 +119,7 @@ public slots:
     }
 
     void cardInserted(const QString &reader, const QByteArray &atr) {
+        (void)atr;
         // If a card is inserted while the dialog is open, we select the reader by default
         selected = reader;
     }

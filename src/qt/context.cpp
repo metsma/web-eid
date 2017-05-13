@@ -209,8 +209,8 @@ void WebContext::processMessage(const QVariantMap &message) {
                 }
             });
             connect(r, &QPCSCReader::connected, [=] (QByteArray atr, QString proto) {
-                _log("connected: %s", qPrintable(proto));
-                outgoing({{"reader", name}, {"protocol", proto}});
+                _log("connected: %s %s", qPrintable(proto), qPrintable(atr.toHex()));
+                outgoing({{"reader", name}, {"protocol", proto}, {"atr", atr.toHex()}});
             });
             connect(r, &QPCSCReader::received, [=] (QByteArray apdu) {
                 _log("Rreceived apdu");
