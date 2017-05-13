@@ -161,7 +161,7 @@ public slots:
             _log("Handling message from application");
             _log("%d bytes available from app", sock->bytesAvailable());
             quint32 msgsize = 0;
-            if (sock->bytesAvailable() < sizeof(msgsize) + 1) {
+            if (sock->bytesAvailable() < qint64(sizeof(msgsize) + 1)) {
                 _log("Not enought data available %d, waiting for next update", sock->bytesAvailable());
                 return;
             }
