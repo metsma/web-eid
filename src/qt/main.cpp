@@ -50,7 +50,7 @@
 #include <unistd.h>
 #endif
 
-QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
+QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this), PKI(&this->PCSC) {
 
     _log("Starting Web eID app v%s", VERSION);
 
@@ -172,20 +172,8 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this) {
     qRegisterMetaType<P11Token>();
     qRegisterMetaType<InternalMessage>();
 
-    connect(this, &QtHost::toPKI, &PKI, &QPKI::receiveIPC, Qt::QueuedConnection);
-    connect(&PKI, &QPKI::sendIPC, this, &QtHost::receiveIPC, Qt::QueuedConnection);
-
-    // Start worker threads
-    pki_thread = new QThread;
-    pki_thread->start();
-    PKI.moveToThread(pki_thread);
-
     // Start PC/SC event thread
     PCSC.start();
-
-    // Refresh PKI tokens when a card is inserted
-    connect(&PCSC, &QtPCSC::cardInserted, &PKI, &QPKI::cardInserted, Qt::QueuedConnection);
-    connect(&PCSC, &QtPCSC::cardRemoved, &PKI, &QPKI::cardRemoved, Qt::QueuedConnection);
 
     connect(&PKI, &QPKI::certificateListChanged, [=] (QVector<QByteArray> certs) {
         printf("Certificate list changed, contains %d entries\n", certs.size());
@@ -225,7 +213,7 @@ void QtHost::newConnection(WebContext *ctx) {
     connect(ctx, &WebContext::disconnected, [this, ctx] {
         contexts.remove(ctx->id);
         ctx->deleteLater();
-        if (contexts.size() == 0) {
+        if (once && contexts.size() == 0) {
             shutdown(0);
         }
     });
@@ -275,10 +263,6 @@ void QtHost::dispatchIPC(const InternalMessage &message) {
 }
 
 void QtHost::shutdown(int exitcode) {
-    _log("Exiting with %d", exitcode);
-    pki_thread->quit();
-    pki_thread->wait();
-
     // Send SCardCancel
     PCSC.cancel();
     PCSC.wait();

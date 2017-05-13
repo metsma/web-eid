@@ -18,15 +18,12 @@
 
 #pragma once
 
-#include <QObject>
+#include <QThread>
 #include <QSslCertificate>
 
 #include "internal.h"
 #include "pkcs11module.h"
-
-#include <vector>
-
-
+#include "qpcsc.h"
 
 
 /*
@@ -35,7 +32,7 @@ PKI keeps track of available certificates
 - listens to pcsc events, updates state, emits pki events
 - keeps track of loaded pkcs11 modules
 */
-class QPKI: public QObject {
+class QPKIWorker: public QObject {
     Q_OBJECT
 
 public:
@@ -43,44 +40,78 @@ public:
         CAPI,
         PKCS11
     };
-
     struct PKIToken {
         TokenType tktype;
         QString module; // if PKCS#11
     };
-    static const char *errorName(const CK_RV err);
-    QVector<QByteArray> getCertificates();
 
-    ~QPKI() {
+    ~QPKIWorker() {
         for (const auto &m: modules.values()) {
             delete m;
         }
     }
+
+    QMutex mutex;
+    QVector<QByteArray> getCertificates();
+
 public slots:
     //refresh available certificates. Triggered by PCSC on cardInserted()
     void cardInserted(const QString &reader, const QByteArray &atr);
     void cardRemoved(const QString &reader);
 
-    // sign a hash with a given certificate
-    void sign(const QString &origin, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
-    // internal ipc
-    void receiveIPC(InternalMessage message);
-
+    // Refresh all certificate sources
+    void refresh();
 signals:
     // If list of available certificates changes
     void certificateListChanged(const QVector<QByteArray> certs);
 
-    void sendIPC(InternalMessage message);
-
 private:
-    QMap<QString, MessageType> ongoing; // Keep track of ongoing operations
     QMap<QString, PKCS11Module *> modules; // loaded PKCS#11 modules
     QMap<QByteArray, PKIToken> certificates; // available certificates
 
+
+};
+
+
+class QPKI: public QObject {
+    Q_OBJECT
+
+public:
+    QPKI(QtPCSC *PCSC) {
+        thread.start();
+        worker.moveToThread(&thread);
+
+        connect(PCSC, &QtPCSC::cardInserted, &worker, &QPKIWorker::cardInserted, Qt::QueuedConnection);
+        connect(PCSC, &QtPCSC::cardRemoved, &worker, &QPKIWorker::cardRemoved, Qt::QueuedConnection);
+
+        connect(&worker, &QPKIWorker::certificateListChanged, this, &QPKI::certificateListChanged, Qt::QueuedConnection);
+    }
+
+    ~QPKI() {
+        thread.quit();
+        thread.wait();
+    }
+
+    static const char *errorName(const CK_RV err);
+
+    QVector<QByteArray> getCertificates();
+
+    // sign a hash with a given certificate
+    void sign(const QString &origin, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
+
+signals:
+    // Useful main thread signals
+    void certificateListChanged(const QVector<QByteArray> certs);
+
+private:
+    QMap<QString, MessageType> ongoing; // Keep track of ongoing operations
+
     void refresh();
-    //
     static QByteArray authenticate_dtbs(const QSslCertificate &cert, const QString &origin, const QString &nonce);
 
     // send message to main
     void select_certificate(const QVariantMap &msg);
+
+    QThread thread;
+    QPKIWorker worker;
 };

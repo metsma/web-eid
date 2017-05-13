@@ -41,31 +41,7 @@
 #endif
 
 
-void QPKI::receiveIPC(InternalMessage message) {
-    // Receive messages from main thread
-    // Message must contain the context id (internal to app)
-    if (message.type == MessageType::Authenticate) {
-        // If we have just one active certificate, fire up signing procedure at once.
-        // Otherwise choose a certificate
-        // If no readers or cards are connected and timeout permits, ask the user to connect a reader
-        _log("IPC: Authenticating");
-        ongoing[message.contextId()] = message.type;
-        // select_certificate(message.data); // TODO: signature
-    } else if (message.type == CertificateSelected) {
-        _log("IPC: cert dialog closed");
-        // Fail TODO: remove from ongoing
-        if (message.error()) {
-            return emit sendIPC({ongoing[message.contextId()], message.data});
-        }
-        if (ongoing[message.contextId()] == Authenticate) {
-            // sign with the certificate
-        }
-    } else {
-        _log("Unknown message: %d", message.type);
-    }
-}
-
-void QPKI::cardInserted(const QString &reader, const QByteArray &atr) {
+void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
     _log("Card inserted to %s (%s), refreshing available certificates", qPrintable(reader), qPrintable(atr.toHex()));
     // Check which module to try
     std::vector<std::string> mods = P11Modules::getPaths({ba2v(atr)});
@@ -96,7 +72,7 @@ void QPKI::cardInserted(const QString &reader, const QByteArray &atr) {
     }
 }
 
-void QPKI::refresh() {
+void QPKIWorker::refresh() {
     QMap<QByteArray, PKIToken> certs;
     for (const auto &m: modules.keys()) {
         modules[m]->refresh();
@@ -117,17 +93,22 @@ void QPKI::refresh() {
     }
 }
 
-void QPKI::cardRemoved(const QString &reader) {
+void QPKIWorker::cardRemoved(const QString &reader) {
     _log("Card removed from %s, refreshing", qPrintable(reader));
     refresh();
 }
 
-QVector<QByteArray> QPKI::getCertificates() {
+QVector<QByteArray> QPKIWorker::getCertificates() {
     QVector<QByteArray> result;
     for (const auto &c: certificates.keys()) {
         result.append(c);
     }
     return result;
+}
+
+QVector<QByteArray> QPKI::getCertificates() {
+    QMutexLocker locker(&worker.mutex);
+    return worker.getCertificates();
 }
 
 // process SIGN message

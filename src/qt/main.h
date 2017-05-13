@@ -19,10 +19,8 @@
 #pragma once
 
 #include "pkcs11module.h"
-#include "context.h"
-
-#include "qpcsc.h"
 #include "qpki.h"
+#include "context.h"
 
 #include "internal.h"
 
@@ -44,6 +42,8 @@
 #include <qt_windows.h>
 #endif
 
+class QtPCSC;
+
 Q_DECLARE_METATYPE(CertificatePurpose)
 Q_DECLARE_METATYPE(P11Token)
 Q_DECLARE_METATYPE(InternalMessage)
@@ -58,9 +58,6 @@ public:
     // PCSC and PKI subsystems
     QtPCSC PCSC;
     QPKI PKI;
-
-    // both in a separate thread
-    QThread *pki_thread;
 
 public slots:
     // connect new clients
@@ -78,7 +75,6 @@ public slots:
 signals:
     // Signals are for separate threads
     void toPKI(InternalMessage message);
-    void toPCSC(InternalMessage message);
 
 private:
     void newConnection(WebContext *ctx);
