@@ -34,8 +34,8 @@
 
 #include <vector>
 
-#include "qt/dialogs/reader_in_use.h"
-#include "qt/dialogs/insert_card.h"
+#include "dialogs/reader_in_use.h"
+#include "dialogs/insert_card.h"
 
 class QtPCSC;
 

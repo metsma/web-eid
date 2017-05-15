@@ -31,8 +31,8 @@ unix {
 win32 {
     DEFINES += WIN32_LEAN_AND_MEAN
     LIBS += winscard.lib ncrypt.lib crypt32.lib cryptui.lib Advapi32.lib
-    SOURCES += win/WinCertSelect.cpp win/WinSigner.cpp qt/qwincrypt.cpp
-    HEADERS += win/WinCertSelect.h win/WinSigner.h qt/qwincrypt.h
+    SOURCES += win/WinCertSelect.cpp win/WinSigner.cpp qwincrypt.cpp
+    HEADERS += win/WinCertSelect.h win/WinSigner.h qwincrypt.h
     INCLUDEPATH += win
     QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
     TARGET = "Web-eID"
@@ -42,15 +42,14 @@ SOURCES += \
     Logger.cpp \
     modulemap.cpp \
     pkcs11module.cpp \
-    qt/main.cpp \
-    qt/qpcsc.cpp \
-    qt/qpki.cpp \
-    qt/autostart.cpp \
-    qt/context.cpp
-INCLUDEPATH += qt
-HEADERS += $$files(*.h) $$files(qt/*.h) $$files(qt/dialogs/*.h)
-RESOURCES += qt/web-eid.qrc qt/translations/strings.qrc
-TRANSLATIONS = qt/translations/strings_et.ts qt/translations/strings_ru.ts
+    main.cpp \
+    qpcsc.cpp \
+    qpki.cpp \
+    autostart.cpp \
+    context.cpp
+HEADERS += $$files(*.h) $$files(dialogs/*.h)
+RESOURCES += web-eid.qrc translations/strings.qrc
+TRANSLATIONS = translations/strings_et.ts translations/strings_ru.ts
 
 isEmpty(QMAKE_LRELEASE) {
     win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
