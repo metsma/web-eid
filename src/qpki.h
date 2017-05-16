@@ -21,6 +21,8 @@
 #include <QThread>
 #include <QSslCertificate>
 
+#include <QFutureWatcher>
+
 #include "internal.h"
 #include "pkcs11module.h"
 #include "qpcsc.h"
@@ -69,7 +71,7 @@ private:
     QMap<QString, PKCS11Module *> modules; // loaded PKCS#11 modules
     QMap<QByteArray, PKIToken> certificates; // available certificates
 
-
+    QFutureWatcher<QVector<QByteArray>> wincerts; // Refreshes windows cert stores on demand.
 };
 
 
@@ -82,7 +84,7 @@ public:
         worker.moveToThread(&thread);
 
         connect(PCSC, &QtPCSC::cardInserted, &worker, &QPKIWorker::cardInserted, Qt::QueuedConnection);
-        connect(PCSC, &QtPCSC::cardRemoved, &worker, &QPKIWorker::cardRemoved, Qt::QueuedConnection);
+        //connect(PCSC, &QtPCSC::cardRemoved, &worker, &QPKIWorker::cardRemoved, Qt::QueuedConnection);
 
         connect(&worker, &QPKIWorker::certificateListChanged, this, &QPKI::certificateListChanged, Qt::QueuedConnection);
     }

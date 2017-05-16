@@ -35,10 +35,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 
-#ifdef _WIN32
-#include "WinCertSelect.h"
-#include "WinSigner.h"
-#endif
+#include <QtConcurrent>
 
 
 void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
@@ -66,8 +63,12 @@ void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
         }
     } else {
 #ifdef Q_OS_WIN
-        _log("Still refreshing cert, because on windows");
-        refresh();
+        if (!wincerts.isRunning()) {
+            _log("refreshing certstore certs");
+           wincerts.setFuture(QtConcurrent::run(&QWinCrypt::getCertificates));
+        } else {
+            _log("already running...");
+        }
 #endif
     }
 }
@@ -95,6 +96,12 @@ void QPKIWorker::refresh() {
 
 void QPKIWorker::cardRemoved(const QString &reader) {
     _log("Card removed from %s, refreshing", qPrintable(reader));
+    if (!wincerts.isRunning()) {
+        _log("refreshing certstore certs");
+        wincerts.setFuture(QtConcurrent::run(&QWinCrypt::getCertificates));
+    } else {
+        _log("already running...");
+    }
     refresh();
 }
 

@@ -9,7 +9,7 @@ isEmpty(VERSION) {
     VERSION=$$VERSION"."$$BUILD_NUMBER
 }
 CONFIG += c++11
-QT += widgets network websockets
+QT += widgets network websockets concurrent
 RC_ICONS = ../artwork/win_icon.ico
 macx {
     LIBS += -framework PCSC -framework ServiceManagement -framework CoreFoundation
@@ -31,9 +31,8 @@ unix {
 win32 {
     DEFINES += WIN32_LEAN_AND_MEAN
     LIBS += winscard.lib ncrypt.lib crypt32.lib cryptui.lib Advapi32.lib
-    SOURCES += win/WinCertSelect.cpp win/WinSigner.cpp qwincrypt.cpp
-    HEADERS += win/WinCertSelect.h win/WinSigner.h qwincrypt.h
-    INCLUDEPATH += win
+    SOURCES += qwincrypt.cpp
+    HEADERS += qwincrypt.h
     QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
     TARGET = "Web-eID"
 }

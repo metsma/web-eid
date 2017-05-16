@@ -25,6 +25,9 @@
 #include <QDialog>
 #include <QUuid>
 #include <QTimer>
+#include <QFutureWatcher>
+
+#include "qwincrypt.h" // FIXME: remove
 
 class QtPCSC;
 class QPCSCReader;
@@ -74,4 +77,8 @@ private:
 
     // Used readers
     QMap<QString, QPCSCReader *> readers;
+
+    // Windows operation
+    QFutureWatcher<QWinCrypt::ErroredResponse> winop; // Refreshes windows cert stores on demand.
+
 };

@@ -22,6 +22,7 @@
 #include "Logger.h"
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QtConcurrent>
 
 #include "main.h" // for parent
 
@@ -175,6 +176,8 @@ void WebContext::processMessage(const QVariantMap &message) {
         return outgoing({{"id", msgid}, {"version", VERSION}});
     } else if (message.contains("SCardConnect")) {
         // Show reader selection or confirmation dialog
+        // TODO: suppress PKI insertion/removal detection until connect or disconnect
+        // to avoid races for card reader resources
         dialog = new QtSelectReader(this); // FIXME
         ((QtSelectReader *)dialog)->update(PCSC->getReaders());
         connect(PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)dialog, &QtSelectReader::update, Qt::QueuedConnection);
@@ -222,7 +225,7 @@ void WebContext::processMessage(const QVariantMap &message) {
             QPCSCReader *r = readers.first(); // FIXME
             r->disconnect();
         } else {
-            // Already disconnected
+            // Already disconnected, do nothing
             outgoing({});
         }
     } else if (message.contains("SCardTransmit")) {
@@ -236,11 +239,32 @@ void WebContext::processMessage(const QVariantMap &message) {
         QVariantMap sign = message.value("sign").toMap();
 //        emit sign(origin, QByteArray::fromBase64(sign.value("cert").toString().toLatin1()), QByteArray::fromBase64(sign.value("hash").toString().toLatin1()), sign.value("hashalgo").toString());
     } else if (message.contains("cert")) {
-//        emit select_certificate(origin, Signing, false);
+        // connect signals for future
+      
     } else if (message.contains("auth")) {
-        QtSelectCertificate *d = new QtSelectCertificate(this, Authentication);
-        d->update(PKI->getCertificates());
-        connect(PKI, &QPKI::certificateListChanged, d, &QtSelectCertificate::update, Qt::QueuedConnection);
+        connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this] {
+            this->winop.disconnect(); // remove signals
+            QWinCrypt::ErroredResponse result = this->winop.result();
+            _log("Winop done: %s", QPKI::errorName(result.error));
+            if (result.error == CKR_OK) {
+                //outgoing({{"cert", result.result.toHex()}});
+                connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this] {
+                    this->winop.disconnect();
+                    QWinCrypt::ErroredResponse result = this->winop.result();
+                    _log("Winop done: %s", QPKI::errorName(result.error));
+                    outgoing({{"error", QPKI::errorName(result.error)}});
+                });
+                winop.setFuture(QtConcurrent::run(&QWinCrypt::sign, result.result, QByteArray::fromHex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"), QWinCrypt::HashType::SHA256));
+            } else {
+                outgoing({{"error", QPKI::errorName(result.error)}});
+            }
+        });
+        // run future
+        winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, Authentication, QStringLiteral("Hello world")));
+
+      //  QtSelectCertificate *d = new QtSelectCertificate(this, Authentication);
+      //  d->update(PKI->getCertificates());
+      //  connect(PKI, &QPKI::certificateListChanged, d, &QtSelectCertificate::update, Qt::QueuedConnection);
         //return emit sendIPC(authenticate(message));
     } else {
         outgoing({{"error", "protocol"}});

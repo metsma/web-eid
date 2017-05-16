@@ -86,7 +86,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this), 
 
     QAction *a2 = menu->addAction("Quit");
     connect(a2, &QAction::triggered, [&] {
-        shutdown(0);
+        quit();
     });
 
     // Initialize listening servers
@@ -184,6 +184,13 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this), 
         printf("error in %s %s\n", qPrintable(reader), QtPCSC::errorName(err));
     });
 
+    connect(this, &QApplication::aboutToQuit, [this] {
+        _log("About to quit");
+        PCSC.cancel();
+        PCSC.wait();
+        _log("Done");
+    });
+
 }
 
 void QtHost::checkOrigin(QWebSocketCorsAuthenticator *authenticator) {
@@ -211,10 +218,16 @@ void QtHost::processConnect() {
 void QtHost::newConnection(WebContext *ctx) {
     contexts[ctx->id] = ctx;
     connect(ctx, &WebContext::disconnected, [this, ctx] {
-        contexts.remove(ctx->id);
+        _log("Client disconnected. Current context count is %d", contexts.size());
+        if (!contexts.remove(ctx->id)) {
+            _log("Did not remove anything");
+        }
+        _log("Client disconnected. New context count is %d", contexts.size());
+
         ctx->deleteLater();
         if (once && contexts.size() == 0) {
-            shutdown(0);
+            _log("Context count is zero, quitting");
+            quit();
         }
     });
 
@@ -260,13 +273,6 @@ void QtHost::dispatchIPC(const InternalMessage &message) {
 
     // TODO: document message signatures and necessary enum-s
 
-}
-
-void QtHost::shutdown(int exitcode) {
-    // Send SCardCancel
-    PCSC.cancel();
-    PCSC.wait();
-    exit(exitcode);
 }
 
 int main(int argc, char *argv[]) {
