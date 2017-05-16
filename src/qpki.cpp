@@ -120,11 +120,47 @@ QVector<QByteArray> QPKI::getCertificates() {
     return worker.getCertificates();
 }
 
-// process SIGN message
+void QPKI::select(const WebContext *context, const CertificatePurpose type) {
+    _log("Selecting certificate for %s", qPrintable(context->friendlyOrigin()));
+    // If we have PKCS#11 certs, show a Qt window, otherwise
+#ifdef Q_OS_WIN
+    connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this] {
+        this->winop.disconnect(); // remove signals
+        QWinCrypt::ErroredResponse result = this->winop.result();
+        _log("Winop done: %s", QPKI::errorName(result.error));
+        if (result.error == CKR_OK) {
+            return emit certificate(context->id, result.error, result.result);
+        } else {
+            return emit certificate(context->id, result.error, 0);
+        }
+    });
+    // run future
+    winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, type));
+#endif
+    //return emit certificate(context->id, CKR_FUNCTION_CANCELED, 0);
+}
+
+// Calculate a signature, emit signature() when done
+// FIXME: add message to function signature, signature type as enum
 void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo) {
     _log("Signing on %s %s:%s", qPrintable(context->friendlyOrigin()), qPrintable(hashalgo), qPrintable(hash.toHex()));
-
-    // FIXME: remove origin from signature, available in UI thread, if not needed for windows.
+// if p11 cert, show a PIN dialog (only if required?)
+// and wire up signals to the worker, that does actual signing
+// otherwise run it in a future and wire up signals.
+#ifdef Q_OS_WIN
+    connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this] {
+        this->winop.disconnect(); // remove signals
+        QWinCrypt::ErroredResponse result = this->winop.result();
+        _log("Winop done: %s", QPKI::errorName(result.error));
+        if (result.error == CKR_OK) {
+            return emit signature(context->id, result.error, result.result);
+        } else {
+            return emit signature(context->id, result.error, 0);
+        }
+    });
+    // run future
+    winop.setFuture(QtConcurrent::run(&QWinCrypt::sign, cert, hash, QWinCrypt::HashType::SHA256));
+#endif
     _log("PKI: Signing stuff");
 }
 

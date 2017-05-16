@@ -112,11 +112,13 @@ public:
         connect(PCSC, &QtPCSC::cardRemoved, &worker, &QPKIWorker::cardRemoved, Qt::QueuedConnection);
     };
 
+    // TODO: type => list of oid-s to match
+    void select(const WebContext *context, const CertificatePurpose type);
     // sign a hash with a given certificate
     void sign(const WebContext *context, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
 
 signals:
-    void certificateListChanged(const QVector<QByteArray> certs); // for dialog. XXX
+    void certificateListChanged(const QVector<QByteArray> certs); // for dialog. FIXME. aggregate win + p11
     // Signature has been calculated
     void signature(const QString &context, const CK_RV result, const QByteArray &value);
     // Certificate has been chose (either p11 or win)
@@ -125,6 +127,11 @@ signals:
 private:
     void refresh();
     static QByteArray authenticate_dtbs(const QSslCertificate &cert, const QString &origin, const QString &nonce);
+
+#ifdef Q_OS_WIN
+    // Windows operation
+    QFutureWatcher<QWinCrypt::ErroredResponse> winop; // Refreshes windows cert stores on demand.
+#endif
 
     QtPCSC *PCSC;
     QThread thread;

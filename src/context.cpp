@@ -221,36 +221,38 @@ void WebContext::processMessage(const QVariantMap &message) {
         }
     } else if (message.contains("sign")) {
         QVariantMap sign = message.value("sign").toMap();
-//        emit sign(origin, QByteArray::fromBase64(sign.value("cert").toString().toLatin1()), QByteArray::fromBase64(sign.value("hash").toString().toLatin1()), sign.value("hashalgo").toString());
-    } else if (message.contains("cert")) {
-        // connect signals for future
-
-    } else if (message.contains("auth")) {
-#ifdef Q_OS_WIN
-        connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this] {
-            this->winop.disconnect(); // remove signals
-            QWinCrypt::ErroredResponse result = this->winop.result();
-            _log("Winop done: %s", QPKI::errorName(result.error));
-            if (result.error == CKR_OK) {
-                //outgoing({{"cert", result.result.toHex()}});
-                connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this] {
-                    this->winop.disconnect();
-                    QWinCrypt::ErroredResponse result = this->winop.result();
-                    _log("Winop done: %s", QPKI::errorName(result.error));
-                    outgoing({{"error", QPKI::errorName(result.error)}});
-                });
-                winop.setFuture(QtConcurrent::run(&QWinCrypt::sign, result.result, QByteArray::fromHex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"), QWinCrypt::HashType::SHA256));
+        const QByteArray cert = QByteArray::fromBase64(sign.value("cert").toString().toLatin1());
+        const QByteArray hash = QByteArray::fromBase64(sign.value("hash").toString().toLatin1());
+        connect(PKI, &QPKI::signature, [this] (const QString &context, const CK_RV result, const QByteArray &value) {
+            disconnect(PKI, 0, this, 0);
+            if (result == CKR_OK) {
+                outgoing({{"signature", value.toBase64()}}); // FIXME
             } else {
-                outgoing({{"error", QPKI::errorName(result.error)}});
+                outgoing({{"error", QPKI::errorName(result)}});
             }
         });
-        // run future
-        winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, Authentication, QStringLiteral("Hello world")));
-#endif
-        //  QtSelectCertificate *d = new QtSelectCertificate(this, Authentication);
-        //  d->update(PKI->getCertificates());
-        //  connect(PKI, &QPKI::certificateListChanged, d, &QtSelectCertificate::update, Qt::QueuedConnection);
-        //return emit sendIPC(authenticate(message));
+        PKI->sign(this, cert, hash, QStringLiteral("SHA-256")); // FIXME: signature
+    } else if (message.contains("cert")) {
+        connect(PKI, &QPKI::certificate, [this] (const QString &context, const CK_RV result, const QByteArray &value) {
+            disconnect(PKI, 0, this, 0);
+            if (result == CKR_OK) {
+                outgoing({{"certificate", value.toBase64()}}); // FIXME
+            } else {
+                outgoing({{"error", QPKI::errorName(result)}});
+            }
+        });
+        PKI->select(this, Authentication);
+    } else if (message.contains("auth")) {
+        // TODO: Select certificate if needed
+        connect(PKI, &QPKI::certificate, [this] (const QString &context, const CK_RV result, const QByteArray &value) {
+            disconnect(PKI, 0, this, 0);
+            if (result == CKR_OK) {
+                outgoing({{"token", value}}); // FIXME
+            } else {
+                outgoing({{"error", QPKI::errorName(result)}});
+            }
+        });
+        PKI->select(this, Authentication);
     } else {
         outgoing({{"error", "protocol"}});
     }
