@@ -1,6 +1,7 @@
 #include "../Logger.h"
 
 #include <QCoreApplication>
+#include <QCommandLineParser>
 #include <QLocalSocket>
 #include <QProcess>
 #include <QTimer>
@@ -62,6 +63,12 @@ public:
         Logger::setFile("nm-bridge.log");
         _log("Running %s", qPrintable(applicationFilePath()));
 
+        QCommandLineParser parser;
+        QCommandLineOption debug("debug");
+        parser.addOption(debug);
+        parser.process(arguments());
+        this->dbg = parser.isSet(debug);
+
         // TODO: figure out the right paths depending on free-form app location
 #if defined(Q_OS_MACOS)
         serverApp = "open -b com.web-eid.app";
@@ -94,8 +101,6 @@ public:
             if (socketError == QLocalSocket::PeerClosedError) {
                 _log("QLocalSocket::PeerClosedError");
                 quit();
-                // We no like it, try connecting again
-                // QTimer::singleShot(500, [this] {sock->connectToServer(serverName);});
                 return;
             } else if (socketError == QLocalSocket::ConnectionRefusedError) {
                 _log("QLocalSocket::ConnectionRefusedError");
@@ -109,7 +114,7 @@ public:
                     // TODO: possibly use QFileSystemWatcher ?
                     QTimer::singleShot(1000, [this] {sock->connectToServer(serverName);});
                     // TODO: set working folder
-                    if (QProcess::startDetached(serverApp, QStringList())) {
+                    if (QProcess::startDetached(serverApp, this->dbg ? QStringList("--debug") : QStringList())) {
                         server_started++;
                         _log("Started %s", qPrintable(serverApp));
                     } else {
@@ -211,6 +216,7 @@ private:
     InputChecker *input;
     QFile out;
     QString browser;
+    bool dbg = false;
 };
 
 int main(int argc, char *argv[])
