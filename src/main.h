@@ -22,8 +22,6 @@
 #include "qpki.h"
 #include "context.h"
 
-#include "internal.h"
-
 // Dialogs
 #include "dialogs/select_cert.h"
 
@@ -46,7 +44,6 @@ class QtPCSC;
 
 Q_DECLARE_METATYPE(CertificatePurpose)
 Q_DECLARE_METATYPE(P11Token)
-Q_DECLARE_METATYPE(InternalMessage)
 
 class QtHost: public QApplication
 {
@@ -66,16 +63,6 @@ public slots:
 
     void checkOrigin(QWebSocketCorsAuthenticator *authenticator);
 
-    // From different threads and subsystems, dispatched to contexts
-    void receiveIPC(InternalMessage message);
-
-    // From contexts, in same thread, direct connection
-    void dispatchIPC(const InternalMessage &message);
-
-signals:
-    // Signals are for separate threads
-    void toPKI(InternalMessage message);
-
 private:
     void newConnection(WebContext *ctx);
     QSystemTrayIcon tray;
@@ -87,7 +74,6 @@ private:
     // Active contexts
     QMap<QString, WebContext *> contexts;
 
-    void shutdown(int exitcode);
     QTranslator translator;
     bool once = false;
 };

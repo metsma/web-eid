@@ -36,10 +36,13 @@ PKI keeps track of available certificates
 - listens to pcsc events, updates state, emits pki events
 - keeps track of loaded pkcs11 modules
 */
+
+// PKIWorker owns PKCS11 modules. CAPI is handled with futures in QPKI
 class QPKIWorker: public QObject {
     Q_OBJECT
 
 public:
+    // FIXME: remove from worker
     enum TokenType {
         CAPI,
         PKCS11
@@ -86,6 +89,7 @@ public:
     QPKI(QtPCSC *pcsc): PCSC(pcsc) {
         thread.start();
         worker.moveToThread(&thread);
+        // FIXME: proxy
         connect(&worker, &QPKIWorker::certificateListChanged, this, &QPKI::certificateListChanged, Qt::QueuedConnection);
         resume();
     }
@@ -117,15 +121,8 @@ signals:
     void certificateListChanged(const QVector<QByteArray> certs);
 
 private:
-    QMap<QString, MessageType> ongoing; // Keep track of ongoing operations
-
     void refresh();
     static QByteArray authenticate_dtbs(const QSslCertificate &cert, const QString &origin, const QString &nonce);
-
-    // send message to main
-    void select_certificate(const QVariantMap &msg);
-
-    bool paused = false;
 
     QtPCSC *PCSC;
     QThread thread;

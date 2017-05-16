@@ -112,26 +112,6 @@ WebContext::WebContext(QObject *parent, QWebSocket *client): QObject(parent) {
     PKI = &((QtHost *)parent)->PKI;
 }
 
-
-// Messages from main application. This means
-void WebContext::receiveIPC(const InternalMessage &message) {
-    _log("Received message from main");
-    if (message.type == Authenticate) {
-        if (message.error()) {
-            _log("Auth failed");
-            outgoing(message.data);
-        }
-    }
-}
-
-// Messages
-static InternalMessage authenticate(const QVariantMap &data) {
-    InternalMessage m;
-    m.type = Authenticate;
-    m.data = data;
-    return m;
-}
-
 // Process a message from a browsing context
 void WebContext::processMessage(const QVariantMap &message) {
     _log("Processing message");

@@ -170,7 +170,6 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     qRegisterMetaType<CertificatePurpose>();
     qRegisterMetaType<P11Token>();
-    qRegisterMetaType<InternalMessage>();
 
     // Start PC/SC event thread
     PCSC.start();
@@ -218,61 +217,14 @@ void QtHost::processConnect() {
 void QtHost::newConnection(WebContext *ctx) {
     contexts[ctx->id] = ctx;
     connect(ctx, &WebContext::disconnected, [this, ctx] {
-        _log("Client disconnected. Current context count is %d", contexts.size());
-        if (!contexts.remove(ctx->id)) {
-            _log("Did not remove anything");
-        }
-        _log("Client disconnected. New context count is %d", contexts.size());
-
-        ctx->deleteLater();
-        if (once && contexts.size() == 0) {
-            _log("Context count is zero, quitting");
-            quit();
+        if (contexts.remove(ctx->id)) {
+            ctx->deleteLater();
+            if (once && contexts.size() == 0) {
+                _log("Context count is zero, quitting");
+                quit();
+            }
         }
     });
-
-    // When context needs something from PKI or PCSC, dispatch through this
-    connect(ctx, &WebContext::sendIPC, this, &QtHost::dispatchIPC, Qt::DirectConnection);
-}
-
-// Invoked from another thread (PKI, PCSC)
-void QtHost::receiveIPC(InternalMessage message) {
-    // TODO: handle disconnected context
-    WebContext *ctx = contexts[message.data["id"].toString()];
-
-    // Handle dialog requests
-    if (message.type == ShowSelectCertificate) {
-        return;
-    } else {
-        // Dispatch to context
-        ctx->receiveIPC(message);
-    }
-}
-
-
-void QtHost::dispatchIPC(const InternalMessage &message) {
-    // Context we are working from
-    WebContext *ctx = qobject_cast<WebContext *>(sender());
-    _log("Dispatching for %s", qPrintable(ctx->id));
-
-    // Make a copy
-    InternalMessage m = message;
-    // Send the context id as a simple prameter
-    m.data["id"] = ctx->id;
-
-    switch (m.type) {
-    case MessageType::Authenticate:
-        return emit toPKI(m);
-    default:
-        _log("Don't know how to process message");
-    }
-
-    // Depending on message type, we send messages to other threads from here.
-    // Other thread emtis a message and we process it in receiveIPC and
-    // call directly the public slot of the context, that keeps state
-
-    // TODO: document message signatures and necessary enum-s
-
 }
 
 int main(int argc, char *argv[]) {

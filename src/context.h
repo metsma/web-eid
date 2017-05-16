@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include "internal.h"
-
 #include <QWebSocket>
 #include <QLocalSocket>
 #include <QDialog>
@@ -54,11 +52,7 @@ public:
     // Any running UI widget, associated with the context
     QDialog *dialog = nullptr;
 
-public slots:
-    void receiveIPC(const InternalMessage &msg);
-
 signals:
-    void sendIPC(const InternalMessage &msg);
     void disconnected();
 
 private:
