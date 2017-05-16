@@ -78,7 +78,8 @@ private:
     // Used readers
     QMap<QString, QPCSCReader *> readers;
 
+#ifdef Q_OS_WIN
     // Windows operation
     QFutureWatcher<QWinCrypt::ErroredResponse> winop; // Refreshes windows cert stores on demand.
-
+#endif
 };

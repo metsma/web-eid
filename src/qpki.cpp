@@ -65,7 +65,7 @@ void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
 #ifdef Q_OS_WIN
         if (!wincerts.isRunning()) {
             _log("refreshing certstore certs");
-           wincerts.setFuture(QtConcurrent::run(&QWinCrypt::getCertificates));
+            wincerts.setFuture(QtConcurrent::run(&QWinCrypt::getCertificates));
         } else {
             _log("already running...");
         }
@@ -96,12 +96,14 @@ void QPKIWorker::refresh() {
 
 void QPKIWorker::cardRemoved(const QString &reader) {
     _log("Card removed from %s, refreshing", qPrintable(reader));
+#ifdef Q_OS_WIN
     if (!wincerts.isRunning()) {
         _log("refreshing certstore certs");
         wincerts.setFuture(QtConcurrent::run(&QWinCrypt::getCertificates));
     } else {
         _log("already running...");
     }
+#endif
     refresh();
 }
 

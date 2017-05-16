@@ -240,8 +240,9 @@ void WebContext::processMessage(const QVariantMap &message) {
 //        emit sign(origin, QByteArray::fromBase64(sign.value("cert").toString().toLatin1()), QByteArray::fromBase64(sign.value("hash").toString().toLatin1()), sign.value("hashalgo").toString());
     } else if (message.contains("cert")) {
         // connect signals for future
-      
+
     } else if (message.contains("auth")) {
+#ifdef Q_OS_WIN
         connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this] {
             this->winop.disconnect(); // remove signals
             QWinCrypt::ErroredResponse result = this->winop.result();
@@ -261,10 +262,10 @@ void WebContext::processMessage(const QVariantMap &message) {
         });
         // run future
         winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, Authentication, QStringLiteral("Hello world")));
-
-      //  QtSelectCertificate *d = new QtSelectCertificate(this, Authentication);
-      //  d->update(PKI->getCertificates());
-      //  connect(PKI, &QPKI::certificateListChanged, d, &QtSelectCertificate::update, Qt::QueuedConnection);
+#endif
+        //  QtSelectCertificate *d = new QtSelectCertificate(this, Authentication);
+        //  d->update(PKI->getCertificates());
+        //  connect(PKI, &QPKI::certificateListChanged, d, &QtSelectCertificate::update, Qt::QueuedConnection);
         //return emit sendIPC(authenticate(message));
     } else {
         outgoing({{"error", "protocol"}});

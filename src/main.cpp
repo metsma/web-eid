@@ -50,7 +50,7 @@
 #include <unistd.h>
 #endif
 
-QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), tray(this), PKI(&this->PCSC) {
+QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->PCSC), tray(this) {
 
     _log("Starting Web eID app v%s", VERSION);
 
