@@ -179,12 +179,14 @@ void WebContext::processMessage(const QVariantMap &message) {
         // TODO: suppress PKI insertion/removal detection until connect or disconnect
         // to avoid races for card reader resources
         dialog = new QtSelectReader(this); // FIXME
+        PKI->pause();
         ((QtSelectReader *)dialog)->update(PCSC->getReaders());
         connect(PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)dialog, &QtSelectReader::update, Qt::QueuedConnection);
         connect(PCSC, &QtPCSC::cardInserted, (QtSelectReader *)dialog, &QtSelectReader::cardInserted, Qt::QueuedConnection);
         connect(PCSC, &QtPCSC::readerAttached, (QtSelectReader *)dialog, &QtSelectReader::readerAttached, Qt::QueuedConnection);
 
         connect(dialog, &QDialog::rejected, [=] {
+            PKI->resume();
             outgoing({{"error", QtPCSC::errorName(SCARD_E_CANCELLED)}});
         });
         // Connect to the reader once the reader name is known
@@ -193,6 +195,7 @@ void WebContext::processMessage(const QVariantMap &message) {
             readers[name] = r;
             connect(r, &QPCSCReader::disconnected, [this, name] (LONG err) {
                 _log("Disconnected: %s", QtPCSC::errorName(err));
+                PKI->resume();
                 if (readers.contains(name)) {
                     QPCSCReader *rd = readers.take(name);
                     // If disconnect happens in between of messages (eg dialog cancel)
@@ -213,6 +216,7 @@ void WebContext::processMessage(const QVariantMap &message) {
             });
             connect(r, &QPCSCReader::connected, [=] (QByteArray atr, QString proto) {
                 _log("connected: %s %s", qPrintable(proto), qPrintable(atr.toHex()));
+                PKI->resume();
                 outgoing({{"reader", name}, {"protocol", proto}, {"atr", atr.toHex()}});
             });
             connect(r, &QPCSCReader::received, [=] (QByteArray apdu) {

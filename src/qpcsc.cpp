@@ -379,12 +379,13 @@ void QPCSCReader::open() {
     connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::showDialog, Qt::QueuedConnection);
 
     // connect in thread
-    emit connectCard(context, reader, protocol);
+    emit connectCard(reader, protocol);
 }
 
 void QPCSCReader::showDialog() {
     isOpen = true;
-    inUseDialog.showIt(static_cast<WebContext *>(parent())->friendlyOrigin(), reader);
+    inUseDialog.showIt(static_cast<WebContext *>(parent())->friendlyOrigin(), reader); // XXX
+    // UX XXX: communicate SCARD_E_CANCELLED to the process if the next signal is triggered
     // Disconnect the reader by canceling dialog
     connect(&inUseDialog, &QDialog::rejected, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
     // And close the dialog if reader is disconnected
@@ -422,7 +423,7 @@ QPCSCReaderWorker::~QPCSCReaderWorker() {
         SCard(Disconnect, card, SCARD_LEAVE_CARD);
     }
     // pcsc-lite requirements
-    if (ourContext && context) {
+    if (context) {
         SCard(ReleaseContext, context);
     }
 }
@@ -430,17 +431,13 @@ QPCSCReaderWorker::~QPCSCReaderWorker() {
 // FIXME: have the "connect" function as part of QtPCSC so that access to existing context
 // would be there. Hide the QPCSCReader constructor
 // Handle the empty reader + UI case
-void QPCSCReaderWorker::connectCard(SCARDCONTEXT ctx, const QString &reader, const QString &protocol) {
+void QPCSCReaderWorker::connectCard(const QString &reader, const QString &protocol) {
     LONG rv = SCARD_S_SUCCESS;
-    if (!ctx) {
-        // Context per thread, required by pcsc-lite
-        rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
-        if (rv != SCARD_S_SUCCESS) {
-            return emit disconnected(rv);
-        }
-    } else {
-        context = ctx;
-        ourContext = false;
+
+    // Context per thread, required by pcsc-lite
+    rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
+    if (rv != SCARD_S_SUCCESS) {
+        return emit disconnected(rv);
     }
 
     // protocol
@@ -455,28 +452,29 @@ void QPCSCReaderWorker::connectCard(SCARDCONTEXT ctx, const QString &reader, con
         return emit disconnected(SCARD_E_INVALID_PARAMETER);
     }
 
-    // TODO: Windows and exclusive access
+    // By default we want to have a reliable connection, which means exclusive connection
     DWORD mode = SCARD_SHARE_EXCLUSIVE;
     // Try to connect multiple times, a freshly inserted card is often probed by other software as well
-    int i = 0;
-    qsrand((uint)QTime::currentTime().msec());
-    do {
-        rv = SCard(Connect, context, reader.toLatin1().data(), mode, proto, &card, &this->protocol);
-        if (rv != LONG(SCARD_E_SHARING_VIOLATION))
-            break;
-
-        int ms = (qrand() % 500) + 100;
-        _log("Sleeping for %d", ms);
-        QTime a = QTime::currentTime();
-        QThread::currentThread()->msleep(ms);  // FIXME: windows only?
-        _log("Slept %d", a.msecsTo(QTime::currentTime()));
-        i++;
-    } while (i < 10);
+    rv = SCard(Connect, context, reader.toLatin1().data(), mode, proto, &card, &this->protocol);
     if (rv == LONG(SCARD_E_SHARING_VIOLATION)) {
-        // try schared mode on non-windows
-#if !defined(Q_OS_WIN)
+#ifndef Q_OS_WIN
+        // On Unix, we are happy with a shared connection + transaction
         mode = SCARD_SHARE_SHARED;
         rv = SCard(Connect, context, reader.toLatin1().data(), mode, proto, &card, &this->protocol);
+#else
+        // On Windows we need to have a exclusive connection to defeat the 5sec rule
+        // Try several times before giving up
+        int i = 0;
+        qsrand((uint)QTime::currentTime().msec());
+        do {
+            rv = SCard(Connect, context, reader.toLatin1().data(), mode, proto, &card, &this->protocol);
+            int ms = (qrand() % 500) + 100;
+            _log("Sleeping for %d", ms);
+            QTime a = QTime::currentTime();
+            QThread::currentThread()->msleep(ms);
+            _log("Slept %d", a.msecsTo(QTime::currentTime()));
+            i++;
+        } while ((i < 10) && (rv == LONG(SCARD_E_SHARING_VIOLATION)));
 #endif
     }
 

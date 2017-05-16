@@ -49,7 +49,7 @@ public:
 
 public slots:
     // establish context in thread and connect to reader
-    void connectCard(const SCARDCONTEXT ctx, const QString &reader, const QString &protocol);
+    void connectCard(const QString &reader, const QString &protocol);
     void transmit(const QByteArray &bytes);
     void disconnectCard();
 
@@ -63,9 +63,8 @@ signals:
     void received(const QByteArray &bytes);
 
 private:
-    SCARDCONTEXT context = 0; // Only on unix, where it is necessary
-    bool ourContext = true;
-    SCARDHANDLE card;
+    SCARDCONTEXT context = 0; // Only required on unix
+    SCARDHANDLE card = 0;
     DWORD protocol = SCARD_PROTOCOL_UNDEFINED;
 };
 
@@ -101,7 +100,7 @@ public slots:
 
 signals:
     // command signals
-    void connectCard(const SCARDCONTEXT ctx, const QString &reader, const QString &protocol);
+    void connectCard(const QString &reader, const QString &protocol);
     void disconnectCard();
     void transmitBytes(const QByteArray &bytes);
 
@@ -118,7 +117,6 @@ private:
     QString protocol;
     QThread thread;
     QPCSCReaderWorker worker;
-    SCARDCONTEXT context = 0;
 };
 
 // Synthesizes PC/SC events to Qt signals

@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "Logger.h"
+
 #include <QThread>
 #include <QSslCertificate>
 
@@ -71,7 +73,9 @@ private:
     QMap<QString, PKCS11Module *> modules; // loaded PKCS#11 modules
     QMap<QByteArray, PKIToken> certificates; // available certificates
 
+#ifdef Q_OS_WIN
     QFutureWatcher<QVector<QByteArray>> wincerts; // Refreshes windows cert stores on demand.
+#endif
 };
 
 
@@ -79,14 +83,11 @@ class QPKI: public QObject {
     Q_OBJECT
 
 public:
-    QPKI(QtPCSC *PCSC) {
+    QPKI(QtPCSC *pcsc): PCSC(pcsc) {
         thread.start();
         worker.moveToThread(&thread);
-
-        connect(PCSC, &QtPCSC::cardInserted, &worker, &QPKIWorker::cardInserted, Qt::QueuedConnection);
-        //connect(PCSC, &QtPCSC::cardRemoved, &worker, &QPKIWorker::cardRemoved, Qt::QueuedConnection);
-
         connect(&worker, &QPKIWorker::certificateListChanged, this, &QPKI::certificateListChanged, Qt::QueuedConnection);
+        resume();
     }
 
     ~QPKI() {
@@ -97,6 +98,16 @@ public:
     static const char *errorName(const CK_RV err);
 
     QVector<QByteArray> getCertificates();
+
+    void pause() {
+        _log("Pausing PCSC event handling");
+        disconnect(PCSC, 0, &worker, 0);
+    };
+    void resume() {
+        _log("Resuimg PCSC event handling");
+        connect(PCSC, &QtPCSC::cardInserted, &worker, &QPKIWorker::cardInserted, Qt::QueuedConnection);
+        connect(PCSC, &QtPCSC::cardRemoved, &worker, &QPKIWorker::cardRemoved, Qt::QueuedConnection);
+    };
 
     // sign a hash with a given certificate
     void sign(const QString &origin, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
@@ -114,6 +125,9 @@ private:
     // send message to main
     void select_certificate(const QVariantMap &msg);
 
+    bool paused = false;
+
+    QtPCSC *PCSC;
     QThread thread;
     QPKIWorker worker;
 };
