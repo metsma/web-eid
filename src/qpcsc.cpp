@@ -428,12 +428,8 @@ QPCSCReaderWorker::~QPCSCReaderWorker() {
     }
 }
 
-// FIXME: have the "connect" function as part of QtPCSC so that access to existing context
-// would be there. Hide the QPCSCReader constructor
-// Handle the empty reader + UI case
 void QPCSCReaderWorker::connectCard(const QString &reader, const QString &protocol) {
     LONG rv = SCARD_S_SUCCESS;
-
     // Context per thread, required by pcsc-lite
     rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
     if (rv != SCARD_S_SUCCESS) {
@@ -467,13 +463,13 @@ void QPCSCReaderWorker::connectCard(const QString &reader, const QString &protoc
         int i = 0;
         qsrand((uint)QTime::currentTime().msec());
         do {
-            rv = SCard(Connect, context, reader.toLatin1().data(), mode, proto, &card, &this->protocol);
             int ms = (qrand() % 500) + 100;
             _log("Sleeping for %d", ms);
             QTime a = QTime::currentTime();
             QThread::currentThread()->msleep(ms);
             _log("Slept %d", a.msecsTo(QTime::currentTime()));
             i++;
+            rv = SCard(Connect, context, reader.toLatin1().data(), mode, proto, &card, &this->protocol);
         } while ((i < 10) && (rv == LONG(SCARD_E_SHARING_VIOLATION)));
 #endif
     }
