@@ -486,7 +486,7 @@ void QPCSCReaderWorker::connectCard(SCARDCONTEXT ctx, const QString &reader, con
     }
 
     // Get fresh information
-    QByteArray tmpname(reader.toLatin1().size() + 1, 0);
+    QByteArray tmpname(reader.toLatin1().size() + 2, 0); // XXX: Windows requires 2, for the extra \0 ?
     DWORD tmplen = tmpname.size();
     DWORD tmpstate = 0;
     DWORD tmpproto = 0;
@@ -537,6 +537,7 @@ void QPCSCReaderWorker::transmit(const QByteArray &apdu) {
     if (err != SCARD_S_SUCCESS) {
         response.resize(0);
         SCard(Disconnect, card, SCARD_RESET_CARD);
+        card = 0;
         return emit disconnected(err);
     }
     response.resize(rlen);
