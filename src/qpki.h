@@ -25,7 +25,6 @@
 
 #include <QFutureWatcher>
 
-#include "internal.h"
 #include "pkcs11module.h"
 #include "qpcsc.h"
 
@@ -114,11 +113,14 @@ public:
     };
 
     // sign a hash with a given certificate
-    void sign(const QString &origin, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
+    void sign(const WebContext *context, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
 
 signals:
-    // Useful main thread signals
-    void certificateListChanged(const QVector<QByteArray> certs);
+    void certificateListChanged(const QVector<QByteArray> certs); // for dialog. XXX
+    // Signature has been calculated
+    void signature(const QString &context, const CK_RV result, const QByteArray &value);
+    // Certificate has been chose (either p11 or win)
+    void certificate(const QString &context, const CK_RV result, const QByteArray &value);
 
 private:
     void refresh();

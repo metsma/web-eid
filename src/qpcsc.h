@@ -29,10 +29,7 @@
 #include <winscard.h>
 #endif
 
-#include "internal.h"
 #include "context.h"
-
-#include <vector>
 
 #include "dialogs/reader_in_use.h"
 #include "dialogs/insert_card.h"

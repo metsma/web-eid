@@ -45,7 +45,7 @@ public:
 
     static bool isSecureOrigin(const QString &origin);
     QString origin; // TODO: access
-    QString friendlyOrigin();
+    QString friendlyOrigin() const;
 
     QTimer timer;
 

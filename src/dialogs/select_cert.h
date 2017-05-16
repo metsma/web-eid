@@ -77,17 +77,9 @@ public:
             ok->setEnabled(true);
         });
 
-        connect(this, &QDialog::finished, [this, ctx] (int code) {
+        connect(this, &QDialog::accepted, [this, ctx] {
             _log("Dialog is finished");
-            if (code == QDialog::Rejected) {
-                _log("Dialog was cancelled");
-                // TODO: send message to ... where?
-                // TO toPKI
-                return emit sendIPC({CertificateSelected, {{"id", ctx->id}, {"error", QPKI::errorName(CKR_FUNCTION_CANCELED)}}});
-
-            }
-//            _log("Selected %d for a status of %d", table->currentItem()->text(3).toUInt(), code);
-//            v2ba(certs[table->currentItem()->text(3).toUInt()]);
+            return emit certificateSelected(certs[table->currentItem()->text(3).toUInt()]);
         });
 
     }
@@ -120,6 +112,8 @@ public slots:
         }
         table->setCurrentIndex(table->model()->index(0, 0));
 
+        this->certs = certs;
+
         show();
         activateWindow(); // to be always topmost and activated, on Linux
         raise(); // to be always topmost, on macOS
@@ -127,9 +121,10 @@ public slots:
     }
 
 signals:
-    void sendIPC(InternalMessage msg);
+    void certificateSelected(const QByteArray &cert);
 
 private:
+    QVector<QByteArray> certs;
     QVBoxLayout *layout;
     QLabel *message;
     QTreeWidget *table;

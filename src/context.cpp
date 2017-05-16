@@ -283,7 +283,7 @@ bool WebContext::terminate() {
     return true;
 }
 
-QString WebContext::friendlyOrigin() {
+QString WebContext::friendlyOrigin() const {
 
     QUrl url(origin);
     if (url.scheme() == "file") {

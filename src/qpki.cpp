@@ -121,8 +121,8 @@ QVector<QByteArray> QPKI::getCertificates() {
 }
 
 // process SIGN message
-void QPKI::sign(const QString &origin, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo) {
-    _log("Signing %s:%s", hashalgo.toStdString().c_str(), toHex(ba2v(hash)).c_str());
+void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo) {
+    _log("Signing on %s %s:%s", qPrintable(context->friendlyOrigin()), qPrintable(hashalgo), qPrintable(hash.toHex()));
 
     // FIXME: remove origin from signature, available in UI thread, if not needed for windows.
     _log("PKI: Signing stuff");
