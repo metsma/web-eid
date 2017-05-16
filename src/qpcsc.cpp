@@ -149,6 +149,7 @@ static QStringList readerStateNames(DWORD state) {
     RSTATE(SPECIFIC);
     return result;
 }
+
 void QtPCSC::run()
 {
     LONG rv = SCARD_S_SUCCESS;
@@ -323,6 +324,10 @@ void QtPCSC::cancel() {
 }
 
 QMap<QString, QStringList> QtPCSC::getReaders() {
+    // If the resource manager was not running before, run it now.
+    // FIXME: probably not the right thing to do, relates to TODO on line 157
+    if (!isRunning())
+        start();
     QMutexLocker locker(&mutex);
 
     QMap<QString, QStringList> result;

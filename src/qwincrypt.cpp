@@ -212,6 +212,8 @@ QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type,
     } else if (type == Signing) {
         pcsc.pFilterCallback = filter_sign;
     }
+    pcsc.dwFlags = CRYPTUI_SELECTCERT_PUT_WINDOW_TOPMOST;
+    pcsc.szTitle = LPWSTR(message.utf16()); // FIXME - origin, default is "Select Certificate"
     pcsc.szDisplayString = LPWSTR(message.utf16());
     pcsc.pvCallbackData = nullptr; // TODO: use a single callback with arguments instead ?
     pcsc.cDisplayStores = 1;
