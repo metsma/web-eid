@@ -5,12 +5,12 @@
 
 #pragma once
 
-#include <QDialog>
+#include "dialogs/betterdialog.h"
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
 
-class QtReaderInUse: public QDialog {
+class QtReaderInUse: public BetterDialog {
     Q_OBJECT
 
 public:

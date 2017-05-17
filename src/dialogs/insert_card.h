@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <QDialog>
+#include "dialogs/betterdialog.h"
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
 
 // Insert card to reader dialog
-class QtInsertCard: public QDialog {
+class QtInsertCard: public BetterDialog {
     Q_OBJECT
 
 public:

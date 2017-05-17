@@ -11,7 +11,8 @@
 #include "context.h"
 #include "qpki.h"
 
-#include <QDialog>
+#include "dialogs/betterdialog.h"
+
 #include <QDialogButtonBox>
 #include <QHeaderView>
 #include <QLabel>
@@ -20,8 +21,7 @@
 #include <QVBoxLayout>
 
 
-
-class QtSelectCertificate: public QDialog {
+class QtSelectCertificate: public BetterDialog {
     Q_OBJECT
 
 public:

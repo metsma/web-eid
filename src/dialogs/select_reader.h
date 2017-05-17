@@ -8,7 +8,7 @@
 #include "Logger.h"
 #include "context.h"
 
-#include <QDialog>
+#include "dialogs/betterdialog.h"
 #include <QTreeWidget>
 #include <QLabel>
 #include <QDialogButtonBox>
@@ -17,7 +17,7 @@
 #include <QPushButton>
 
 // Reader selection dialog
-class QtSelectReader: public QDialog {
+class QtSelectReader: public BetterDialog {
     Q_OBJECT
 
 public:

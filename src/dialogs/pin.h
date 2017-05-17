@@ -10,7 +10,7 @@
 
 #include "context.h"
 
-#include <QDialog>
+#include "dialogs/betterdialog.h"
 #include <QDialogButtonBox>
 #include <QLabel>
 #include <QLineEdit>
@@ -21,7 +21,7 @@
 #include <QHBoxLayout>
 #include <QUrl>
 
-class QtPINDialog : public QDialog
+class QtPINDialog : public BetterDialog
 {
     Q_OBJECT
 
