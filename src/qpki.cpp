@@ -47,15 +47,6 @@ void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
                 refresh();
             }
         }
-    } else {
-#ifdef Q_OS_WIN
-        if (!wincerts.isRunning()) {
-            _log("refreshing certstore certs");
-            wincerts.setFuture(QtConcurrent::run(&QWinCrypt::getCertificates));
-        } else {
-            _log("already running...");
-        }
-#endif
     }
 }
 
@@ -67,13 +58,6 @@ void QPKIWorker::refresh() {
             certs[v2ba(c)] = {PKCS11, m};
         }
     }
-#ifdef Q_OS_WIN
-    _log("WINDOWS ENUM");
-    QVector<QByteArray> wincerts = QWinCrypt::getCertificates();
-    for (const auto &cert: wincerts) {
-        certs[cert] = {CAPI, ""};
-    }
-#endif
     if (certificates.size() != certs.size()) {
         certificates = certs;
         emit certificateListChanged(getCertificates());
@@ -82,14 +66,6 @@ void QPKIWorker::refresh() {
 
 void QPKIWorker::cardRemoved(const QString &reader) {
     _log("Card removed from %s, refreshing", qPrintable(reader));
-#ifdef Q_OS_WIN
-    if (!wincerts.isRunning()) {
-        _log("refreshing certstore certs");
-        wincerts.setFuture(QtConcurrent::run(&QWinCrypt::getCertificates));
-    } else {
-        _log("already running...");
-    }
-#endif
     refresh();
 }
 
@@ -106,22 +82,23 @@ QVector<QByteArray> QPKI::getCertificates() {
     return worker.getCertificates();
 }
 
+// Select a single certificate for a web context, signal certificate() when done
 void QPKI::select(const WebContext *context, const CertificatePurpose type) {
     _log("Selecting certificate for %s", qPrintable(context->friendlyOrigin()));
     // If we have PKCS#11 certs, show a Qt window, otherwise
 #ifdef Q_OS_WIN
-    connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this] {
+    connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this, context] {
         this->winop.disconnect(); // remove signals
         QWinCrypt::ErroredResponse result = this->winop.result();
-        _log("Winop done: %s", QPKI::errorName(result.error));
+        _log("Winop done: %s %d", QPKI::errorName(result.error), result.result.size());
         if (result.error == CKR_OK) {
-            return emit certificate(context->id, result.error, result.result);
+            return emit certificate(context, result.error, result.result.at(0)); // FIXME: range check
         } else {
-            return emit certificate(context->id, result.error, 0);
+            return emit certificate(context, result.error, 0);
         }
     });
     // run future
-    winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, type));
+    winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, type, QStringLiteral("dummy string FIXME")));
 #endif
     //return emit certificate(context->id, CKR_FUNCTION_CANCELED, 0);
 }
@@ -134,14 +111,14 @@ void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteAr
 // and wire up signals to the worker, that does actual signing
 // otherwise run it in a future and wire up signals.
 #ifdef Q_OS_WIN
-    connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this] {
+    connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this, context] {
         this->winop.disconnect(); // remove signals
         QWinCrypt::ErroredResponse result = this->winop.result();
-        _log("Winop done: %s", QPKI::errorName(result.error));
+        _log("Winop done: %s %d", QPKI::errorName(result.error), result.result.size());
         if (result.error == CKR_OK) {
-            return emit signature(context->id, result.error, result.result);
+            return emit signature(context, result.error, result.result.at(0)); // FIXME: range check
         } else {
-            return emit signature(context->id, result.error, 0);
+            return emit signature(context, result.error, 0);
         }
     });
     // run future

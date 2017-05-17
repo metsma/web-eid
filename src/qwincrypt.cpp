@@ -54,8 +54,9 @@ extern "C" {
 }  // extern "C"
 
 
-
+// TODO UX: this is a slow operation, possibly skip it and let Windows do the job
 static BOOL isCardInReader(PCCERT_CONTEXT certContext) {
+    return TRUE;
     DWORD flags = CRYPT_ACQUIRE_CACHE_FLAG | CRYPT_ACQUIRE_COMPARE_KEY_FLAG | CRYPT_ACQUIRE_SILENT_FLAG;
     NCRYPT_KEY_HANDLE key = 0;
     DWORD spec = 0;
@@ -75,12 +76,12 @@ static BOOL isCardInReader(PCCERT_CONTEXT certContext) {
     return TRUE;
 }
 
-QVector<QByteArray> QWinCrypt::getCertificates() {
-    QVector<QByteArray> result;
+QWinCrypt::ErroredResponse QWinCrypt::getCertificates() {
+    QList<QByteArray> result;
     HCERTSTORE store = CertOpenSystemStore(0, L"MY");
     if (!store) {
         _log("Cold not open store: 0x%08x", GetLastError());
-        return result;
+        return {CKR_GENERAL_ERROR};
     }
 
     // Enumerate certificates, so that no_certificates satus could be reported.
@@ -95,7 +96,7 @@ QVector<QByteArray> QWinCrypt::getCertificates() {
     }
     _log("Found a total of %d certs in MY store", result.size());
     CertCloseStore(store, 0);
-    return result;
+    return {CKR_OK, result};
 }
 
 
@@ -170,7 +171,7 @@ QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type,
     HCERTSTORE store = CertOpenSystemStore(0, L"MY");
     if (!store)	{
         _log("Cold not open store: %d", GetLastError());
-        return {CKR_GENERAL_ERROR, 0};
+        return {CKR_GENERAL_ERROR};
     }
 
     // Enumerate certificates, so that no_certificates satus could be reported.
@@ -189,7 +190,7 @@ QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type,
 
     if (certificatesCount == 0) {
         CertCloseStore(store, 0);
-        return {CKR_KEY_NEEDED, 0};
+        return {CKR_KEY_NEEDED};
     }
     // Show selection dialog
     CRYPTUI_SELECTCERTIFICATE_STRUCT pcsc = { sizeof(pcsc) };
@@ -198,7 +199,7 @@ QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type,
     } else if (type == Signing) {
         pcsc.pFilterCallback = filter_sign;
     }
-    pcsc.dwFlags = CRYPTUI_SELECTCERT_PUT_WINDOW_TOPMOST;
+    // pcsc.dwFlags = CRYPTUI_SELECTCERT_PUT_WINDOW_TOPMOST; Windows 7 sp1 onwards, not available
     pcsc.szTitle = LPWSTR(message.utf16()); // FIXME - origin, default is "Select Certificate"
     pcsc.szDisplayString = LPWSTR(message.utf16());
     pcsc.pvCallbackData = nullptr; // TODO: use a single callback with arguments instead ?
@@ -210,16 +211,17 @@ QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type,
     {
         CertCloseStore(store, 0);
         _log("User pressed cancel");
-        return {CKR_FUNCTION_CANCELED, 0};
+        return {CKR_FUNCTION_CANCELED};
     }
     QByteArray result = QByteArray((const char *)cert_context->pbCertEncoded, int(cert_context->cbCertEncoded));
     _log("Selected certificate");
     CertFreeCertificateContext(cert_context);
     CertCloseStore(store, 0);
-    return {CKR_OK, result};
+    return {CKR_OK, {result}};
 }
 
 QWinCrypt::ErroredResponse QWinCrypt::sign(const QByteArray &cert, const QByteArray &hash, const HashType hashtype) {
+    _log("Cert for signing is: %s", qPrintable(cert.toHex()));
     QByteArray result;
     CK_RV rv = CKR_OK;
     BCRYPT_PKCS1_PADDING_INFO padInfo;
@@ -345,7 +347,7 @@ QWinCrypt::ErroredResponse QWinCrypt::sign(const QByteArray &cert, const QByteAr
         _log("Signing failed: 0x%u08x", err);
         rv = CKR_GENERAL_ERROR;
     }
-    return {rv, result};
+    return {rv, {result}};
 }
 
 

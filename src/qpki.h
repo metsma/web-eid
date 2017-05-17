@@ -61,9 +61,6 @@ private:
     QMap<QString, PKCS11Module *> modules; // loaded PKCS#11 modules
     QMap<QByteArray, PKIToken> certificates; // available certificates
 
-#ifdef Q_OS_WIN
-    QFutureWatcher<QVector<QByteArray>> wincerts; // Refreshes windows cert stores on demand.
-#endif
 };
 
 
@@ -106,9 +103,9 @@ public:
 signals:
     void certificateListChanged(const QVector<QByteArray> certs); // for dialog. FIXME. aggregate win + p11
     // Signature has been calculated
-    void signature(const QString &context, const CK_RV result, const QByteArray &value);
+    void signature(const WebContext *context, const CK_RV result, const QByteArray &value);
     // Certificate has been chose (either p11 or win)
-    void certificate(const QString &context, const CK_RV result, const QByteArray &value);
+    void certificate(const WebContext *context, const CK_RV result, const QByteArray &value);
 
 private:
     void refresh();
@@ -117,6 +114,7 @@ private:
 #ifdef Q_OS_WIN
     // Windows operation
     QFutureWatcher<QWinCrypt::ErroredResponse> winop; // Refreshes windows cert stores on demand.
+    QFutureWatcher<QWinCrypt::ErroredResponse> wincerts; // Refreshes windows cert stores on demand.
 #endif
 
     QtPCSC *PCSC;

@@ -206,9 +206,13 @@ void WebContext::processMessage(const QVariantMap &message) {
         }
     } else if (message.contains("sign")) {
         QVariantMap sign = message.value("sign").toMap();
-        const QByteArray cert = QByteArray::fromBase64(sign.value("cert").toString().toLatin1());
+        const QByteArray cert = QByteArray::fromBase64(sign.value("certificate").toString().toLatin1());
         const QByteArray hash = QByteArray::fromBase64(sign.value("hash").toString().toLatin1());
-        connect(PKI, &QPKI::signature, [this] (const QString &context, const CK_RV result, const QByteArray &value) {
+        connect(PKI, &QPKI::signature, [this] (const WebContext *context, const CK_RV result, const QByteArray &value) {
+            if (this != context) {
+                _log("Not us, ignore");
+                return;
+            }
             disconnect(PKI, 0, this, 0);
             if (result == CKR_OK) {
                 outgoing({{"signature", value.toBase64()}}); // FIXME
@@ -218,7 +222,11 @@ void WebContext::processMessage(const QVariantMap &message) {
         });
         PKI->sign(this, cert, hash, QStringLiteral("SHA-256")); // FIXME: signature
     } else if (message.contains("cert")) {
-        connect(PKI, &QPKI::certificate, [this] (const QString &context, const CK_RV result, const QByteArray &value) {
+        connect(PKI, &QPKI::certificate, [this] (const WebContext *context, const CK_RV result, const QByteArray &value) {
+            if (this != context) {
+                _log("Not us, ignore");
+                return;
+            }
             disconnect(PKI, 0, this, 0);
             if (result == CKR_OK) {
                 outgoing({{"certificate", value.toBase64()}}); // FIXME
@@ -227,9 +235,13 @@ void WebContext::processMessage(const QVariantMap &message) {
             }
         });
         PKI->select(this, Authentication);
-    } else if (message.contains("auth")) {
+    } else if (message.contains("authenticate")) {
         // TODO: Select certificate if needed
-        connect(PKI, &QPKI::certificate, [this] (const QString &context, const CK_RV result, const QByteArray &value) {
+        connect(PKI, &QPKI::certificate, [this] (const WebContext *context, const CK_RV result, const QByteArray &value) {
+            if (this != context) {
+                _log("Not us, ignore");
+                return;
+            }
             disconnect(PKI, 0, this, 0);
             if (result == CKR_OK) {
                 outgoing({{"token", value}}); // FIXME

@@ -15,7 +15,7 @@ def b64pad(s):
 class TestAuth(ChromeTest):
   def test_simple_auth(self):
       nonce = str(uuid.uuid4())
-      cmd = {"auth": {"nonce": nonce}}
+      cmd = {"authenticate": {"nonce": nonce}}
       resp = self.transact(cmd)
       self.assertEqual("token" in resp, True)
       # basic verification of returned token

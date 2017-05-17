@@ -10,7 +10,7 @@ SIGN = signtool sign /v /n "$(SIGNER)" /fd SHA256 /tr http://timestamp.comodoca.
 EXE = src\release\Web-eID.exe
 DISTNAME = Web-eID
 
-app: src\*.h src\*.cpp src\dialos\*.h
+app: src\*.h src\*.cpp src\dialogs\*.h
 	c:\Qt\5.8\msvc2015\bin\lrelease.exe src\src.pro
 	c:\Qt\5.8\msvc2015\bin\qmake.exe -config release -o QMakefile
 	$(MAKE) /f QMakefile
