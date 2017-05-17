@@ -22,6 +22,7 @@ public:
         layout->addWidget(message);
         layout->addWidget(buttons);
         setWindowFlags(Qt::WindowStaysOnTopHint);
+
         // remove minimize and maximize buttons
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) &
                        ~(Qt::WindowMaximizeButtonHint|Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint));

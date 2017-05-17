@@ -166,7 +166,7 @@ BOOL WINAPI filter_sign(PCCERT_CONTEXT certContext, BOOL *pfInitialSelectedCert,
 }
 
 // Show a certificate selection window
-QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type, const QString &message) {
+QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type, const QString &title, const QString &message) {
 
     HCERTSTORE store = CertOpenSystemStore(0, L"MY");
     if (!store)	{
@@ -200,7 +200,7 @@ QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type,
         pcsc.pFilterCallback = filter_sign;
     }
     // pcsc.dwFlags = CRYPTUI_SELECTCERT_PUT_WINDOW_TOPMOST; Windows 7 sp1 onwards, not available
-    pcsc.szTitle = LPWSTR(message.utf16()); // FIXME - origin, default is "Select Certificate"
+    pcsc.szTitle = LPWSTR(title.utf16());
     pcsc.szDisplayString = LPWSTR(message.utf16());
     pcsc.pvCallbackData = nullptr; // TODO: use a single callback with arguments instead ?
     pcsc.cDisplayStores = 1;

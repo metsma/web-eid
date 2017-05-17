@@ -250,12 +250,12 @@ CK_RV PKCS11Module::refresh() {
 
 }
 
-std::vector<std::vector <unsigned char>> PKCS11Module::getCerts(CertificatePurpose type) {
-    std::vector<std::vector<unsigned char>> res;
+std::map<std::vector <unsigned char>, P11Token> PKCS11Module::getCerts(CertificatePurpose type) {
+    std::map<std::vector<unsigned char>, P11Token> res;
     for(auto const &crts: certs) {
         _log("certificate: %s", toHex(crts.first).c_str());
         if(usage_matches(crts.first, type))
-            res.push_back(crts.first);
+            res.insert(std::make_pair(crts.first, crts.second.first));
     }
     return res;
 }
@@ -266,13 +266,9 @@ CK_RV PKCS11Module::login(const std::vector<unsigned char> &cert, const char *pi
 
     // Assumes presence of session
     if (!session) {
-        const P11Token *token = getP11Token(cert);
-        if (!token) {
-            // FIXME: error
-            return CKR_TOKEN_NOT_PRESENT;
-        }
+        const P11Token token = getP11Token(cert);
         _log("Using key from slot %d with ID %s", slot.first.slot, toHex(slot.second).c_str());
-        check_C(OpenSession, token->slot, CKF_SERIAL_SESSION, nullptr, nullptr, &session);
+        check_C(OpenSession, token.slot, CKF_SERIAL_SESSION, nullptr, nullptr, &session);
     }
     check_C(Login, session, CKU_USER, (unsigned char*)pin, pin ? strlen(pin) : 0);
 
@@ -345,12 +341,12 @@ CK_RV PKCS11Module::sign(const std::vector<unsigned char> &cert, const std::vect
 }
 
 std::pair<int, int> PKCS11Module::getPINLengths(const std::vector<unsigned char> &cert) {
-    const P11Token *token = getP11Token(cert);
-    return std::make_pair(token->pin_min, token->pin_max);
+    const P11Token token = getP11Token(cert);
+    return std::make_pair(token.pin_min, token.pin_max);
 }
 
 bool PKCS11Module::isPinpad(const std::vector<unsigned char> &cert) const {
-    return getP11Token(cert)->has_pinpad;
+    return getP11Token(cert).has_pinpad;
 }
 
 // FIXME: assumes 3 tries for a PIN
@@ -364,13 +360,11 @@ int PKCS11Module::getPINRetryCount(const P11Token &p11token) {
     return 3;
 }
 
-const P11Token *PKCS11Module::getP11Token(const std::vector<unsigned char> &cert) const {
+const P11Token PKCS11Module::getP11Token(const std::vector<unsigned char> &cert) const {
     auto slotinfo = certs.find(cert);
-    if (slotinfo == certs.end()) {
-        return nullptr;
-    }
-    return &(slotinfo->second.first);
+    return slotinfo->second.first;
 }
+
 const char *PKCS11Module::errorName(CK_RV err) {
 #define CASE(X) case X: return #X
     switch (err) {

@@ -23,6 +23,7 @@ struct P11Token {
     bool has_pinpad; // true if pinpad present
     CK_SLOT_ID slot; // Associated slot ID
     CK_FLAGS flags; // all of the flags
+    std::string module; // name of module
 };
 
 class PKCS11Module {
@@ -36,9 +37,9 @@ public:
     bool isLoaded() {
         return !certs.empty();
     }
-    std::vector<std::vector <unsigned char>> getCerts(CertificatePurpose type = CertificatePurpose(Authentication|Signing));
+    std::map<std::vector <unsigned char>, P11Token> getCerts(CertificatePurpose type = CertificatePurpose(Authentication|Signing));
 
-    const P11Token *getP11Token(const std::vector<unsigned char> &cert) const;
+    const P11Token getP11Token(const std::vector<unsigned char> &cert) const;
 
     bool isPinpad(const std::vector<unsigned char> &cert) const;
     static int getPINRetryCount(const P11Token &cert);

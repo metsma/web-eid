@@ -256,7 +256,7 @@ void WebContext::processMessage(const QVariantMap &message) {
                         return;
                     }
                     disconnect(PKI, 0, this, 0);
-                  if (rv == CKR_OK) {
+                    if (rv == CKR_OK) {
                         QByteArray token = jwt_token + "." + val.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
                         outgoing({{"token", QString(token)}});  // FIXME
                     } else {

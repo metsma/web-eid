@@ -26,7 +26,7 @@ class QtSelectCertificate: public QDialog {
 
 public:
 
-    QtSelectCertificate(WebContext *ctx, CertificatePurpose type):
+    QtSelectCertificate(const WebContext *ctx, const CertificatePurpose type):
         layout(new QVBoxLayout(this)),
         message(new QLabel(this)),
         table(new QTreeWidget(this)),
@@ -59,6 +59,13 @@ public:
         buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+
+        connect(table, &QTreeWidget::currentItemChanged, [=] (QTreeWidgetItem *item, QTreeWidgetItem *previous) {
+            (void)previous;
+            if (item) {
+                ok->setEnabled(true);
+            }
+        });
         connect(table, &QTreeWidget::clicked, [&] {
             ok->setEnabled(true);
         });
@@ -67,7 +74,6 @@ public:
             _log("Dialog is finished");
             return emit certificateSelected(certs[table->currentItem()->text(3).toUInt()]);
         });
-
     }
 
 public slots:
@@ -87,9 +93,9 @@ public slots:
                 _log("Could not parse certificate");
             }
             // filter out expired certificates
-            // TODO: not here
-            if (QDateTime::currentDateTime() >= cert.expiryDate())
-                continue;
+            // FIXME: not here
+//            if (QDateTime::currentDateTime() >= cert.expiryDate())
+//                continue;
             table->insertTopLevelItem(0, new QTreeWidgetItem(table, QStringList{
                 cert.subjectInfo(QSslCertificate::CommonName).at(0),
                 cert.subjectInfo(QSslCertificate::Organization).at(0),

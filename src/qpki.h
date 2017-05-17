@@ -27,24 +27,11 @@ class QPKIWorker: public QObject {
     Q_OBJECT
 
 public:
-    // FIXME: remove from worker
-    enum TokenType {
-        CAPI,
-        PKCS11
-    };
-    struct PKIToken {
-        TokenType tktype;
-        QString module; // if PKCS#11
-    };
-
     ~QPKIWorker() {
         for (const auto &m: modules.values()) {
             delete m;
         }
     }
-
-    QMutex mutex;
-    QVector<QByteArray> getCertificates();
 
 public slots:
     //refresh available certificates. Triggered by PCSC on cardInserted()
@@ -53,14 +40,20 @@ public slots:
 
     // Refresh all certificate sources
     void refresh();
+
+    void login(const QByteArray &cert, const QString &pin);
+    void sign(const QByteArray &cert, const QByteArray &hash); // FIXME: hashtype
+
 signals:
-    // If list of available certificates changes
-    void certificateListChanged(const QVector<QByteArray> certs);
+    // If list of available certificates changes after refresh
+    void refreshed(const QMap<QByteArray, P11Token> certs);
+
+    void loginDone(const CK_RV rv);
+    void signDone(const CK_RV rv, const QByteArray &signature);
 
 private:
     QMap<QString, PKCS11Module *> modules; // loaded PKCS#11 modules
-    QMap<QByteArray, PKIToken> certificates; // available certificates
-
+    QMap<QByteArray, P11Token> certificates; // from which module a certificate comes
 };
 
 
@@ -72,7 +65,13 @@ public:
         thread.start();
         worker.moveToThread(&thread);
         // FIXME: proxy
-        connect(&worker, &QPKIWorker::certificateListChanged, this, &QPKI::certificateListChanged, Qt::QueuedConnection);
+        connect(&worker, &QPKIWorker::refreshed, this, &QPKI::updateCertificates, Qt::QueuedConnection);
+        // control signals
+        //connect(this, &QPKI::login, &worker, &QPKIWorker::login, Qt::QueuedConnection);
+        // FIXME: have this tied to the PIN dialog maybe ?
+        connect(this, &QPKI::p11sign, &worker, &QPKIWorker::sign, Qt::QueuedConnection);
+        connect(&worker, &QPKIWorker::signDone, this, &QPKI::signDone, Qt::QueuedConnection);
+
         resume();
     }
 
@@ -90,7 +89,7 @@ public:
         disconnect(PCSC, 0, &worker, 0);
     };
     void resume() {
-        _log("Resuimg PCSC event handling");
+        _log("Resuming PCSC event handling");
         connect(PCSC, &QtPCSC::cardInserted, &worker, &QPKIWorker::cardInserted, Qt::QueuedConnection);
         connect(PCSC, &QtPCSC::cardRemoved, &worker, &QPKIWorker::cardRemoved, Qt::QueuedConnection);
     };
@@ -102,12 +101,20 @@ public:
 
     static QByteArray authenticate_dtbs(const QSslCertificate &cert, const QString &origin, const QString &nonce);
 
+    void updateCertificates(const QMap<QByteArray, P11Token> certs);
+
 signals:
+    // TODO: enrich with PKCS#11 information (tries remainign etc)
     void certificateListChanged(const QVector<QByteArray> certs); // for dialog. FIXME. aggregate win + p11
     // Signature has been calculated
     void signature(const WebContext *context, const CK_RV result, const QByteArray &value);
     // Certificate has been chose (either p11 or win)
     void certificate(const WebContext *context, const CK_RV result, const QByteArray &value);
+
+    // Control signals with worker
+    void login(const QByteArray &cert, const QString &pin);
+    void p11sign(const QByteArray &cert, const QByteArray &hash); // FIXME: hashtype
+    void signDone(const CK_RV rv, const QByteArray &signature);
 
 private:
     void refresh();
@@ -121,4 +128,5 @@ private:
     QtPCSC *PCSC;
     QThread thread;
     QPKIWorker worker;
+    QMap<QByteArray, P11Token> certificates; // FIXME: type?
 };

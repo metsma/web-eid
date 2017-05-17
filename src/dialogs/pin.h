@@ -8,6 +8,8 @@
 #include "util.h" // helpers
 #include "Logger.h"
 
+#include "context.h"
+
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QLabel>
@@ -19,88 +21,13 @@
 #include <QHBoxLayout>
 #include <QUrl>
 
-#include <thread>
-
-enum
-{
-    UserCancel = 0, // same as QDialog::Rejected
-    TechnicalError = -1,
-    AuthError = -2,
-};
-
-// TODO: rewrite dialogs for longrunning process
-
 class QtPINDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    // Called from main thread, thus we use exec() here
-    void showit(CK_RV last, const P11Token &p11token, const std::vector<unsigned char> &cert, const QString &origin, CertificatePurpose type)
-    {
-        // Set title
-        if (type == Signing) {
-            setWindowTitle(tr("Signing at %1").arg(origin));
-        } else {
-            setWindowTitle(tr("Authenticating to %1").arg(origin));
-        }
-
-        nameLabel->setText(x509subject(cert).c_str());
-        pinLabel->setText(tr("Enter PIN for \"%1\"").arg(QString::fromStdString(p11token.label)));
-        ok->setEnabled(false);
-        ok->setText(type == Signing ? tr("Sign") : tr("Authenticate"));
-
-        errorLabel->setTextFormat(Qt::RichText);
-        errorLabel->hide();
-        auto triesLeft = PKCS11Module::getPINRetryCount(p11token);
-        if (triesLeft != 3 || last != CKR_OK) {
-            errorLabel->setText(QString("<font color='red'><b>%1 tries left: %2</b></font>").arg(triesLeft).arg(PKCS11Module::errorName(last)));
-            errorLabel->show();
-        }
-        if (p11token.has_pinpad) {
-            showpwd->hide();
-            pin->hide();
-            buttons->hide();
-            progress->show();
-
-            // Show the spinner
-            // TODO: restart spinner
-            // 30 seconds of time.
-            progress->setRange(0, 30);
-            progress->setValue(progress->maximum());
-            // Timeline for counting from 30 to 0
-            statusTimer->setFrameRange(progress->maximum(), progress->minimum());
-            statusTimer->start();
-            show();
-            emit login(CKR_OK, nullptr, type);
-        } else {
-            // TODO: show/hide things
-            progress->hide();
-            showpwd->show();
-            pin->show();
-            buttons->show();
-
-            pin->setEchoMode(QLineEdit::Password);
-            pin->setText("");
-            pin->setFocus();
-            pin->setMaxLength(p11token.pin_max);
-
-            connect(pin, &QLineEdit::textEdited, [=](const QString &text) {
-                ok->setEnabled(text.size() >= p11token.pin_min);
-            });
-            // Exec
-            int dlg = exec();
-            if (dlg == QDialog::Rejected) {
-                _log("Rejected");
-                emit login(CKR_FUNCTION_CANCELED, 0, type);
-            } else if (dlg == QDialog::Accepted) {
-                _log("PIN is %s", pin->text().toUtf8().toStdString().c_str());
-                emit login(CKR_OK, pin->text(), type);
-            }
-        }
-    }
-
-    QtPINDialog() : layout(new QVBoxLayout(this)),
+    QtPINDialog(const WebContext *context, const QByteArray &cert, const P11Token p11token, const CK_RV last, CertificatePurpose type):
+        layout(new QVBoxLayout(this)),
         nameLabel(new QLabel(this)),
         pinLabel(new QLabel(this)),
         errorLabel(new QLabel(this)),
@@ -111,10 +38,17 @@ public:
         pin(new QLineEdit(this))
 
     {
+
+        setAttribute(Qt::WA_DeleteOnClose);
+        setMinimumWidth(400); // TODO: static sizing sucks
+        // Force window to be topmost
+        setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+        // Remove minimize and maximize buttons from window chrome
+        setWindowFlags((windowFlags() | Qt::CustomizeWindowHint) & ~(Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint));
+
         // Create buttons for PIN entry subdialog
         buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
-        ok = buttons->addButton(tr("OK"), QDialogButtonBox::AcceptRole); // FIXME
-        connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
+        ok = buttons->addButton(tr("OK"), QDialogButtonBox::ActionRole); // FIXME
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
         // TODO: UX use a gray "eye" icon if possible, instead
@@ -147,15 +81,95 @@ public:
         layout->addWidget(buttons);
 
         layout->addWidget(progress);
-        setMinimumWidth(400); // TODO: static sizing sucks
-        // Force window to be topmost
-        setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
-        // Remove minimize and maximize buttons from window chrome
-        setWindowFlags((windowFlags() | Qt::CustomizeWindowHint) & ~(Qt::WindowMaximizeButtonHint | Qt::WindowMinimizeButtonHint | Qt::WindowCloseButtonHint));
+
+        // Set title
+        if (type == Signing) {
+            setWindowTitle(tr("Signing at %1").arg(context->friendlyOrigin()));
+        } else {
+            setWindowTitle(tr("Authenticating to %1").arg(context->friendlyOrigin()));
+        }
+
+        //nameLabel->setText(x509subject(cert).c_str());
+        nameLabel->setText("serdi subjekt");
+        pinLabel->setText(tr("Enter PIN for \"%1\"").arg(QString::fromStdString(p11token.label)));
+        ok->setEnabled(false);
+        ok->setText(type == Signing ? tr("Sign") : tr("Authenticate"));
+
+        errorLabel->setTextFormat(Qt::RichText);
+        errorLabel->hide();
+        auto triesLeft = PKCS11Module::getPINRetryCount(p11token);
+        if (triesLeft != 3 || last != CKR_OK) {
+            errorLabel->setText(QString("<font color='red'><b>%1 tries left: %2</b></font>").arg(triesLeft).arg(PKCS11Module::errorName(last)));
+            errorLabel->show();
+        }
+        if (p11token.has_pinpad) {
+            showpwd->hide();
+            pin->hide();
+            buttons->hide();
+            progress->show();
+
+            // Show the spinner
+            // TODO: restart spinner
+            // 30 seconds of time.
+            progress->setRange(0, 30);
+            progress->setValue(progress->maximum());
+            // Timeline for counting from 30 to 0
+            statusTimer->setFrameRange(progress->maximum(), progress->minimum());
+            statusTimer->start();
+            show();
+            raise();
+            activateWindow();
+            emit login(cert, nullptr);
+        } else {
+            // TODO: show/hide things
+            progress->hide();
+            showpwd->show();
+            pin->show();
+            buttons->show();
+
+            pin->setEchoMode(QLineEdit::Password);
+            pin->setText("");
+            pin->setFocus();
+            pin->setMaxLength(p11token.pin_max);
+
+            // TODO: use validator
+            connect(pin, &QLineEdit::textEdited, [=](const QString &text) {
+                ok->setEnabled(text.size() >= p11token.pin_min);
+            });
+
+            connect(pin, &QLineEdit::returnPressed, [=] {
+                emit login(cert, pin->text());
+            });
+
+            show();
+            raise();
+            activateWindow();
+        }
+    }
+
+    // Called with result of C_Login
+    void update(CK_RV rv) {
+        if (rv == CKR_FUNCTION_CANCELED) {
+            return reject();
+        }
+        if (rv == CKR_OK) {
+            return accept();
+        }
+        if (rv == CKR_PIN_INCORRECT) {
+            errorLabel->setText(QString("<font color='red'><b>%1</b></font>").arg(PKCS11Module::errorName(rv)));
+            errorLabel->show();
+            pin->clear();
+        } else {
+            hide();
+            emit failed(rv);
+            deleteLater();
+        }
     }
 
 signals:
-    void login(CK_RV status, const QString &pin, CertificatePurpose purpose);
+    void login(const QByteArray &cert, const QString &pin);
+    void failed(const CK_RV rv);
+
 
 private:
     QVBoxLayout *layout;

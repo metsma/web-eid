@@ -11,22 +11,14 @@
 #include "modulemap.h"
 #include "qwincrypt.h"
 
-#include <QDialogButtonBox>
-#include <QHeaderView>
-#include <QLabel>
-#include <QPushButton>
-#include <QTreeWidget>
-#include <QVBoxLayout>
-#include <QJsonObject>
-#include <QJsonDocument>
-#include <QJsonArray>
+#include "dialogs/select_cert.h"
+#include "dialogs/pin.h"
 
 #include <QtConcurrent>
 
-
 void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
     _log("Card inserted to %s (%s), refreshing available certificates", qPrintable(reader), qPrintable(atr.toHex()));
-    // Check which module to try
+    // Check if module already present
     std::vector<std::string> mods = P11Modules::getPaths({ba2v(atr)});
     if (mods.size() > 0) {
         for (const auto &m: mods) {
@@ -50,42 +42,74 @@ void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
     }
 }
 
+void QPKIWorker::cardRemoved(const QString &reader) {
+    _log("Card removed from %s, refreshing PKCS#11 certificates", qPrintable(reader));
+    refresh();
+}
+
+
 void QPKIWorker::refresh() {
-    QMap<QByteArray, PKIToken> certs;
+    QMap<QByteArray, P11Token> certs;
     for (const auto &m: modules.keys()) {
         modules[m]->refresh();
-        for (const auto &c: modules[m]->getCerts()) {
-            certs[v2ba(c)] = {PKCS11, m};
+        for (auto &c: modules[m]->getCerts()) {
+            c.second.module = m.toStdString();
+            certs[v2ba(c.first)] = c.second;
         }
     }
     if (certificates.size() != certs.size()) {
         certificates = certs;
-        emit certificateListChanged(getCertificates());
+        emit refreshed(certificates);
     }
 }
 
-void QPKIWorker::cardRemoved(const QString &reader) {
-    _log("Card removed from %s, refreshing", qPrintable(reader));
-    refresh();
+void QPKIWorker::login(const QByteArray &cert, const QString &pin) {
+    _log("Login in worker");
+    PKCS11Module *m = modules[QString::fromStdString(certificates[cert].module)];
+    // Block with pinpad
+    CK_RV rv = m->login(ba2v(cert), pin.toLatin1().data());
+    emit loginDone(rv);
 }
 
-QVector<QByteArray> QPKIWorker::getCertificates() {
-    QVector<QByteArray> result;
-    for (const auto &c: certificates.keys()) {
-        result.append(c);
-    }
-    return result;
+// FIXME: hashtype
+void QPKIWorker::sign(const QByteArray &cert, const QByteArray &hash) {
+    _log("Signing in worker");
+    PKCS11Module *m = modules[QString::fromStdString(certificates[cert].module)];
+    // Takes a sec or so
+    std::vector<unsigned char> result;
+    CK_RV rv = m->sign(ba2v(cert), ba2v(hash), result);
+    emit signDone(rv, v2ba(result));
+}
+
+void QPKI::updateCertificates(const QMap<QByteArray, P11Token> certs) {
+    // FIXME
+    certificates = certs;
+    _log("Updated certificates, emitting as well. %d", certificates.size());
+    return emit certificateListChanged(QVector<QByteArray>::fromList(certificates.keys()));
 }
 
 QVector<QByteArray> QPKI::getCertificates() {
-    QMutexLocker locker(&worker.mutex);
-    return worker.getCertificates();
+    return QVector<QByteArray>::fromList(certificates.keys());
 }
 
 // Select a single certificate for a web context, signal certificate() when done
 void QPKI::select(const WebContext *context, const CertificatePurpose type) {
     _log("Selecting certificate for %s", qPrintable(context->friendlyOrigin()));
     // If we have PKCS#11 certs, show a Qt window, otherwise
+    // FIXME: logic is baaaaaad.
+#ifndef Q_OS_WIN
+    QtSelectCertificate *dlg = new QtSelectCertificate(context, type);
+    connect(context, &WebContext::disconnected, dlg, &QDialog::reject);
+    connect(this, &QPKI::certificateListChanged, dlg, &QtSelectCertificate::update);
+    connect(dlg, &QDialog::rejected, [this, context] {
+        return emit certificate(context, CKR_FUNCTION_CANCELED, 0);
+    });
+    connect(dlg, &QtSelectCertificate::certificateSelected, [this, context] (const QByteArray &cert) {
+        return emit certificate(context, CKR_OK, cert);
+    });
+    dlg->update(QVector<QByteArray>::fromList(certificates.keys()));
+#endif
+
 #ifdef Q_OS_WIN
     connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this, context] {
         this->winop.disconnect(); // remove signals
@@ -98,7 +122,7 @@ void QPKI::select(const WebContext *context, const CertificatePurpose type) {
         }
     });
     // run future
-    winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, type, QStringLiteral("dummy string FIXME")));
+    winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, type, context->friendlyOrigin(), QStringLiteral("Dummy text about type"))));
 #endif
     //return emit certificate(context->id, CKR_FUNCTION_CANCELED, 0);
 }
@@ -107,7 +131,33 @@ void QPKI::select(const WebContext *context, const CertificatePurpose type) {
 // FIXME: add message to function signature, signature type as enum
 void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo) {
     _log("Signing on %s %s:%s", qPrintable(context->friendlyOrigin()), qPrintable(hashalgo), qPrintable(hash.toHex()));
-// if p11 cert, show a PIN dialog (only if required?)
+
+#ifndef Q_OS_WIN
+    QtPINDialog *dlg = new QtPINDialog(context, cert, certificates[cert], CKR_OK, Signing);
+    connect(dlg, &QDialog::rejected, [this, context] {
+        return emit signature(context, CKR_FUNCTION_CANCELED, 0);
+    });
+    connect(dlg, &QtPINDialog::failed, [this, context] (CK_RV rv) {
+        return emit signature(context, rv, 0);
+    });
+    // from dialog to worker
+    connect(dlg, &QtPINDialog::login, &worker, &QPKIWorker::login, Qt::QueuedConnection);
+    connect(&worker, &QPKIWorker::loginDone, dlg, &QtPINDialog::update, Qt::QueuedConnection);
+    connect(dlg, &QDialog::accepted, [=] {
+        _log("PIN dialog OK, signing stuff");
+        // PIN has been successfully verified. Issue a C_Sign, subscribing to the result
+        connect(this, &QPKI::signDone, [this, context] (CK_RV rv, QByteArray result) {
+            // Remove lambda
+            QObject::disconnect(this, &QPKI::signDone, this, nullptr);
+            _log("Sign done, result is %s", QPKI::errorName(rv));
+            return emit signature(context, rv, result);
+        });
+        _log("Emitting p11sign");
+        return emit p11sign(cert, hash);
+    });
+#endif
+
+
 // and wire up signals to the worker, that does actual signing
 // otherwise run it in a future and wire up signals.
 #ifdef Q_OS_WIN
@@ -124,7 +174,7 @@ void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteAr
     // run future
     winop.setFuture(QtConcurrent::run(&QWinCrypt::sign, cert, hash, QWinCrypt::HashType::SHA256));
 #endif
-    _log("PKI: Signing stuff");
+
 }
 
 
