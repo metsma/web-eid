@@ -81,6 +81,7 @@ public:
     }
 
     static const char *errorName(const CK_RV err);
+    static bool usageMatches(const QByteArray &crt, CertificatePurpose type);
 
     QVector<QByteArray> getCertificates();
 

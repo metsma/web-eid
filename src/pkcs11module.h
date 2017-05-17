@@ -37,7 +37,7 @@ public:
     bool isLoaded() {
         return !certs.empty();
     }
-    std::map<std::vector <unsigned char>, P11Token> getCerts(CertificatePurpose type = CertificatePurpose(Authentication|Signing));
+    std::map<std::vector <unsigned char>, P11Token> getCerts();
 
     const P11Token getP11Token(const std::vector<unsigned char> &cert) const;
 

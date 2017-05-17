@@ -136,9 +136,20 @@ public:
             connect(pin, &QLineEdit::textEdited, [=](const QString &text) {
                 ok->setEnabled(text.size() >= p11token.pin_min);
             });
+            connect(buttons, &QDialogButtonBox::clicked, [this, cert] (QAbstractButton *button) {
+                if (ok == button) {
+                    emit login(cert, pin->text());
+                }
+            });
 
-            connect(pin, &QLineEdit::returnPressed, [=] {
-                emit login(cert, pin->text());
+            connect(pin, &QLineEdit::returnPressed, [this, cert] {
+                _log("Currently we are %d", ok->isEnabled());
+                if (ok->isEnabled()) {
+                    emit login(cert, pin->text());
+                } else {
+                    pin->selectAll();
+                    pin->setFocus();
+                }
             });
 
             show();

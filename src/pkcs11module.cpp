@@ -84,55 +84,7 @@ std::vector<CK_OBJECT_HANDLE> PKCS11Module::getKey(CK_SESSION_HANDLE session, co
 }
 
 
-// TODO: move this to QtPKI
-static bool usage_matches(const std::vector<unsigned char> &certificateCandidate, CertificatePurpose type)
-{
-    QSslCertificate cert = v2cert(certificateCandidate);
-    bool isCa = true;
-    bool isSSLClient = false;
-    bool isNonRepudiation = false;
 
-    for (const QSslCertificateExtension &ext: cert.extensions()) {
-        QVariant v = ext.value();
-//      _log("ext: %s", ext.name().toStdString().c_str());
-        if (ext.name() == "basicConstraints") {
-            QVariantMap m = ext.value().toMap();
-            isCa = m.value("ca").toBool();
-        } else if (ext.oid() == "2.5.29.37") {
-            // 2.5.29.37 - extendedKeyUsage
-            // XXX: these are not declared stable by Qt.
-            // Linux returns parsed map (OpenSSL?) OSX 5.8 returns QByteArrays, 5.5 works
-            if (v.canConvert<QByteArray>()) {
-                // XXX: this is 06082b06010505070302 what is 1.3.6.1.5.5.7.3.2 what is "TLS Client"
-                if (v.toByteArray().toHex().contains("06082b06010505070302")) {
-                    isSSLClient = true;
-                }
-            } else if (v.canConvert<QList<QVariant>>()) {
-                // Linux
-                if (v.toList().contains("TLS Web Client Authentication")) {
-                    isSSLClient = true;
-                }
-            }
-        } else if (ext.name() == "keyUsage") {
-            if (v.canConvert<QList<QVariant>>()) {
-                // Linux
-                if (v.toList().contains("Non Repudiation")) {
-                    isNonRepudiation = true;
-                }
-            }
-            // FIXME: detect NR from byte array
-            // Do a ugly trick for esteid only
-            QList<QString> ou = cert.subjectInfo(QSslCertificate::OrganizationalUnitName);
-            if (!isNonRepudiation && ou.size() > 0 && ou.at(0) == "digital signature") {
-                isNonRepudiation = true;
-            }
-            _log("keyusage: %s", v.toByteArray().toHex().toStdString().c_str());
-        }
-    }
-    _log("Certificate flags: ca=%d auth=%d nonrepu=%d", isCa, isSSLClient, isNonRepudiation);
-    return !isCa &&
-           ((type & Authentication && isSSLClient) || (type & Signing && isNonRepudiation));
-}
 
 
 CK_RV PKCS11Module::load(const std::string &module) {
@@ -250,12 +202,11 @@ CK_RV PKCS11Module::refresh() {
 
 }
 
-std::map<std::vector <unsigned char>, P11Token> PKCS11Module::getCerts(CertificatePurpose type) {
+std::map<std::vector <unsigned char>, P11Token> PKCS11Module::getCerts() {
     std::map<std::vector<unsigned char>, P11Token> res;
     for(auto const &crts: certs) {
         _log("certificate: %s", toHex(crts.first).c_str());
-        if(usage_matches(crts.first, type))
-            res.insert(std::make_pair(crts.first, crts.second.first));
+        res.insert(std::make_pair(crts.first, crts.second.first));
     }
     return res;
 }

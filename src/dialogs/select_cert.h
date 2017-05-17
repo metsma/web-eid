@@ -26,7 +26,8 @@ class QtSelectCertificate: public QDialog {
 
 public:
 
-    QtSelectCertificate(const WebContext *ctx, const CertificatePurpose type):
+    QtSelectCertificate(const WebContext *ctx, const CertificatePurpose certtype):
+        type(certtype),
         layout(new QVBoxLayout(this)),
         message(new QLabel(this)),
         table(new QTreeWidget(this)),
@@ -62,23 +63,28 @@ public:
 
         connect(table, &QTreeWidget::currentItemChanged, [=] (QTreeWidgetItem *item, QTreeWidgetItem *previous) {
             (void)previous;
-            if (item) {
+            _log("New item is %s which is %d", qPrintable(item->text(0)), item->isDisabled());
+            if (item && !item->isDisabled()) {
                 ok->setEnabled(true);
             }
         });
-        connect(table, &QTreeWidget::clicked, [&] {
-            ok->setEnabled(true);
-        });
 
         connect(this, &QDialog::accepted, [this, ctx] {
-            _log("Dialog is finished");
             return emit certificateSelected(certs[table->currentItem()->text(3).toUInt()]);
         });
     }
 
 public slots:
     // Called from PKI after QtPKI::refresh() when a card has been inserted and certificate list changes.
-    void update(const QVector<QByteArray> &certs) {
+    void update(const QVector<QByteArray> &newcerts) {
+        QVector<QByteArray> certs;
+        // Filter by usage.
+        for (const auto &c: newcerts) {
+            if (QPKI::usageMatches(c, type)) {
+                certs.append(c);
+            }
+        }
+
         // Change from some to none, interpret as implicit cancel
         // TODO: what about chaning cards?
         if (certs.empty()) {
@@ -92,15 +98,20 @@ public slots:
             if (cert.isNull()) {
                 _log("Could not parse certificate");
             }
-            // filter out expired certificates
-            // FIXME: not here
-//            if (QDateTime::currentDateTime() >= cert.expiryDate())
-//                continue;
-            table->insertTopLevelItem(0, new QTreeWidgetItem(table, QStringList{
+            QTreeWidgetItem *item = new QTreeWidgetItem(table, QStringList {
                 cert.subjectInfo(QSslCertificate::CommonName).at(0),
                 cert.subjectInfo(QSslCertificate::Organization).at(0),
                 cert.expiryDate().toString("dd.MM.yyyy"),
-                QString::number(&c - &certs[0])})); // Index of certs list
+                QString::number(&c - &certs[0]) // Index of certs list
+            });
+            // filter out expired certificates
+            // TODO: add "expired" mouseover hint
+            if (QDateTime::currentDateTime() >= cert.expiryDate()) {
+                item->setFlags(Qt::NoItemFlags);
+                item->setForeground(2, QBrush(Qt::darkRed));
+                item->setDisabled(true);
+            }
+            table->insertTopLevelItem(0, item);
         }
         table->setCurrentIndex(table->model()->index(0, 0));
 
@@ -116,6 +127,7 @@ signals:
     void certificateSelected(const QByteArray &cert);
 
 private:
+    CertificatePurpose type;
     QVector<QByteArray> certs;
     QVBoxLayout *layout;
     QLabel *message;
