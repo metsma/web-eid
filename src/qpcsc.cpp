@@ -338,12 +338,12 @@ QPCSCReader *QtPCSC::connectReader(WebContext *webcontext, const QString &reader
 
     if (!rdrs[reader].contains("PRESENT") && wait) {
         _log("Showing insert reader dialog");
-        result->insertCardDialog.showIt(webcontext->friendlyOrigin(), reader);
+        QtInsertCard *dlg = new QtInsertCard(webcontext->friendlyOrigin(), reader);
         connect(this, &QtPCSC::cardInserted, result, &QPCSCReader::cardInserted, Qt::QueuedConnection);
-        connect(&result->insertCardDialog, &QDialog::rejected, result, &QPCSCReader::disconnect);
+        connect(dlg, &QDialog::rejected, result, &QPCSCReader::disconnect);
         // Close if event. TODO: handle MUTE
-        connect(result, &QPCSCReader::connected, &result->insertCardDialog, &QDialog::accept);
-        connect(result, &QPCSCReader::disconnected, &result->insertCardDialog, &QDialog::accept);
+        connect(result, &QPCSCReader::connected, dlg, &QDialog::accept);
+        connect(result, &QPCSCReader::disconnected, dlg, &QDialog::accept);
     } else {
         result->open();
     }
@@ -367,20 +367,16 @@ void QPCSCReader::open() {
     connect(&worker, &QPCSCReaderWorker::received, this, &QPCSCReader::received, Qt::QueuedConnection);
 
     // Open the "in use"" dialog. Separate slot because lambda would be in the worker thread.
-    connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::showDialog, Qt::QueuedConnection);
+    connect(&worker, &QPCSCReaderWorker::connected, this, [=] {
+        isOpen = true;
+        QtReaderInUse *inusedlg = new QtReaderInUse(static_cast<WebContext *>(parent())->friendlyOrigin(), reader);
+        connect(inusedlg, &QDialog::rejected, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
+        // And close the dialog if reader is disconnected
+        connect(&worker, &QPCSCReaderWorker::disconnected, inusedlg, &QDialog::accept, Qt::QueuedConnection);
+    }, Qt::QueuedConnection);
 
     // connect in thread
     emit connectCard(reader, protocol);
-}
-
-void QPCSCReader::showDialog() {
-    isOpen = true;
-    inUseDialog.showIt(static_cast<WebContext *>(parent())->friendlyOrigin(), reader); // XXX
-    // UX XXX: communicate SCARD_E_CANCELLED to the process if the next signal is triggered
-    // Disconnect the reader by canceling dialog
-    connect(&inUseDialog, &QDialog::rejected, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
-    // And close the dialog if reader is disconnected
-    connect(&worker, &QPCSCReaderWorker::disconnected, &inUseDialog, &QDialog::accept, Qt::QueuedConnection);
 }
 
 void QPCSCReader::cardInserted(const QString &reader, const QByteArray &atr) {

@@ -58,9 +58,6 @@ class QPCSCReader: public QObject {
 public:
     QPCSCReader(WebContext *webcontext, QtPCSC *pcsc, const QString &name, const QString &proto): QObject(webcontext), PCSC(pcsc), reader(name), protocol(proto) {};
 
-    QtReaderInUse inUseDialog;
-    QtInsertCard insertCardDialog;
-
     ~QPCSCReader() {
         if (thread.isRunning()) {
             thread.quit();
@@ -77,7 +74,6 @@ public slots:
     void transmit(const QByteArray &apdu);
     void disconnect();
 
-    void showDialog();
     void cardInserted(const QString &reader, const QByteArray &atr);
     void readerRemoved(const QString &reader);
 

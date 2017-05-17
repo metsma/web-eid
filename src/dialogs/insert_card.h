@@ -14,14 +14,19 @@ class QtInsertCard: public BetterDialog {
     Q_OBJECT
 
 public:
-    QtInsertCard():
+    QtInsertCard(const QString &origin, const QString &reader):
         layout(new QVBoxLayout(this)),
         buttons(new QDialogButtonBox(this)),
         message(new QLabel(this))
     {
         layout->addWidget(message);
         layout->addWidget(buttons);
+
+        setWindowTitle(reader);
+        message->setText(tr("Insert card into reader %1 to be used on %2").arg(reader).arg(origin));
+
         setWindowFlags(Qt::WindowStaysOnTopHint);
+        setAttribute(Qt::WA_DeleteOnClose);
 
         // remove minimize and maximize buttons
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) &
@@ -29,15 +34,10 @@ public:
         buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
 
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    };
-
-    void showIt(const QString &origin, const QString &reader) {
-        setWindowTitle(reader);
-        message->setText(tr("Insert card into reader %1 to be used on %2").arg(reader).arg(origin));
         show();
         raise();
         activateWindow();
-    }
+    };
 private:
     QVBoxLayout *layout;
     QDialogButtonBox *buttons;
