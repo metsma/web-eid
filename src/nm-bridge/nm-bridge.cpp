@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2017 Martin Paljak
+ */
+
 #include "../Logger.h"
 
 #include <QCoreApplication>

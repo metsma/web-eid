@@ -3,7 +3,7 @@ Version:        VERSION
 Release:        1%{?dist}
 Summary:        Use your eID card on the Web
 
-License:        LGPLv2+
+License:        Copyright
 URL:            https://web-eid.com
 
 BuildRequires:  qt5-qtbase-devel qt5-qtwebsockets-devel qt5-linguist pcsc-lite-devel

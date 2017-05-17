@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2017 Martin Paljak
+ */
+
+// TODO: use plain execve
 #include <QProcess>
 
 int main()
