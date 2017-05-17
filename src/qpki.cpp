@@ -104,17 +104,17 @@ void QPKI::select(const WebContext *context, const CertificatePurpose type) {
     QtSelectCertificate *dlg = new QtSelectCertificate(context, type);
     connect(context, &WebContext::disconnected, dlg, &QDialog::reject);
     connect(this, &QPKI::certificateListChanged, dlg, &QtSelectCertificate::update);
-    connect(dlg, &QDialog::rejected, [this, context] {
+    connect(dlg, &QDialog::rejected, this, [this, context] {
         return emit certificate(context, CKR_FUNCTION_CANCELED, 0);
     });
-    connect(dlg, &QtSelectCertificate::certificateSelected, [this, context] (const QByteArray &cert) {
+    connect(dlg, &QtSelectCertificate::certificateSelected, this, [this, context] (const QByteArray &cert) {
         return emit certificate(context, CKR_OK, cert);
     });
     dlg->update(QVector<QByteArray>::fromList(certificates.keys()));
 #endif
 
 #ifdef Q_OS_WIN
-    connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this, context] {
+    connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, this, [this, context] {
         this->winop.disconnect(); // remove signals
         QWinCrypt::ErroredResponse result = this->winop.result();
         _log("Winop done: %s %d", QPKI::errorName(result.error), result.result.size());
@@ -138,19 +138,19 @@ void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteAr
 #ifndef Q_OS_WIN
     QtPINDialog *dlg = new QtPINDialog(context, cert, certificates[cert], CKR_OK, Signing);
     connect(context, &WebContext::disconnected, dlg, &QDialog::reject);
-    connect(dlg, &QDialog::rejected, [this, context] {
+    connect(dlg, &QDialog::rejected, this, [this, context] {
         return emit signature(context, CKR_FUNCTION_CANCELED, 0);
     });
-    connect(dlg, &QtPINDialog::failed, [this, context] (CK_RV rv) {
+    connect(dlg, &QtPINDialog::failed, this, [this, context] (CK_RV rv) {
         return emit signature(context, rv, 0);
     });
     // from dialog to worker
     connect(dlg, &QtPINDialog::login, &worker, &QPKIWorker::login, Qt::QueuedConnection);
     connect(&worker, &QPKIWorker::loginDone, dlg, &QtPINDialog::update, Qt::QueuedConnection);
-    connect(dlg, &QDialog::accepted, [=] {
+    connect(dlg, &QDialog::accepted, this, [=] {
         _log("PIN dialog OK, signing stuff");
         // PIN has been successfully verified. Issue a C_Sign, subscribing to the result
-        connect(this, &QPKI::signDone, [this, context] (CK_RV rv, QByteArray result) {
+        connect(this, &QPKI::signDone, this, [this, context] (CK_RV rv, QByteArray result) {
             // Remove lambda
             QObject::disconnect(this, &QPKI::signDone, this, nullptr);
             _log("Sign done, result is %s", QPKI::errorName(rv));
@@ -165,7 +165,7 @@ void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteAr
 // and wire up signals to the worker, that does actual signing
 // otherwise run it in a future and wire up signals.
 #ifdef Q_OS_WIN
-    connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, [this, context] {
+    connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, this, [this, context] {
         this->winop.disconnect(); // remove signals
         QWinCrypt::ErroredResponse result = this->winop.result();
         _log("Winop done: %s %d", QPKI::errorName(result.error), result.result.size());

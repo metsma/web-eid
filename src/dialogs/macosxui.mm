@@ -1,6 +1,9 @@
 #import <AppKit/NSApplication.h>
 
 void nshideapp() {
-    printf("hiding\n");
-    [NSApp hide:nil];
+    int windowCount = [[[NSApplication sharedApplication] windows] count];
+//    printf("Window count is %d\n", windowCount);
+    if (windowCount == 4) { // XXX No idea why this number
+        [NSApp hide:nil];
+    }
 }
