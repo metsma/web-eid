@@ -234,17 +234,36 @@ void WebContext::processMessage(const QVariantMap &message) {
                 outgoing({{"error", QPKI::errorName(result)}});
             }
         });
-        PKI->select(this, Authentication);
+        PKI->select(this, Signing);
     } else if (message.contains("authenticate")) {
+        QVariantMap auth = message.value("authenticate").toMap();
+
         // TODO: Select certificate if needed
-        connect(PKI, &QPKI::certificate, [this] (const WebContext *context, const CK_RV result, const QByteArray &value) {
+        connect(PKI, &QPKI::certificate, [this, auth] (const WebContext *context, const CK_RV result, const QByteArray &value) {
+            const QString nonce = auth.value("nonce").toString().toLatin1();
             if (this != context) {
                 _log("Not us, ignore");
                 return;
             }
             disconnect(PKI, 0, this, 0);
             if (result == CKR_OK) {
-                outgoing({{"token", value}}); // FIXME
+                // We have the certificate
+                QByteArray jwt_token = QPKI::authenticate_dtbs(QSslCertificate(value, QSsl::Der), context->origin, nonce);
+                QByteArray hash = QCryptographicHash::hash(jwt_token, QCryptographicHash::Sha256);
+                connect(PKI, &QPKI::signature, [this, jwt_token] (const WebContext* ctx, const CK_RV rv, const QByteArray& val) {
+                    if (this != ctx) {
+                        _log("Not us, ignore");
+                        return;
+                    }
+                    disconnect(PKI, 0, this, 0);
+                  if (rv == CKR_OK) {
+                        QByteArray token = jwt_token + "." + val.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
+                        outgoing({{"token", QString(token)}});  // FIXME
+                    } else {
+                        outgoing({{"error", QPKI::errorName(rv)}});
+                    }
+                });
+                PKI->sign(this, value, hash, QStringLiteral("SHA-256"));
             } else {
                 outgoing({{"error", QPKI::errorName(result)}});
             }

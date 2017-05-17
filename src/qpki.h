@@ -100,6 +100,8 @@ public:
     // sign a hash with a given certificate
     void sign(const WebContext *context, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
 
+    static QByteArray authenticate_dtbs(const QSslCertificate &cert, const QString &origin, const QString &nonce);
+
 signals:
     void certificateListChanged(const QVector<QByteArray> certs); // for dialog. FIXME. aggregate win + p11
     // Signature has been calculated
@@ -109,7 +111,6 @@ signals:
 
 private:
     void refresh();
-    static QByteArray authenticate_dtbs(const QSslCertificate &cert, const QString &origin, const QString &nonce);
 
 #ifdef Q_OS_WIN
     // Windows operation
