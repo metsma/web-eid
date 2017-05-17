@@ -149,7 +149,7 @@ void WebContext::processMessage(const QVariantMap &message) {
         connect(PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)dialog, &QtSelectReader::update, Qt::QueuedConnection);
         connect(PCSC, &QtPCSC::cardInserted, (QtSelectReader *)dialog, &QtSelectReader::cardInserted, Qt::QueuedConnection);
         connect(PCSC, &QtPCSC::readerAttached, (QtSelectReader *)dialog, &QtSelectReader::readerAttached, Qt::QueuedConnection);
-
+        connect(this, &WebContext::disconnected, dialog, &QDialog::reject);
         connect(dialog, &QDialog::rejected, [=] {
             PKI->resume();
             outgoing({{"error", QtPCSC::errorName(SCARD_E_CANCELLED)}});
@@ -158,7 +158,7 @@ void WebContext::processMessage(const QVariantMap &message) {
         connect((QtSelectReader *)dialog, &QtSelectReader::readerSelected, [this, message] (QString name) {
             QPCSCReader *r = PCSC->connectReader(this, name, message.value("SCardConnect").toMap().value("protocol", "*").toString(), true);
             readers[name] = r;
-            connect(r, &QPCSCReader::disconnected, [this, name] (LONG err) {
+            connect(r, &QPCSCReader::disconnected, this, [this, name] (LONG err) {
                 _log("Disconnected: %s", QtPCSC::errorName(err));
                 PKI->resume();
                 if (readers.contains(name)) {
@@ -208,12 +208,12 @@ void WebContext::processMessage(const QVariantMap &message) {
         QVariantMap sign = message.value("sign").toMap();
         const QByteArray cert = QByteArray::fromBase64(sign.value("certificate").toString().toLatin1());
         const QByteArray hash = QByteArray::fromBase64(sign.value("hash").toString().toLatin1());
-        connect(PKI, &QPKI::signature, [this] (const WebContext *context, const CK_RV result, const QByteArray &value) {
+        connect(PKI, &QPKI::signature, this, [this] (const WebContext *context, const CK_RV result, const QByteArray &value) {
             if (this != context) {
                 _log("Not us, ignore");
                 return;
             }
-            disconnect(PKI, 0, this, 0);
+            disconnect(PKI, &QPKI::signature, this, 0);
             if (result == CKR_OK) {
                 outgoing({{"signature", value.toBase64()}}); // FIXME
             } else {
@@ -222,12 +222,12 @@ void WebContext::processMessage(const QVariantMap &message) {
         });
         PKI->sign(this, cert, hash, QStringLiteral("SHA-256")); // FIXME: signature
     } else if (message.contains("cert")) {
-        connect(PKI, &QPKI::certificate, [this] (const WebContext *context, const CK_RV result, const QByteArray &value) {
+        connect(PKI, &QPKI::certificate, this, [this] (const WebContext *context, const CK_RV result, const QByteArray &value) {
             if (this != context) {
                 _log("Not us, ignore");
                 return;
             }
-            disconnect(PKI, 0, this, 0);
+            disconnect(PKI, &QPKI::certificate, this, 0);
             if (result == CKR_OK) {
                 outgoing({{"certificate", value.toBase64()}}); // FIXME
             } else {
@@ -239,23 +239,23 @@ void WebContext::processMessage(const QVariantMap &message) {
         QVariantMap auth = message.value("authenticate").toMap();
 
         // TODO: Select certificate if needed
-        connect(PKI, &QPKI::certificate, [this, auth] (const WebContext *context, const CK_RV result, const QByteArray &value) {
+        connect(PKI, &QPKI::certificate, this, [this, auth] (const WebContext *context, const CK_RV result, const QByteArray &value) {
             const QString nonce = auth.value("nonce").toString().toLatin1();
             if (this != context) {
                 _log("Not us, ignore");
                 return;
             }
-            disconnect(PKI, 0, this, 0);
+            disconnect(PKI, &QPKI::certificate, this, 0);
             if (result == CKR_OK) {
                 // We have the certificate
                 QByteArray jwt_token = QPKI::authenticate_dtbs(QSslCertificate(value, QSsl::Der), context->origin, nonce);
                 QByteArray hash = QCryptographicHash::hash(jwt_token, QCryptographicHash::Sha256);
-                connect(PKI, &QPKI::signature, [this, jwt_token] (const WebContext* ctx, const CK_RV rv, const QByteArray& val) {
+                connect(PKI, &QPKI::signature, this, [this, jwt_token] (const WebContext* ctx, const CK_RV rv, const QByteArray& val) {
                     if (this != ctx) {
                         _log("Not us, ignore");
                         return;
                     }
-                    disconnect(PKI, 0, this, 0);
+                    disconnect(PKI, &QPKI::signature, this, 0);
                     if (rv == CKR_OK) {
                         QByteArray token = jwt_token + "." + val.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
                         outgoing({{"token", QString(token)}});  // FIXME

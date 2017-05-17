@@ -137,6 +137,7 @@ void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteAr
 
 #ifndef Q_OS_WIN
     QtPINDialog *dlg = new QtPINDialog(context, cert, certificates[cert], CKR_OK, Signing);
+    connect(context, &WebContext::disconnected, dlg, &QDialog::reject);
     connect(dlg, &QDialog::rejected, [this, context] {
         return emit signature(context, CKR_FUNCTION_CANCELED, 0);
     });
