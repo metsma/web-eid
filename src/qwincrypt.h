@@ -27,7 +27,7 @@ public:
 
     static ErroredResponse getCertificates();
     static ErroredResponse sign(const QByteArray &cert, const QByteArray &hash, const HashType hashtype);
-    static ErroredResponse selectCertificate(CertificatePurpose type, const QString &message);
+    static ErroredResponse selectCertificate(CertificatePurpose type, const QString &title, const QString &message);
 };
 
 #endif

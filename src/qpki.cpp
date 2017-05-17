@@ -125,7 +125,7 @@ void QPKI::select(const WebContext *context, const CertificatePurpose type) {
         }
     });
     // run future
-    winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, type, context->friendlyOrigin(), QStringLiteral("Dummy text about type"))));
+    winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, type, context->friendlyOrigin(), QStringLiteral("Dummy text about type")));
 #endif
     //return emit certificate(context->id, CKR_FUNCTION_CANCELED, 0);
 }
