@@ -7,9 +7,9 @@
 #include "Logger.h"
 
 #ifdef Q_OS_MACOS
-#include <QProcess>
+#include <CoreFoundation/CoreFoundation.h>
 #include <QUrl>
-#include <ServiceManagement/ServiceManagement.h>
+QString osascript(QString scpt); // macosxui.mm
 #endif
 
 // For Mac OS X: http://hints.macworld.com/article.php?story=20111226075701552
@@ -25,13 +25,9 @@ bool StartAtLoginHelper::isEnabled() {
     // startup script, eg disabled (X-MATE-Autostart-enabled=false or something similar)
     //if (QFile(QDir::homePath().filePath(".config/autostart/web-eid-service.desktop")))
 #elif defined(Q_OS_MACOS)
-    QProcess osascript;
-    osascript.start("/usr/bin/osascript", {"-e", "tell application \"System Events\" to get the name of every login item"});
-    osascript.waitForFinished(); // we assume fast execution
-    QString output(osascript.readAllStandardOutput());
-    _log("Output is: %s", qPrintable(output));
-    enabled = output.simplified().split(",").contains(" Web eID");
-    _log("Enabled: %d", enabled);
+    // XXX: we cast the list to a string in applescript, for simple osascript() function
+    QString output = osascript("set text item delimiters to \",\"\ntell application \"System Events\" to get the name of every login item as text");
+    enabled = output.simplified().split(",").contains("Web eID");
 #elif defined(Q_OS_WIN32)
     // Check registry entry and if it addresses *this* instance of the app
     // QCoreApplication::applicationFilePath()
@@ -50,15 +46,11 @@ bool StartAtLoginHelper::setEnabled(bool enabled) {
     CFURLRef url = (CFURLRef)CFAutorelease((CFURLRef)CFBundleCopyBundleURL(CFBundleGetMainBundle()));
     QString bundlepath = QUrl::fromCFURL(url).path();
     _log("Current bundle is: %s", qPrintable(bundlepath));
-    QProcess osascript;
     if (enabled) {
-        osascript.start("/usr/bin/osascript", {"-e", QString("tell application \"System Events\" to make login item at end with properties {path:\"%1\", hidden:false}").arg(bundlepath)});
+        _log("result: %s", qPrintable(osascript(QString("tell application \"System Events\" to make login item at end with properties {name:\"Web eID\", path:\"%1\", hidden:false}").arg(bundlepath))));
     } else {
-        osascript.start("/usr/bin/osascript", {"-e", "tell application \"System Events\" to delete login item \"Web eID\""});
+        _log("result: %s", qPrintable(osascript("tell application \"System Events\" to delete login item \"Web eID\"")));
     }
-    osascript.waitForFinished(); // we assume fast execution
-    QString output(osascript.readAllStandardOutput());
-    _log("Output is: %s", qPrintable(output));
 #elif defined(Q_OS_WIN32)
     // Add registry entry. Utilizing  QCoreApplication::applicationFilePath()
 #else
