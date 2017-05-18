@@ -15,8 +15,8 @@ LIBDIR = $(TMPROOT)/Library/Web\ eID
 APP = $(APPDIR)/Web\ eID.app
 
 $(APP): app
-	mkdir -p $(APPDIR)
-	cp -R src/Web\ eID.app $(APP)
+	mkdir -p $(APP)
+	cp -R src/Web\ eID.app/ $(APP)
 	cp src/nm-bridge/web-eid-bridge $(APP)/Contents/MacOS/web-eid-bridge
 	$(QTPATH)/bin/macdeployqt $(APP) -always-overwrite
 
@@ -61,10 +61,7 @@ Web-eID_$(VERSION)-unsigned.pkg: web-eid-app.pkg scripts.pkg
 
 signed: Web-eID_$(VERSION).pkg
 .PHONY: Web-eID_$(VERSION).pkg
-Web-eID_$(VERSION).pkg:
-	rm -f *.pkg
-	$(MAKE) codesign
-	$(MAKE) pkg
+Web-eID_$(VERSION).pkg: pkg
 	productsign --sign "Developer ID Installer: $(SIGNER)" Web-eID_$(VERSION)-unsigned.pkg $@
 
 dmg: Web-eID.dmg

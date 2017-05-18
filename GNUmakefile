@@ -18,16 +18,14 @@ include macos/Makefile
 endif
 
 QMAKE ?= qmake
+LRELEASE ?= lrelease
 
-app:
+app: src/translations/strings_et.qm
 	$(QMAKE) -o QMakefile
 	$(MAKE) -f QMakefile
 
-# Tests must be re-thought
-#test:
-	# wildcard will resolve to an empty string with a missing file
-	# so that OSX will not run with xvfb
-#	$(wildcard /usr/bin/xvfb-run) python tests/pipe-test.py -v
+src/translations/strings_et.qm: $(wildcard src/translations/*.ts)
+	$(LRELEASE) src/src.pro
 
 release:
 	# Make sure we are on master branch

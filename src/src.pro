@@ -34,7 +34,7 @@ win32 {
     LIBS += winscard.lib ncrypt.lib crypt32.lib cryptui.lib Advapi32.lib
     SOURCES += qwincrypt.cpp
     HEADERS += qwincrypt.h
-    QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
+ #   QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
     TARGET = "Web-eID"
 }
 DEFINES += VERSION=\\\"$$VERSION\\\"
@@ -51,10 +51,10 @@ HEADERS += $$files(*.h) $$files(dialogs/*.h)
 RESOURCES += web-eid.qrc translations/strings.qrc
 TRANSLATIONS = translations/strings_et.ts translations/strings_ru.ts
 
-isEmpty(QMAKE_LRELEASE) {
-    win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
-    else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
-}
-lrelease.commands = $$QMAKE_LRELEASE $$PWD/src.pro
-PRE_TARGETDEPS += lrelease
-QMAKE_EXTRA_TARGETS += lrelease
+#isEmpty(QMAKE_LRELEASE) {
+#    win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
+#    else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+#}
+#lrelease.commands = $$QMAKE_LRELEASE $$PWD/src.pro
+#PRE_TARGETDEPS += lrelease
+#QMAKE_EXTRA_TARGETS += lrelease

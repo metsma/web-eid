@@ -4,10 +4,16 @@
 
 #include "autostart.h"
 #include <QFile>
+#include "Logger.h"
 
 #ifdef Q_OS_MACOS
+#include <QProcess>
+#include <QUrl>
 #include <ServiceManagement/ServiceManagement.h>
 #endif
+
+// For Mac OS X: http://hints.macworld.com/article.php?story=20111226075701552
+// Current bundle path: http://stackoverflow.com/questions/3489405/qt-accessing-the-bundle-path
 
 bool StartAtLoginHelper::isEnabled() {
     bool enabled = false;
@@ -19,16 +25,13 @@ bool StartAtLoginHelper::isEnabled() {
     // startup script, eg disabled (X-MATE-Autostart-enabled=false or something similar)
     //if (QFile(QDir::homePath().filePath(".config/autostart/web-eid-service.desktop")))
 #elif defined(Q_OS_MACOS)
-    if (CFArrayRef jobs = SMCopyAllJobDictionaries(kSMDomainUserLaunchd)) {
-        for (CFIndex i = 0, count = CFArrayGetCount(jobs); i < count; ++i) {
-            CFDictionaryRef job = CFDictionaryRef(CFArrayGetValueAtIndex(jobs, i));
-            if (CFStringCompare(CFStringRef(CFDictionaryGetValue(job, CFSTR("Label"))), CFSTR("com.web-eid.login"), 0) == kCFCompareEqualTo) {
-                enabled = CFBooleanGetValue(CFBooleanRef(CFDictionaryGetValue(job, CFSTR("OnDemand"))));
-                break;
-            }
-        }
-        CFRelease(jobs);
-    }
+    QProcess osascript;
+    osascript.start("/usr/bin/osascript", {"-e", "tell application \"System Events\" to get the name of every login item"});
+    osascript.waitForFinished(); // we assume fast execution
+    QString output(osascript.readAllStandardOutput());
+    _log("Output is: %s", qPrintable(output));
+    enabled = output.simplified().split(",").contains(" Web eID");
+    _log("Enabled: %d", enabled);
 #elif defined(Q_OS_WIN32)
     // Check registry entry and if it addresses *this* instance of the app
     // QCoreApplication::applicationFilePath()
@@ -43,9 +46,19 @@ bool StartAtLoginHelper::setEnabled(bool enabled) {
     // disable: add a file to ~/.config with "disabled" flag.
     // enable: make sure global autostart exists and user file is removed
 #elif defined(Q_OS_MACOS)
-    if (!SMLoginItemSetEnabled(CFSTR("com.web-eid.login"), enabled)) {
-        //_log("Login Item Was Not Successful");
+    // Get current bundle path
+    CFURLRef url = (CFURLRef)CFAutorelease((CFURLRef)CFBundleCopyBundleURL(CFBundleGetMainBundle()));
+    QString bundlepath = QUrl::fromCFURL(url).path();
+    _log("Current bundle is: %s", qPrintable(bundlepath));
+    QProcess osascript;
+    if (enabled) {
+        osascript.start("/usr/bin/osascript", {"-e", QString("tell application \"System Events\" to make login item at end with properties {path:\"%1\", hidden:false}").arg(bundlepath)});
+    } else {
+        osascript.start("/usr/bin/osascript", {"-e", "tell application \"System Events\" to delete login item \"Web eID\""});
     }
+    osascript.waitForFinished(); // we assume fast execution
+    QString output(osascript.readAllStandardOutput());
+    _log("Output is: %s", qPrintable(output));
 #elif defined(Q_OS_WIN32)
     // Add registry entry. Utilizing  QCoreApplication::applicationFilePath()
 #else

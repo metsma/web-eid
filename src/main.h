@@ -52,6 +52,7 @@ public slots:
 private:
     void newConnection(WebContext *ctx);
     QSystemTrayIcon tray;
+    QAction *autostart;
 
     QWebSocketServer *ws; // IPv4
     QWebSocketServer *ws6; // IPv6

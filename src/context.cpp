@@ -103,6 +103,9 @@ void WebContext::processMessage(const QVariantMap &message) {
     QVariantMap resp;
 
     // Current message ID
+    if (!msgid.isEmpty()) {
+        return outgoing({{"error", "protocol"}});
+    }
     msgid = message.value("id").toString();
 
     // Origin. If unset for context, set

@@ -53,6 +53,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     tray.setIcon(QIcon(":/web-eid.png"));
     connect(&tray, &QSystemTrayIcon::activated, [&] (QSystemTrayIcon::ActivationReason reason) {
         // TODO: show some generic dialog here.
+        autostart->setChecked(StartAtLoginHelper::isEnabled());
         _log("activated: %d", reason);
     });
 
@@ -62,18 +63,16 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     connect(about, &QAction::triggered, [] {
         QDesktopServices::openUrl(QUrl(QStringLiteral("https://web-eid.com")));
     });
-    QAction *a1 = menu->addAction("Start at login");
-    a1->setCheckable(true);
-    a1->setChecked(StartAtLoginHelper::isEnabled());
-    connect(a1, &QAction::toggled, [] (bool checked) {
+    autostart = menu->addAction(tr("Start at login"));
+    autostart->setCheckable(true);
+    autostart->setChecked(StartAtLoginHelper::isEnabled());
+    connect(autostart, &QAction::toggled, [] (bool checked) {
         _log("Setting start at login to %d", checked);
         StartAtLoginHelper::setEnabled(checked);
     });
 
     QAction *a2 = menu->addAction("Quit");
-    connect(a2, &QAction::triggered, [&] {
-        quit();
-    });
+    connect(a2, &QAction::triggered, this, &QApplication::quit);
 
     // Initialize listening servers
     ws = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
