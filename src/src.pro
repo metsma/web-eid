@@ -18,7 +18,6 @@ macx {
     QMAKE_INFO_PLIST += Info.plist
     CONFIG += app_bundle
     TARGET = "Web eID"
-    QMAKE_POST_LINK += "mkdir -p \"$${TARGET}.app/Contents/Library/LoginItems\" && cp -r login/login.app \"$${TARGET}.app/Contents/Library/LoginItems\""
     SOURCES += dialogs/macosxui.mm
 }
 unix:!macx: {
@@ -51,6 +50,7 @@ HEADERS += $$files(*.h) $$files(dialogs/*.h)
 RESOURCES += web-eid.qrc translations/strings.qrc
 TRANSLATIONS = translations/strings_et.ts translations/strings_ru.ts
 
+#should only be used if can be made to depend on source files
 #isEmpty(QMAKE_LRELEASE) {
 #    win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
 #    else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
