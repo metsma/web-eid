@@ -21,7 +21,7 @@ $(APP): app
 	$(QTPATH)/bin/macdeployqt $(APP) -always-overwrite
 
 codesign: $(APP)
-	# Possibly add "--entitlements macos/web-eid.entitlements" for sanboxing
+	# Possibly add "--entitlements macos/web-eid.entitlements" for sanboxing, once "osascript" replacement exists
 	codesign -f --deep -s "Developer ID Application: $(SIGNER)" $(APP)
 
 web-eid-app.pkg: $(APP)

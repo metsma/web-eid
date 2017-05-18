@@ -8,6 +8,8 @@
 	<true/>
 	<key>com.apple.security.network.server</key>
 	<true/>
+	<key>com.apple.security.temporary-exception.apple-events</key>
+	<string>com.apple.systemevents</string>
 	<key>com.apple.security.temporary-exception.files.absolute-path.read-only</key>
 	<string>/private/var/run/pcscd.pub</string>
 </dict>
