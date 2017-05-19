@@ -10,7 +10,7 @@ class TestSigning(ChromeTest):
 
   def test_simple_sign_session(self):
       id = str(uuid.uuid4())
-      cmd = {"cert": {}}
+      cmd = {"certificate": {}}
       resp = self.transact(cmd)
       self.assertEqual("certificate" in resp, True)
       base64.b64decode(resp["certificate"]) # just to make sure it parses
