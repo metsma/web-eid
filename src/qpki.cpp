@@ -71,6 +71,9 @@ void QPKIWorker::login(const QByteArray &cert, const QString &pin) {
     PKCS11Module *m = modules[QString::fromStdString(certificates[cert].module)];
     // Block with pinpad
     CK_RV rv = m->login(ba2v(cert), pin.toLatin1().data());
+    // Too bad.
+    if (rv == CKR_USER_ALREADY_LOGGED_IN)
+        rv = CKR_OK;
     emit loginDone(rv);
 }
 
@@ -180,8 +183,6 @@ void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteAr
 #endif
 
 }
-
-
 
 // FIXME: move to pkcs11module.h
 const char *QPKI::errorName(const CK_RV err) {

@@ -29,12 +29,16 @@
 #include <stdio.h>
 #include <iostream>
 
-#ifdef _WIN32
+#ifdef Q_OS_WIN
 // for setting stdio mode
 #include <fcntl.h>
 #include <io.h>
 #else
 #include <unistd.h>
+#endif
+
+#ifdef Q_OS_MAC
+void nshideapp(bool);
 #endif
 
 QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->PCSC), tray(this) {
@@ -181,7 +185,10 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         PCSC.wait();
         _log("Done");
     });
-
+#ifdef Q_OS_MAC
+    // Never grab focus from other apps, even on starting
+    nshideapp(true);
+#endif
 }
 
 void QtHost::checkOrigin(QWebSocketCorsAuthenticator *authenticator) {

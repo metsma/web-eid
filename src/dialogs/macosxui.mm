@@ -1,10 +1,10 @@
 #import <AppKit/NSApplication.h>
 #import <QString>
 
-void nshideapp() {
+void nshideapp(bool force = false) {
     int windowCount = [[[NSApplication sharedApplication] windows] count];
-//    printf("Window count is %d\n", windowCount);
-    if (windowCount == 4) { // XXX No idea why this number
+    printf("Window count is %d\n", windowCount);
+    if (force || windowCount == 4) { // XXX No idea why this number
         [NSApp hide:nil];
     }
 }

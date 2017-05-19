@@ -188,7 +188,7 @@ void WebContext::processMessage(const QVariantMap &message) {
                 outgoing({{"reader", name}, {"protocol", proto}, {"atr", atr.toHex()}});
             });
             connect(r, &QPCSCReader::received, [=] (QByteArray apdu) {
-                _log("Rreceived apdu");
+                _log("Received apdu");
                 outgoing({{"bytes", apdu.toBase64()}});
             });
         });

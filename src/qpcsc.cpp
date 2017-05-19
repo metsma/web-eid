@@ -287,6 +287,9 @@ void QtPCSC::run()
                 } else if ((i.dwEventState & SCARD_STATE_EMPTY) && (known[reader] & SCARD_STATE_PRESENT) && !(known[reader] & SCARD_STATE_MUTE)) {
                     emit cardRemoved(QString::fromStdString(reader));
                     change = true;
+                } else if ((i.dwEventState ^ known[reader]) & SCARD_STATE_EXCLUSIVE) {
+                    // if exclusive access changes, trigger UI change
+                    change = true;
                 }
 
                 mutex.lock();
@@ -513,11 +516,12 @@ void QPCSCReaderWorker::disconnectCard() {
 
 void QPCSCReaderWorker::transmit(const QByteArray &apdu) {
     SCARD_IO_REQUEST req;
-    std::vector<unsigned char> response(4096, 0); // Should be enough
+    QByteArray response(4096, 0); // Should be enough
     req.dwProtocol = protocol;
     req.cbPciLength = sizeof(req);
     DWORD rlen = response.size();
-    LONG err = SCard(Transmit, card, &req, (const unsigned char *)apdu.data(), DWORD(apdu.size()), &req, response.data(), &rlen);
+    _log("SEND %s", qPrintable(apdu.toHex()));
+    LONG err = SCard(Transmit, card, &req, (const unsigned char *)apdu.data(), DWORD(apdu.size()), &req, (unsigned char *)response.data(), &rlen);
     if (err != SCARD_S_SUCCESS) {
         response.resize(0);
         SCard(Disconnect, card, SCARD_RESET_CARD);
@@ -525,5 +529,6 @@ void QPCSCReaderWorker::transmit(const QByteArray &apdu) {
         return emit disconnected(err);
     }
     response.resize(rlen);
+    _log("RECV %s", qPrintable(response.toHex()));
     emit received(QByteArray((const char*)response.data(), int(response.size())));
 }
