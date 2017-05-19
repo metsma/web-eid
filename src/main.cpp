@@ -9,6 +9,8 @@
 #include "util.h"
 #include "Logger.h" // TODO: rename
 
+#include "dialogs/debug.h"
+
 #include <QIcon>
 #include <QJsonDocument>
 #include <QSslCertificate>
@@ -21,7 +23,6 @@
 #include <QLockFile>
 #include <QDir>
 #include <QStandardPaths>
-
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -71,6 +72,12 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         StartAtLoginHelper::setEnabled(checked);
     });
 
+    if (parser.isSet(debug)) {
+        QAction *dbg = menu->addAction("Debug");
+        connect(dbg, &QAction::triggered, this, [=] {
+            new QtDebugDialog(this);
+        });
+    }
     QAction *a2 = menu->addAction("Quit");
     connect(a2, &QAction::triggered, this, &QApplication::quit);
 
@@ -201,8 +208,10 @@ void QtHost::processConnect() {
 
 void QtHost::newConnection(WebContext *ctx) {
     contexts[ctx->id] = ctx;
-    connect(ctx, &WebContext::disconnected, [this, ctx] {
+    tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
+    connect(ctx, &WebContext::disconnected, this, [this, ctx] {
         if (contexts.remove(ctx->id)) {
+            tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
             ctx->deleteLater();
             if (once && contexts.size() == 0) {
                 _log("Context count is zero, quitting");
