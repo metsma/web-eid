@@ -12,5 +12,9 @@
 	<string>com.apple.systemevents</string>
 	<key>com.apple.security.temporary-exception.files.absolute-path.read-only</key>
 	<string>/private/var/run/pcscd.pub</string>
+	<key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
+	<array>
+		<string>/tmp/web-eid.log</string>
+	</array>
 </dict>
 </plist>

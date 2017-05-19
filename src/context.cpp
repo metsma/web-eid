@@ -224,7 +224,7 @@ void WebContext::processMessage(const QVariantMap &message) {
             }
         });
         PKI->sign(this, cert, hash, QStringLiteral("SHA-256")); // FIXME: signature
-    } else if (message.contains("cert")) {
+    } else if (message.contains("certificate")) {
         connect(PKI, &QPKI::certificate, this, [this] (const WebContext *context, const CK_RV result, const QByteArray &value) {
             if (this != context) {
                 _log("Not us, ignore");
@@ -261,7 +261,7 @@ void WebContext::processMessage(const QVariantMap &message) {
                     disconnect(PKI, &QPKI::signature, this, 0);
                     if (rv == CKR_OK) {
                         QByteArray token = jwt_token + "." + val.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
-                        outgoing({{"token", QString(token)}});  // FIXME
+                        outgoing({{"token", QString(token)}, {"type", "JWT"}});
                     } else {
                         outgoing({{"error", QPKI::errorName(rv)}});
                     }
