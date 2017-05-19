@@ -11,6 +11,11 @@
 #include <QUrl>
 QString osascript(QString scpt); // macosxui.mm
 #endif
+#ifdef Q_OS_WIN
+#include <QDir>
+#include <QSettings>
+#include <QCoreApplication>
+#endif
 
 // For Mac OS X: http://hints.macworld.com/article.php?story=20111226075701552
 // Current bundle path: http://stackoverflow.com/questions/3489405/qt-accessing-the-bundle-path
@@ -20,7 +25,7 @@ bool StartAtLoginHelper::isEnabled() {
 #if defined(Q_OS_LINUX)
     // chekc for presence of desktop entry
     if (QFile("/etc/xdg/autostart/web-eid-service.desktop").exists())
-        return true;
+        enabled = true;
     // TODO: if the following file exists as well, it means user has overriden the default
     // startup script, eg disabled (X-MATE-Autostart-enabled=false or something similar)
     //if (QFile(QDir::homePath().filePath(".config/autostart/web-eid-service.desktop")))
@@ -29,8 +34,8 @@ bool StartAtLoginHelper::isEnabled() {
     QString output = osascript("set text item delimiters to \",\"\ntell application \"System Events\" to get the name of every login item as text");
     enabled = output.simplified().split(",").contains("Web eID");
 #elif defined(Q_OS_WIN32)
-    // Check registry entry and if it addresses *this* instance of the app
-    // QCoreApplication::applicationFilePath()
+    QSettings startup("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
+    enabled = startup.value("Web eID").toString() == QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
 #else
 #error "Unsupported platform"
 #endif
@@ -53,6 +58,13 @@ bool StartAtLoginHelper::setEnabled(bool enabled) {
     }
 #elif defined(Q_OS_WIN32)
     // Add registry entry. Utilizing  QCoreApplication::applicationFilePath()
+    QSettings startup("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
+
+    if (enabled) {
+        startup.setValue("Web eID", QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));
+    } else {
+        startup.remove("Web eID");
+    }
 #else
 #error "Unsupported platform"
 #endif

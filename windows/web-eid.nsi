@@ -50,7 +50,7 @@ WriteRegStr HKCU "SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native" '' 
 WriteRegStr HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native" '' '$INSTDIR\org.hwcrypto.native.json'
 
 ; By default start on login
-WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" 'Web-eID' '$INSTDIR\Web-eID.exe'
+WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" 'Web eID' '$INSTDIR\Web-eID.exe'
 
 ; Make shortcut on desktop
 CreateShortCut "$DESKTOP\Web eID.lnk" "$INSTDIR\Web-eID.exe"
