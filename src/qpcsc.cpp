@@ -335,6 +335,7 @@ QPCSCReader *QtPCSC::connectReader(WebContext *webcontext, const QString &reader
     QPCSCReader *result = new QPCSCReader(webcontext, this, reader, protocol);
 
     connect(this, &QtPCSC::readerRemoved, result, &QPCSCReader::readerRemoved, Qt::QueuedConnection);
+    connect(this, &QtPCSC::cardRemoved, result, &QPCSCReader::readerRemoved, Qt::QueuedConnection);
 
     if (!rdrs[reader].contains("PRESENT") && wait) {
         _log("Showing insert reader dialog");
@@ -369,10 +370,12 @@ void QPCSCReader::open() {
     // Open the "in use"" dialog. Separate slot because lambda would be in the worker thread.
     connect(&worker, &QPCSCReaderWorker::connected, this, [=] {
         isOpen = true;
-        QtReaderInUse *inusedlg = new QtReaderInUse(static_cast<WebContext *>(parent())->friendlyOrigin(), reader);
+        WebContext *ctx = static_cast<WebContext *>(parent());
+        QtReaderInUse *inusedlg = new QtReaderInUse(ctx->friendlyOrigin(), reader);
         connect(inusedlg, &QDialog::rejected, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
         // And close the dialog if reader is disconnected
         connect(&worker, &QPCSCReaderWorker::disconnected, inusedlg, &QDialog::accept, Qt::QueuedConnection);
+        connect(ctx, &WebContext::disconnected, inusedlg, &QDialog::reject);
     }, Qt::QueuedConnection);
 
     // connect in thread

@@ -21,8 +21,8 @@ $(APP): app
 	$(QTPATH)/bin/macdeployqt $(APP) -always-overwrite
 
 codesign: $(APP)
-	# TODO: Add "--entitlements macos/web-eid.entitlements" for sanboxing after beta period
-	codesign -f --deep -s "Developer ID Application: $(SIGNER)" $(APP)
+	# Use a sandbox
+	codesign -f --entitlements macos/web-eid.entitlements --deep -s "Developer ID Application: $(SIGNER)" $(APP)
 
 web-eid-app.pkg: $(APP)
 	# Copy necessary files

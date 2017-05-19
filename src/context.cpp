@@ -189,7 +189,7 @@ void WebContext::processMessage(const QVariantMap &message) {
             });
             connect(r, &QPCSCReader::received, [=] (QByteArray apdu) {
                 _log("Rreceived apdu");
-                outgoing({{"bytes", apdu.toHex()}});
+                outgoing({{"bytes", apdu.toBase64()}});
             });
         });
     } else if (message.contains("SCardDisconnect")) {
@@ -203,7 +203,7 @@ void WebContext::processMessage(const QVariantMap &message) {
     } else if (message.contains("SCardTransmit")) {
         if (!readers.isEmpty()) {
             QPCSCReader *r = readers.first(); // FIXME
-            r->transmit(QByteArray::fromHex(message.value("SCardTransmit").toMap().value("bytes").toString().toLatin1()));
+            r->transmit(QByteArray::fromBase64(message.value("SCardTransmit").toMap().value("bytes").toString().toLatin1()));
         } else {
             outgoing({{"error", QtPCSC::errorName(SCARD_E_NO_SMARTCARD)}});
         }

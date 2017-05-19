@@ -13,6 +13,7 @@ QT += widgets network websockets concurrent
 RC_ICONS = ../artwork/win_icon.ico
 macx {
     LIBS += -framework PCSC -framework ServiceManagement -framework CoreFoundation -framework AppKit
+    QMAKE_OBJECTIVE_CFLAGS = -fobjc-arc
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.9
     ICON = ../artwork/mac.icns
     QMAKE_INFO_PLIST += Info.plist
