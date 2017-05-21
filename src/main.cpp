@@ -90,8 +90,6 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         StartAtLoginHelper::setEnabled(checked);
     });
 
-    usage = menu->addAction(tr("0 active sites"));
-    usage->setEnabled(false);
     // Debug menu
     if (parser.isSet(debug)) {
         QAction *dbg = menu->addAction(tr("Debug"));
@@ -102,7 +100,10 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     // Quit
     QAction *a2 = menu->addAction(tr("Quit"));
     connect(a2, &QAction::triggered, this, &QApplication::quit);
-
+    menu->addSeparator();
+    usage = menu->addAction(tr("0 active sites"));
+    usage->setEnabled(false);
+    
     // Initialize listening servers
     ws = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
     ws6 = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
