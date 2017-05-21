@@ -276,6 +276,7 @@ void QtHost::processConnect() {
         return;
     }
     _log("Connection to %s from %s:%d (%s)", qPrintable(client->requestUrl().toString()), qPrintable(client->peerAddress().toString()), client->peerPort(), qPrintable(client->origin()));
+    _log("UA: %s", qPrintable(client->request().header(QNetworkRequest::UserAgentHeader).toString()));
     WebContext *ctx = new WebContext(this, client);
     newConnection(ctx);
 }
