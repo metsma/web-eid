@@ -21,6 +21,7 @@ class QtSelectReader: public BetterDialog {
     Q_OBJECT
 
 public:
+    // FIXME: optional list of wanted ATR-s
     QtSelectReader(WebContext *ctx):
         layout(new QVBoxLayout(this)),
         message(new QLabel(this)),
@@ -35,7 +36,7 @@ public:
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) &
                        ~(Qt::WindowMaximizeButtonHint|Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint));
         setAttribute(Qt::WA_DeleteOnClose);
-        setWindowTitle(tr("Select reader for %1").arg(ctx->friendlyOrigin()));
+        setWindowTitle(ctx->friendlyOrigin());
 
         message->setText("Reader will be made available to remote site!");
         table->setColumnCount(1);
@@ -72,14 +73,9 @@ public:
 public slots:
     void update(QMap<QString, QStringList> readers) {
         if (readers.size() == 0) {
-            // No readers FIXME UX
-            // FIXME: if started with empty list
-            if (table->topLevelItemCount() > 0) {
-                // if previous list had some
-                return reject();
-            } else {
-                message->setText("Please connect a smart card reader!");
-            }
+            message->setText(tr("Please connect a smart card reader!"));
+        } else {
+            message->setText(tr("Please select a smart card reader"));
         }
         table->clear();
         // set ok enabled only if previously selected reader is still in list.
@@ -104,10 +100,19 @@ public slots:
         raise();
     }
 
-    void cardInserted(const QString &reader, const QByteArray &atr) {
+    void cardInserted(const QString &reader, const QByteArray &atr, const QStringList &flags) {
         (void)atr;
         // If a card is inserted while the dialog is open, we select the reader by default
         selected = reader;
+
+        if (flags.contains("MUTE")) {
+            message->setText(tr("Card inserted to %1 can not be used.\nPlease check the card").arg(reader));
+        }
+    }
+
+    void cardRemoved(const QString &reader) {
+        // Reset message after a possibly mute message
+        message->setText(tr("Please select a smart card reader"));
     }
 
     void readerAttached(const QString &reader) {

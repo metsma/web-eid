@@ -17,9 +17,6 @@
 
 #include "context.h"
 
-#include "dialogs/reader_in_use.h"
-#include "dialogs/insert_card.h"
-
 class QtPCSC;
 
 // Lives in a separate thread because of possibly blocking
@@ -56,7 +53,7 @@ private:
 class QPCSCReader: public QObject {
     Q_OBJECT
 public:
-    QPCSCReader(WebContext *webcontext, QtPCSC *pcsc, const QString &name, const QString &proto): QObject(webcontext), PCSC(pcsc), reader(name), protocol(proto) {};
+    QPCSCReader(WebContext *webcontext, QtPCSC *pcsc, const QString &name, const QString &proto): QObject(webcontext), name(name), PCSC(pcsc), protocol(proto) {};
 
     ~QPCSCReader() {
         if (thread.isRunning()) {
@@ -68,13 +65,14 @@ public:
     bool isConnected() {
         return isOpen;
     };
+    QString name;
 
 public slots:
     void open();
     void transmit(const QByteArray &apdu);
     void disconnect();
 
-    void cardInserted(const QString &reader, const QByteArray &atr);
+    void cardInserted(const QString &reader, const QByteArray &atr, const QStringList &flags);
     void readerRemoved(const QString &reader);
 
 signals:
@@ -89,10 +87,8 @@ signals:
     void connected(const QByteArray &atr, const QString &protocol);
 
 private:
-
     bool isOpen = false;
     QtPCSC *PCSC;
-    QString reader;
     QString protocol;
     QThread thread;
     QPCSCReaderWorker worker;
@@ -112,7 +108,7 @@ public:
     static const char *errorName(LONG err);
 
 signals:
-    void cardInserted(const QString &reader, const QByteArray &atr);
+    void cardInserted(const QString &reader, const QByteArray &atr, const QStringList flags);
     void cardRemoved(const QString &reader);
 
     void readerAttached(const QString &name);

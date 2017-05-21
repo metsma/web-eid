@@ -10,6 +10,8 @@
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
 
+#include "qpcsc.h"
+
 class QtReaderInUse: public BetterDialog {
     Q_OBJECT
 

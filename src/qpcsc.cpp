@@ -22,6 +22,9 @@
 #include <QTime>
 
 
+#include "dialogs/reader_in_use.h"
+#include "dialogs/insert_card.h"
+
 /*
  QtPCSC is:
  - a QObject
@@ -273,18 +276,15 @@ void QtPCSC::run()
                     continue;
                 }
                 if ((i.dwEventState & SCARD_STATE_PRESENT) && !(known[reader] & SCARD_STATE_PRESENT)) {
-                    if (i.dwEventState & SCARD_STATE_MUTE) {
-                        _log("Card in %s is mute", reader.c_str());
-                        emit error(QString::fromStdString(reader), SCARD_W_UNRESPONSIVE_CARD);
-                    } else {
                         QByteArray atr = QByteArray::fromRawData((const char *)i.rgbAtr, i.cbAtr);
                         if (!atr.isEmpty()) {
                             _log("  atr:%s", atr.toHex().toStdString().c_str());
                         }
-                        emit cardInserted(QString::fromStdString(reader), atr);
-                        change = true;
-                    }
-                } else if ((i.dwEventState & SCARD_STATE_EMPTY) && (known[reader] & SCARD_STATE_PRESENT) && !(known[reader] & SCARD_STATE_MUTE)) {
+                        emit cardInserted(QString::fromStdString(reader), atr, stateNames(i.dwEventState & ~SCARD_STATE_CHANGED));
+                        // Only emit reader list change if the card is not mute
+                        if (!(i.dwEventState & SCARD_STATE_MUTE))
+                            change = true;
+                } else if ((i.dwEventState & SCARD_STATE_EMPTY) && (known[reader] & SCARD_STATE_PRESENT)) {
                     emit cardRemoved(QString::fromStdString(reader));
                     change = true;
                 } else if ((i.dwEventState ^ known[reader]) & SCARD_STATE_EXCLUSIVE) {
@@ -338,12 +338,12 @@ QPCSCReader *QtPCSC::connectReader(WebContext *webcontext, const QString &reader
     QPCSCReader *result = new QPCSCReader(webcontext, this, reader, protocol);
 
     connect(this, &QtPCSC::readerRemoved, result, &QPCSCReader::readerRemoved, Qt::QueuedConnection);
-    connect(this, &QtPCSC::cardRemoved, result, &QPCSCReader::readerRemoved, Qt::QueuedConnection);
-
-    if (!rdrs[reader].contains("PRESENT") && wait) {
+    
+    if ((!rdrs[reader].contains("PRESENT") || rdrs[reader].contains("MUTE")) && wait) {
         _log("Showing insert reader dialog");
-        QtInsertCard *dlg = new QtInsertCard(webcontext->friendlyOrigin(), reader);
-        connect(this, &QtPCSC::cardInserted, result, &QPCSCReader::cardInserted, Qt::QueuedConnection);
+        QtInsertCard *dlg = new QtInsertCard(webcontext->friendlyOrigin(), result);
+        connect(this, &QtPCSC::cardInserted, dlg, &QtInsertCard::cardInserted, Qt::QueuedConnection);
+        connect(this, &QtPCSC::cardRemoved, dlg, &QtInsertCard::cardRemoved, Qt::QueuedConnection);
         connect(dlg, &QDialog::rejected, result, &QPCSCReader::disconnect);
         // Close if event. TODO: handle MUTE
         connect(result, &QPCSCReader::connected, dlg, &QDialog::accept);
@@ -365,16 +365,18 @@ void QPCSCReader::open() {
     connect(this, &QPCSCReader::disconnectCard, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
     connect(this, &QPCSCReader::transmitBytes, &worker, &QPCSCReaderWorker::transmit, Qt::QueuedConnection);
 
+    connect(PCSC, &QtPCSC::cardRemoved, this, &QPCSCReader::readerRemoved, Qt::QueuedConnection);
+
     // proxy signals
     connect(&worker, &QPCSCReaderWorker::disconnected, this, &QPCSCReader::disconnected, Qt::QueuedConnection);
     connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::connected, Qt::QueuedConnection);
     connect(&worker, &QPCSCReaderWorker::received, this, &QPCSCReader::received, Qt::QueuedConnection);
 
-    // Open the "in use"" dialog. Separate slot because lambda would be in the worker thread.
+    // Open the "in use"" dialog.
     connect(&worker, &QPCSCReaderWorker::connected, this, [=] {
         isOpen = true;
         WebContext *ctx = static_cast<WebContext *>(parent());
-        QtReaderInUse *inusedlg = new QtReaderInUse(ctx->friendlyOrigin(), reader);
+        QtReaderInUse *inusedlg = new QtReaderInUse(ctx->friendlyOrigin(), name);
         connect(inusedlg, &QDialog::rejected, &worker, &QPCSCReaderWorker::disconnectCard, Qt::QueuedConnection);
         // And close the dialog if reader is disconnected
         connect(&worker, &QPCSCReaderWorker::disconnected, inusedlg, &QDialog::accept, Qt::QueuedConnection);
@@ -382,17 +384,17 @@ void QPCSCReader::open() {
     }, Qt::QueuedConnection);
 
     // connect in thread
-    emit connectCard(reader, protocol);
+    emit connectCard(name, protocol);
 }
 
-void QPCSCReader::cardInserted(const QString &reader, const QByteArray &atr) {
-    if ((this->reader == reader) && (!atr.isEmpty())) {
+void QPCSCReader::cardInserted(const QString &reader, const QByteArray &atr, const QStringList &flags) {
+    if ((this->name == reader) && (!atr.isEmpty()) && !flags.contains("MUTE")) {
         open();
     }
 }
 
 void QPCSCReader::readerRemoved(const QString &reader) {
-    if (this->reader == reader) {
+    if (this->name == reader) {
         disconnect();
     }
 }

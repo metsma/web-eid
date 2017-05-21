@@ -151,6 +151,7 @@ void WebContext::processMessage(const QVariantMap &message) {
         ((QtSelectReader *)dialog)->update(PCSC->getReaders());
         connect(PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)dialog, &QtSelectReader::update, Qt::QueuedConnection);
         connect(PCSC, &QtPCSC::cardInserted, (QtSelectReader *)dialog, &QtSelectReader::cardInserted, Qt::QueuedConnection);
+        connect(PCSC, &QtPCSC::cardRemoved, (QtSelectReader *)dialog, &QtSelectReader::cardRemoved, Qt::QueuedConnection);
         connect(PCSC, &QtPCSC::readerAttached, (QtSelectReader *)dialog, &QtSelectReader::readerAttached, Qt::QueuedConnection);
         connect(this, &WebContext::disconnected, dialog, &QDialog::reject);
         connect(dialog, &QDialog::rejected, [=] {

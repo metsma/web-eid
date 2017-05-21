@@ -44,7 +44,10 @@ void nshideapp(bool);
 QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->PCSC), tray(this) {
 
     _log("Starting Web eID app v%s", VERSION);
-
+    QCoreApplication::setOrganizationName("Web eID");
+    QCoreApplication::setOrganizationDomain("web-eid.com");
+    QCoreApplication::setApplicationName("Web eID");
+  
     QCommandLineParser parser;
     QCommandLineOption debug("debug");
     parser.addOption(debug);
@@ -54,8 +57,14 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         // TODO: set debug mode
     }
 
+    // Enable autostart, if not disabled
+    QSettings settings;
+    if (settings.value("startAtLogin", 1).toBool()) {
+        StartAtLoginHelper::setEnabled(true);
+    }
+
     // Construct tray icon and related menu
-    tray.setIcon(QIcon(":/web-eid.png"));
+    tray.setIcon(QIcon(":/web-eid.png")); // TODO: 71 71 71 on inactive on macosx
     connect(&tray, &QSystemTrayIcon::activated, [&] (QSystemTrayIcon::ActivationReason reason) {
         // TODO: show some generic dialog here.
         autostart->setChecked(StartAtLoginHelper::isEnabled());
@@ -64,38 +73,43 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     // Context menu
     QMenu *menu = new QMenu();
+    // TODO: have about dialog
     QAction *about = menu->addAction("About");
     connect(about, &QAction::triggered, [] {
         QDesktopServices::openUrl(QUrl(QStringLiteral("https://web-eid.com")));
     });
+
+    // Start at login
     autostart = menu->addAction(tr("Start at login"));
     autostart->setCheckable(true);
     autostart->setChecked(StartAtLoginHelper::isEnabled());
-    connect(autostart, &QAction::toggled, [] (bool checked) {
+    connect(autostart, &QAction::toggled, this, [=] (bool checked) {
         _log("Setting start at login to %d", checked);
+        QSettings settings;
+        settings.setValue("startAtLogin", checked);
         StartAtLoginHelper::setEnabled(checked);
     });
 
+    // Debug menu
     if (parser.isSet(debug)) {
-        QAction *dbg = menu->addAction("Debug");
+        QAction *dbg = menu->addAction(tr("Debug"));
         connect(dbg, &QAction::triggered, this, [=] {
             new QtDebugDialog(this);
         });
     }
-    QAction *a2 = menu->addAction("Quit");
+    // Quit
+    QAction *a2 = menu->addAction(tr("Quit"));
     connect(a2, &QAction::triggered, this, &QApplication::quit);
 
     // Initialize listening servers
     ws = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
     ws6 = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
     ls = new QLocalServer(this);
-
-    // Set up listening
-
     quint16 port = 42123; // TODO: 3 ports to try.
 
     // Now this will probably get some bad publicity ...
     QSslConfiguration sslConfiguration;
+ 
     // TODO: make this configurable
     QFile keyFile(":/app.web-eid.com.key");
     keyFile.open(QIODevice::ReadOnly);
@@ -207,7 +221,14 @@ void QtHost::processConnectLocal() {
 }
 
 void QtHost::processConnect() {
-    QWebSocket *client = ws->nextPendingConnection(); // FIXME: v6 vs v4
+    QWebSocket *client;
+    if (ws->hasPendingConnections()) {
+        client = ws->nextPendingConnection();
+    } else if (ws6->hasPendingConnections()) {
+        client = ws6->nextPendingConnection();
+    } else {
+        return;
+    }
     _log("Connection to %s from %s:%d (%s)", qPrintable(client->requestUrl().toString()), qPrintable(client->peerAddress().toString()), client->peerPort(), qPrintable(client->origin()));
     WebContext *ctx = new WebContext(this, client);
     newConnection(ctx);
@@ -215,6 +236,7 @@ void QtHost::processConnect() {
 
 void QtHost::newConnection(WebContext *ctx) {
     contexts[ctx->id] = ctx;
+    // Keep count of active contexts
     tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
     connect(ctx, &WebContext::disconnected, this, [this, ctx] {
         if (contexts.remove(ctx->id)) {
