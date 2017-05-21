@@ -72,6 +72,9 @@ public slots:
         if (readers.size() == 0) {
             message->setText(tr("Please connect a smart card reader!"));
             select->hide();
+            ok->setEnabled(false);
+            cancel->setDefault(true);
+            cancel->setFocus();
         } else if (readers.size() == 1) {
             select->hide();
             QString reader = readers.keys().at(0);
@@ -79,9 +82,13 @@ public slots:
                 message->setText(tr("%1 can not be used.\nIt is used exclusively by some other application").arg(reader));
                 ok->setEnabled(false);
                 cancel->setDefault(true);
+                cancel->setFocus();
             } else {
                 message->setText(tr("Allow access to %1?").arg(reader));
+                cancel->setDefault(false);
+                ok->setEnabled(true);
                 ok->setDefault(true);
+                ok->setFocus();
             }
         } else {
             select->clear();
@@ -104,6 +111,8 @@ public slots:
             if (select->currentIndex() != -1) {
                 ok->setEnabled(true);
                 ok->setDefault(true);
+                ok->setFocus();
+                cancel->setDefault(false);
             }
             select->show();
         }
