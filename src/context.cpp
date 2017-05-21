@@ -15,7 +15,7 @@
 
 WebContext::WebContext(QObject *parent, QLocalSocket *client): QObject(parent)  {
     this->ls = client;
-    connect(client, &QLocalSocket::readyRead, [this, client] {
+    connect(client, &QLocalSocket::readyRead, this, [this, client] {
         _log("Handling data from local socket");
         _log("Available: %d", client->bytesAvailable());
         quint32 msgsize = 0;
@@ -60,7 +60,7 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client): QObject(parent)  
             terminate();
         }
     });
-    connect(client, &QLocalSocket::disconnected, [this, client] {
+    connect(client, &QLocalSocket::disconnected, this, [this, client] {
         _log("Local client disconnected (%s)", qPrintable(this->origin));
         emit disconnected();
     });
@@ -72,7 +72,7 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client): QObject(parent)  
 WebContext::WebContext(QObject *parent, QWebSocket *client): QObject(parent) {
     this->ws = client;
     this->origin = client->origin();
-    connect(client, &QWebSocket::textMessageReceived, [this, client] (QString message) {
+    connect(client, &QWebSocket::textMessageReceived, this, [this, client] (QString message) {
         _log("Message received from %s", qPrintable(origin));
         QVariantMap json = QJsonDocument::fromJson(message.toUtf8()).toVariant().toMap();
         if (!json.contains("id")) {
@@ -87,7 +87,7 @@ WebContext::WebContext(QObject *parent, QWebSocket *client): QObject(parent) {
         json["origin"] = origin;
         processMessage(json);
     });
-    connect(client, &QWebSocket::disconnected, [this, client] {
+    connect(client, &QWebSocket::disconnected, this, [this, client] {
         _log("%s disconnected", qPrintable(client->origin()));
         emit disconnected();
     });
@@ -154,12 +154,12 @@ void WebContext::processMessage(const QVariantMap &message) {
         connect(PCSC, &QtPCSC::cardRemoved, (QtSelectReader *)dialog, &QtSelectReader::cardRemoved, Qt::QueuedConnection);
         connect(PCSC, &QtPCSC::readerAttached, (QtSelectReader *)dialog, &QtSelectReader::readerAttached, Qt::QueuedConnection);
         connect(this, &WebContext::disconnected, dialog, &QDialog::reject);
-        connect(dialog, &QDialog::rejected, [=] {
+        connect(dialog, &QDialog::rejected, this, [=] {
             PKI->resume();
             outgoing({{"error", QtPCSC::errorName(SCARD_E_CANCELLED)}});
         });
         // Connect to the reader once the reader name is known
-        connect((QtSelectReader *)dialog, &QtSelectReader::readerSelected, [this, message] (QString name) {
+        connect((QtSelectReader *)dialog, &QtSelectReader::readerSelected, this, [this, message] (QString name) {
             QPCSCReader *r = PCSC->connectReader(this, name, message.value("SCardConnect").toMap().value("protocol", "*").toString(), true);
             readers[name] = r;
             connect(r, &QPCSCReader::disconnected, this, [this, name] (LONG err) {
@@ -183,12 +183,12 @@ void WebContext::processMessage(const QVariantMap &message) {
                     // Not yet connected
                 }
             });
-            connect(r, &QPCSCReader::connected, [=] (QByteArray atr, QString proto) {
+            connect(r, &QPCSCReader::connected, this, [=] (QByteArray atr, QString proto) {
                 _log("connected: %s %s", qPrintable(proto), qPrintable(atr.toHex()));
                 PKI->resume();
                 outgoing({{"reader", name}, {"protocol", proto}, {"atr", atr.toHex()}});
             });
-            connect(r, &QPCSCReader::received, [=] (QByteArray apdu) {
+            connect(r, &QPCSCReader::received, this, [=] (QByteArray apdu) {
                 _log("Received apdu");
                 outgoing({{"bytes", apdu.toBase64()}});
             });
@@ -296,13 +296,12 @@ void WebContext::outgoing(QVariantMap message) {
     }
 }
 
-bool WebContext::terminate() {
+void WebContext::terminate() {
     if (ws) {
         ws->disconnect();
     } else if(ls) {
         ls->abort();
     }
-    return true;
 }
 
 QString WebContext::friendlyOrigin() const {

@@ -32,6 +32,7 @@ public:
     static bool isSecureOrigin(const QString &origin);
     QString origin; // TODO: access
     QString friendlyOrigin() const;
+    void terminate();
 
     QTimer timer;
 
@@ -44,7 +45,6 @@ signals:
 private:
     void processMessage(const QVariantMap &message); // Message received from client
     void outgoing(QVariantMap message);
-    bool terminate();
 
     // message transport
     QWebSocket *ws = nullptr;

@@ -26,8 +26,8 @@ public:
         setWindowFlags(Qt::WindowStaysOnTopHint);
         setAttribute(Qt::WA_DeleteOnClose);
 
-        setWindowTitle(origin);
-        message->setText(tr("Reader %1 is used by %2.\nPress cancel to end access").arg(reader).arg(origin));
+        setWindowTitle(tr("%1 @ %2").arg(reader).arg(origin));
+        message->setText(tr("%1 is used by %2.\nPress cancel to end access").arg(reader).arg(origin));
 
         // remove minimize and maximize buttons
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) &
@@ -38,6 +38,7 @@ public:
         raise();
         activateWindow();
     };
+
 private:
     QVBoxLayout *layout;
     QDialogButtonBox *buttons;

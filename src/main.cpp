@@ -47,7 +47,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     QCoreApplication::setOrganizationName("Web eID");
     QCoreApplication::setOrganizationDomain("web-eid.com");
     QCoreApplication::setApplicationName("Web eID");
-  
+
     QCommandLineParser parser;
     QCommandLineOption debug("debug");
     parser.addOption(debug);
@@ -65,9 +65,50 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     // Construct tray icon and related menu
     tray.setIcon(QIcon(":/web-eid.png")); // TODO: 71 71 71 on inactive on macosx
-    connect(&tray, &QSystemTrayIcon::activated, [&] (QSystemTrayIcon::ActivationReason reason) {
+    connect(&tray, &QSystemTrayIcon::activated, this, [this] (QSystemTrayIcon::ActivationReason reason) {
         // TODO: show some generic dialog here.
         autostart->setChecked(StartAtLoginHelper::isEnabled());
+        // Construct active sites menu.
+        usage->clear();
+        usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
+        QMap<QString, int> active;
+
+        for(const auto &c: contexts) {
+            QString o = c->friendlyOrigin();
+            if (!active.contains(o)) {
+                active[o] = 1;
+            } else {
+                active[o]++;
+            }
+        }
+        if (active.size() > 0 ) {
+            QAction *instruction = usage->addAction(tr("Click to terminate"));
+            instruction->setEnabled(false);
+            usage->addSeparator();
+            for (const auto &o: active.keys()) {
+                QAction *item;
+                if (active[o] > 1) {
+                    item = usage->addAction(tr("%1x %2").arg(active[o]).arg(o));
+                } else {
+                    item = usage->addAction(o);
+                }
+                // FIXME: terminate with a nice JSON status ?
+                connect(item, &QAction::triggered, this, [this, o] {
+                    for (const auto &c: this->contexts) {
+                        if (c->friendlyOrigin() == o) {
+                            c->terminate();
+                        }
+                    }
+                });
+            }
+            usage->addSeparator();
+            QAction *kamikaze = usage->addAction(tr("Terminate all"));
+            connect(kamikaze, &QAction::triggered, this, [=] {
+                for (const auto &c: this->contexts) {
+                    c->terminate();
+                }
+            });
+        }
         _log("activated: %d", reason);
     });
 
@@ -75,12 +116,12 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     QMenu *menu = new QMenu();
     // TODO: have about dialog
     QAction *about = menu->addAction("About");
-    connect(about, &QAction::triggered, [] {
+    connect(about, &QAction::triggered, this, [=] {
         QDesktopServices::openUrl(QUrl(QStringLiteral("https://web-eid.com")));
     });
 
     // Start at login
-    autostart = menu->addAction(tr("Start at login"));
+    autostart = menu->addAction(tr("Start at Login"));
     autostart->setCheckable(true);
     autostart->setChecked(StartAtLoginHelper::isEnabled());
     connect(autostart, &QAction::toggled, this, [=] (bool checked) {
@@ -101,9 +142,11 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     QAction *a2 = menu->addAction(tr("Quit"));
     connect(a2, &QAction::triggered, this, &QApplication::quit);
     menu->addSeparator();
-    usage = menu->addAction(tr("0 active sites"));
-    usage->setEnabled(false);
-    
+
+    // Number of active sites
+    usage = new QMenu(tr("0 active sites"), menu);
+    menu->addMenu(usage);
+
     // Initialize listening servers
     ws = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
     ws6 = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
@@ -112,7 +155,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     // Now this will probably get some bad publicity ...
     QSslConfiguration sslConfiguration;
- 
+
     // TODO: make this configurable
     QFile keyFile(":/app.web-eid.com.key");
     keyFile.open(QIODevice::ReadOnly);
@@ -241,11 +284,11 @@ void QtHost::newConnection(WebContext *ctx) {
     contexts[ctx->id] = ctx;
     // Keep count of active contexts
     tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
-    usage->setText(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
+    usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
     connect(ctx, &WebContext::disconnected, this, [this, ctx] {
         if (contexts.remove(ctx->id)) {
             tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
-            usage->setText(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
+            usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
             ctx->deleteLater();
             if (once && contexts.size() == 0) {
                 _log("Context count is zero, quitting");
