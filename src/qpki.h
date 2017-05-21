@@ -51,6 +51,8 @@ signals:
     void loginDone(const CK_RV rv);
     void signDone(const CK_RV rv, const QByteArray &signature);
 
+    void noDriver(const QString &reader, const QByteArray &atr, const QByteArray &extra);
+
 private:
     QMap<QString, PKCS11Module *> modules; // loaded PKCS#11 modules
     QMap<QByteArray, P11Token> certificates; // from which module a certificate comes
@@ -71,7 +73,8 @@ public:
         // FIXME: have this tied to the PIN dialog maybe ?
         connect(this, &QPKI::p11sign, &worker, &QPKIWorker::sign, Qt::QueuedConnection);
         connect(&worker, &QPKIWorker::signDone, this, &QPKI::signDone, Qt::QueuedConnection);
-
+        connect(&worker, &QPKIWorker::noDriver, this, &QPKI::noDriver, Qt::QueuedConnection);
+        // Start listening for pcsc events.
         resume();
     }
 
@@ -111,6 +114,8 @@ signals:
     void signature(const WebContext *context, const CK_RV result, const QByteArray &value);
     // Certificate has been chose (either p11 or win)
     void certificate(const WebContext *context, const CK_RV result, const QByteArray &value);
+
+    void noDriver(const QString &reader, const QByteArray &atr, const QByteArray &extra);
 
     // Control signals with worker
     void login(const QByteArray &cert, const QString &pin);

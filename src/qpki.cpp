@@ -42,6 +42,8 @@ void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
                 refresh();
             }
         }
+    } else {
+        emit noDriver(reader, atr, 0);
     }
 }
 
@@ -106,7 +108,9 @@ void QPKI::select(const WebContext *context, const CertificatePurpose type) {
 #ifndef Q_OS_WIN
     QtSelectCertificate *dlg = new QtSelectCertificate(context, type);
     connect(context, &WebContext::disconnected, dlg, &QDialog::reject);
+    connect(PCSC, &QtPCSC::cardInserted, dlg, &QtSelectCertificate::cardInserted, Qt::QueuedConnection);
     connect(this, &QPKI::certificateListChanged, dlg, &QtSelectCertificate::update);
+    connect(this, &QPKI::noDriver, dlg, &QtSelectCertificate::noDriver);
     connect(dlg, &QDialog::rejected, this, [this, context] {
         return emit certificate(context, CKR_FUNCTION_CANCELED, 0);
     });

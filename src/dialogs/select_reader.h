@@ -9,12 +9,11 @@
 #include "context.h"
 
 #include "dialogs/betterdialog.h"
+#include <QVBoxLayout>
 #include <QStandardItemModel>
 #include <QComboBox>
 #include <QLabel>
 #include <QDialogButtonBox>
-#include <QVBoxLayout>
-#include <QHeaderView>
 #include <QPushButton>
 
 // Reader selection dialog
@@ -49,14 +48,7 @@ public:
         cancel->setFocusPolicy(Qt::StrongFocus);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-        //connect(table, &QTreeWidget::currentItemChanged, [=] (QTreeWidgetItem *item, QTreeWidgetItem *previous) {
-        //    (void)previous;
-        //    // TODO: only if reader can be used
-        //    if (item) {
-        //        selected = item->text(0);
-        //        ok->setEnabled(true);
-        //    }
-        //});
+
         connect(select, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [=](const QString &text) {
             _log("New item is %s", qPrintable(text));
         });

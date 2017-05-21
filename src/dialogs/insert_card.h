@@ -55,7 +55,7 @@ public:
 
     void cardRemoved(const QString &reader) {
         if (this->reader->name == reader) {
-           message->setText(tr("Insert card into reader %1").arg(reader));
+            message->setText(tr("Insert card into reader %1").arg(reader));
         }
     }
 

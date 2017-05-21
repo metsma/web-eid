@@ -12,6 +12,7 @@
 
 #include "qpcsc.h"
 
+// TODO: merge with "insert card"
 class QtReaderInUse: public BetterDialog {
     Q_OBJECT
 
