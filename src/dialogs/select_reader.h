@@ -32,7 +32,7 @@ public:
         layout->addWidget(message);
         layout->addWidget(select);
         layout->addWidget(buttons);
-
+        layout->setSizeConstraint(QLayout::SetFixedSize);
         select->setFocusPolicy(Qt::StrongFocus);
         setWindowFlags(Qt::WindowStaysOnTopHint);
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) &
