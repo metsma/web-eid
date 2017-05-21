@@ -10,6 +10,7 @@
 #include "Logger.h" // TODO: rename
 
 #include "dialogs/debug.h"
+#include "dialogs/about.h"
 
 #include <QIcon>
 #include <QJsonDocument>
@@ -126,7 +127,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     // TODO: have about dialog
     QAction *about = menu->addAction(tr("About Web eID"));
     connect(about, &QAction::triggered, this, [=] {
-        QDesktopServices::openUrl(QUrl(QStringLiteral("https://web-eid.com")));
+        new AboutDialog();
     });
 
     // Start at login
