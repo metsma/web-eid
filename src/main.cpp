@@ -57,14 +57,18 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         // TODO: set debug mode
     }
 
-    // Enable autostart, if not disabled
+    // Enable autostart, if not explicitly disabled
     QSettings settings;
     if (settings.value("startAtLogin", 1).toBool()) {
         StartAtLoginHelper::setEnabled(true);
     }
 
     // Construct tray icon and related menu
-    tray.setIcon(QIcon(":/web-eid.png")); // TODO: 71 71 71 on inactive on macosx
+#ifdef Q_OS_MACOS
+    tray.setIcon(QIcon(":/inactive-web-eid.png"));
+#else
+    tray.setIcon(QIcon(":/web-eid.png"));
+#endif
     connect(&tray, &QSystemTrayIcon::activated, this, [this] (QSystemTrayIcon::ActivationReason reason) {
         // TODO: show some generic dialog here.
         autostart->setChecked(StartAtLoginHelper::isEnabled());
@@ -115,7 +119,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     // Context menu
     QMenu *menu = new QMenu();
     // TODO: have about dialog
-    QAction *about = menu->addAction("About");
+    QAction *about = menu->addAction(tr("About Web eID"));
     connect(about, &QAction::triggered, this, [=] {
         QDesktopServices::openUrl(QUrl(QStringLiteral("https://web-eid.com")));
     });
@@ -138,14 +142,16 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
             new QtDebugDialog(this);
         });
     }
+
+    // Number of active sites
+    menu->addSeparator();
+    usage = new QMenu(tr("0 active sites"), menu);
+    menu->addMenu(usage);
+    menu->addSeparator();
+
     // Quit
     QAction *a2 = menu->addAction(tr("Quit"));
     connect(a2, &QAction::triggered, this, &QApplication::quit);
-    menu->addSeparator();
-
-    // Number of active sites
-    usage = new QMenu(tr("0 active sites"), menu);
-    menu->addMenu(usage);
 
     // Initialize listening servers
     ws = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
@@ -283,6 +289,9 @@ void QtHost::processConnect() {
 
 void QtHost::newConnection(WebContext *ctx) {
     contexts[ctx->id] = ctx;
+#ifdef Q_OS_MACOS
+    tray.setIcon(QIcon(":/web-eid.png"));
+#endif
     // Keep count of active contexts
     tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
     usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
@@ -291,9 +300,14 @@ void QtHost::newConnection(WebContext *ctx) {
             tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
             usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
             ctx->deleteLater();
-            if (once && contexts.size() == 0) {
-                _log("Context count is zero, quitting");
-                quit();
+            if (contexts.size() == 0) {
+#ifdef Q_OS_MACOS
+                tray.setIcon(QIcon(":/inactive-web-eid.png"));
+#endif
+                if (once) {
+                    _log("Context count is zero, quitting");
+                    quit();
+                }
             }
         }
     });
