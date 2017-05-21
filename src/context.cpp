@@ -298,9 +298,9 @@ void WebContext::outgoing(QVariantMap message) {
 
 void WebContext::terminate() {
     if (ws) {
-        ws->disconnect();
+        ws->close();
     } else if(ls) {
-        ls->abort();
+        ls->close();
     }
 }
 

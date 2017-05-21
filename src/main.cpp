@@ -98,17 +98,22 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
                 }
                 // FIXME: terminate with a nice JSON status ?
                 connect(item, &QAction::triggered, this, [this, o] {
+                    QList<WebContext *> all(contexts.values());
                     for (const auto &c: this->contexts) {
                         if (c->friendlyOrigin() == o) {
-                            c->terminate();
+                           all.append(c);
                         }
+                    }
+                    for (const auto &c: all) {
+                        c->terminate();
                     }
                 });
             }
             usage->addSeparator();
             QAction *kamikaze = usage->addAction(tr("Terminate all"));
-            connect(kamikaze, &QAction::triggered, this, [=] {
-                for (const auto &c: this->contexts) {
+            connect(kamikaze, &QAction::triggered, this, [this] {
+                QList<WebContext *> all(contexts.values());
+                for (const auto &c: all) {
                     c->terminate();
                 }
             });
