@@ -9,7 +9,8 @@
 #include "context.h"
 
 #include "dialogs/betterdialog.h"
-#include <QTreeWidget>
+#include <QStandardItemModel>
+#include <QComboBox>
 #include <QLabel>
 #include <QDialogButtonBox>
 #include <QVBoxLayout>
@@ -25,13 +26,14 @@ public:
     QtSelectReader(WebContext *ctx):
         layout(new QVBoxLayout(this)),
         message(new QLabel(this)),
-        table(new QTreeWidget(this)),
+        select(new QComboBox(this)),
         buttons(new QDialogButtonBox(this))
     {
         layout->addWidget(message);
-        layout->addWidget(table);
+        layout->addWidget(select);
         layout->addWidget(buttons);
 
+        select->setFocusPolicy(Qt::StrongFocus);
         setWindowFlags(Qt::WindowStaysOnTopHint);
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) &
                        ~(Qt::WindowMaximizeButtonHint|Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint));
@@ -39,33 +41,28 @@ public:
         setWindowTitle(ctx->friendlyOrigin());
 
         message->setText("Reader will be made available to remote site!");
-        table->setColumnCount(1);
-        table->setRootIsDecorated(false);
-        table->setHeaderLabels({tr("Reader")});
-        table->header()->setStretchLastSection(true);
-        table->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-        table->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-        table->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-
-
         ok = buttons->addButton(tr("Select"), QDialogButtonBox::AcceptRole);
+        ok->setFocusPolicy(Qt::StrongFocus);
         ok->setEnabled(false);
 
-        buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
+        cancel = buttons->addButton(tr("Cancel"), QDialogButtonBox::RejectRole);
+        cancel->setFocusPolicy(Qt::StrongFocus);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-        connect(table, &QTreeWidget::currentItemChanged, [=] (QTreeWidgetItem *item, QTreeWidgetItem *previous) {
-            (void)previous;
-            // TODO: only if reader can be used
-            if (item) {
-                selected = item->text(0);
-                ok->setEnabled(true);
-            }
+        //connect(table, &QTreeWidget::currentItemChanged, [=] (QTreeWidgetItem *item, QTreeWidgetItem *previous) {
+        //    (void)previous;
+        //    // TODO: only if reader can be used
+        //    if (item) {
+        //        selected = item->text(0);
+        //        ok->setEnabled(true);
+        //    }
+        //});
+        connect(select, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [=](const QString &text) {
+            _log("New item is %s", qPrintable(text));
         });
-
         connect(this, &QDialog::accepted, [=] {
-            _log("Selected reader %s", qPrintable(table->currentItem()->text(0)));
-            emit readerSelected(table->currentItem()->text(0));
+            _log("Selected reader %s", qPrintable(select->currentText()));
+            emit readerSelected(select->currentText());
         });
         show();
     }
@@ -74,27 +71,41 @@ public slots:
     void update(QMap<QString, QStringList> readers) {
         if (readers.size() == 0) {
             message->setText(tr("Please connect a smart card reader!"));
+            select->hide();
+        } else if (readers.size() == 1) {
+            select->hide();
+            QString reader = readers.keys().at(0);
+            if (readers[reader].contains("EXCLUSIVE")) {
+                message->setText(tr("%1 can not be used.\nIt is used exclusively by some other application").arg(reader));
+                ok->setEnabled(false);
+                cancel->setDefault(true);
+            } else {
+                message->setText(tr("Allow access to %1?").arg(reader));
+                ok->setDefault(true);
+            }
         } else {
+            select->clear();
+            select->addItems(readers.keys());
             message->setText(tr("Please select a smart card reader"));
-        }
-        table->clear();
-        // set ok enabled only if previously selected reader is still in list.
-        if (!readers.keys().contains(selected)) {
-            selected.clear();
-            ok->setEnabled(false);
-        }
-        for (const auto &r: readers.keys()) {
-            QTreeWidgetItem *item = new QTreeWidgetItem(table, QStringList {r});
-            if (readers[r].contains("EXCLUSIVE")) {
-                item->setFlags(Qt::NoItemFlags);
-                item->setForeground(0, QBrush(Qt::darkRed));
-            } else if (readers[r].contains("EMPTY")) {
-                item->setForeground(0, QBrush(Qt::darkGreen));
+            // Disable readers
+            QStandardItemModel* model = qobject_cast<QStandardItemModel*>(select->model());
+            for (const auto &reader: readers.keys()) {
+                _log("REader %s has %s", qPrintable(reader), qPrintable(readers[reader].join(",")));
+                QStandardItem *item = model->findItems(reader).at(0);
+                // Disable some elements, if necessary
+                if (readers[reader].contains("EXCLUSIVE")) {
+                    _log("Disabling combo %s", qPrintable(reader));
+                    item->setEnabled(false);
+                    item->setToolTip(tr("Reader is used in exclusive mode"));
+                } else if ((select->currentIndex() == -1) || (selected == reader)) {
+                    select->setCurrentText(reader);
+                }
             }
-            table->insertTopLevelItem(0, item);
-            if (selected == r) {
-                table->setCurrentItem(item);
+            if (select->currentIndex() != -1) {
+                ok->setEnabled(true);
+                ok->setDefault(true);
             }
+            select->show();
         }
         activateWindow();
         raise();
@@ -104,6 +115,7 @@ public slots:
         (void)atr;
         // If a card is inserted while the dialog is open, we select the reader by default
         selected = reader;
+        select->setCurrentText(selected);
 
         if (flags.contains("MUTE")) {
             message->setText(tr("Card inserted to %1 can not be used.\nPlease check the card").arg(reader));
@@ -113,6 +125,7 @@ public slots:
     void cardRemoved(const QString &reader) {
         // Reset message after a possibly mute message
         message->setText(tr("Please select a smart card reader"));
+        selected = reader;
     }
 
     void readerAttached(const QString &reader) {
@@ -126,8 +139,9 @@ signals:
 private:
     QVBoxLayout *layout;
     QLabel *message;
-    QTreeWidget *table;
+    QComboBox *select;
     QDialogButtonBox *buttons;
     QPushButton *ok;
+    QPushButton *cancel;
     QString selected;
 };
