@@ -72,10 +72,12 @@ public slots:
         if (readers.size() == 0) {
             message->setText(tr("Please connect a smart card reader!"));
             select->hide();
-            ok->setEnabled(false);
+            ok->hide();
             cancel->setDefault(true);
             cancel->setFocus();
         } else if (readers.size() == 1) {
+            ok->setText(tr("Allow"));
+            ok->show();
             select->hide();
             QString reader = readers.keys().at(0);
             if (readers[reader].contains("EXCLUSIVE")) {
@@ -93,7 +95,9 @@ public slots:
         } else {
             select->clear();
             select->addItems(readers.keys());
-            message->setText(tr("Please select a smart card reader"));
+            ok->setText(tr("Select"));
+            ok->show();
+            message->setText(tr("Please select a smart card reader to use"));
             // Disable readers
             QStandardItemModel* model = qobject_cast<QStandardItemModel*>(select->model());
             for (const auto &reader: readers.keys()) {
