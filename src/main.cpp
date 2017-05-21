@@ -90,6 +90,8 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         StartAtLoginHelper::setEnabled(checked);
     });
 
+    usage = menu->addAction(tr("0 active sites"));
+    usage->setEnabled(false);
     // Debug menu
     if (parser.isSet(debug)) {
         QAction *dbg = menu->addAction(tr("Debug"));
@@ -238,9 +240,11 @@ void QtHost::newConnection(WebContext *ctx) {
     contexts[ctx->id] = ctx;
     // Keep count of active contexts
     tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
+    usage->setText(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
     connect(ctx, &WebContext::disconnected, this, [this, ctx] {
         if (contexts.remove(ctx->id)) {
             tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
+            usage->setText(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
             ctx->deleteLater();
             if (once && contexts.size() == 0) {
                 _log("Context count is zero, quitting");

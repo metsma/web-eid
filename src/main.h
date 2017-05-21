@@ -53,6 +53,7 @@ private:
     void newConnection(WebContext *ctx);
     QSystemTrayIcon tray;
     QAction *autostart;
+    QAction *usage;
 
     QWebSocketServer *ws; // IPv4
     QWebSocketServer *ws6; // IPv6
