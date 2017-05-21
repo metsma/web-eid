@@ -39,7 +39,7 @@ public slots:
     void cardRemoved(const QString &reader);
 
     // Refresh all certificate sources
-    void refresh();
+    void refresh(const QByteArray &atr = 0);
 
     void login(const QByteArray &cert, const QString &pin);
     void sign(const QByteArray &cert, const QByteArray &hash); // FIXME: hashtype

@@ -31,7 +31,7 @@ void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
                 PKCS11Module *module = new PKCS11Module();
                 if (module->load(m) == CKR_OK) {
                     modules[QString::fromStdString(m)] = module;
-                    refresh(); // TODO: optimize
+                    refresh(atr); // TODO: optimize
                     _log("Module loaded with %d certificates", module->getCerts().size());
                     break; // Use first module that reports certificates
                 } else {
@@ -39,7 +39,7 @@ void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
                 }
             } else {
                 _log("%s is already loaded", m.c_str());
-                refresh();
+                refresh(atr);
             }
         }
     } else {
@@ -53,7 +53,7 @@ void QPKIWorker::cardRemoved(const QString &reader) {
 }
 
 
-void QPKIWorker::refresh() {
+void QPKIWorker::refresh(const QByteArray &atr) {
     QMap<QByteArray, P11Token> certs;
     for (const auto &m: modules.keys()) {
         modules[m]->refresh();
@@ -65,6 +65,10 @@ void QPKIWorker::refresh() {
     if (certificates.size() != certs.size()) {
         certificates = certs;
         emit refreshed(certificates);
+    }  else {
+       if (!atr.isEmpty()) {
+            emit noDriver(0, atr, 0);
+       }
     }
 }
 

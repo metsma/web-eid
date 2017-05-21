@@ -276,7 +276,7 @@ void QtPCSC::run()
                     continue;
                 }
                 if ((i.dwEventState & SCARD_STATE_PRESENT) && !(known[reader] & SCARD_STATE_PRESENT)) {
-                        QByteArray atr = QByteArray::fromRawData((const char *)i.rgbAtr, i.cbAtr);
+                        QByteArray atr((const char *)i.rgbAtr, i.cbAtr);
                         if (!atr.isEmpty()) {
                             _log("  atr:%s", atr.toHex().toStdString().c_str());
                         }
