@@ -35,6 +35,12 @@ WebContext::WebContext(QObject *parent, QLocalSocket *client): QObject(parent)  
                 QByteArray response =  QJsonDocument::fromVariant(json).toJson();
                 _log("Read message:\n%s", response.constData());
 
+                // Handle internal messages
+                if (json.contains("internal")) {
+                    if (json["internal"] == "quit") {
+                        return QApplication::quit();
+                    }
+                }
                 // Check for mandatory fields
                 if (!json.contains("origin") || !json.contains("id")) {
                     _log("No id or origin, terminating");

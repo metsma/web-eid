@@ -13,6 +13,7 @@
 #include <QFile>
 #include <QThread>
 #include <QStandardPaths>
+#include <QJsonDocument>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -44,7 +45,8 @@ public:
             QByteArray msg(int(messageLength), 0);
             std::cin.read(msg.data(), msg.size());
             _log("Message (%u): %s", messageLength, msg.constData());
-            emit messageReceived(msg);
+            QVariantMap json = QJsonDocument::fromJson(msg).toVariant().toMap();
+            emit fromBrowser(json);
         }
         _log("Input reading thread is done.");
         // If input is closed, we quit
@@ -52,7 +54,7 @@ public:
     }
 
 signals:
-    void messageReceived(const QByteArray &msg);
+    void fromBrowser(const QVariantMap &msg);
 };
 
 class NMBridge: public QCoreApplication
@@ -60,20 +62,48 @@ class NMBridge: public QCoreApplication
     Q_OBJECT
 
 public:
-    NMBridge(int &argc, char *argv[], const QString &browser_name) : QCoreApplication(argc, argv),
-        sock(new QLocalSocket(this)),
-        browser(browser_name)
+    NMBridge(int &argc, char *argv[]): QCoreApplication(argc, argv),
+        sock(new QLocalSocket(this))
     {
         Logger::setFile("nm-bridge.log");
         _log("Running %s", qPrintable(applicationFilePath()));
+        args = arguments();
+        const char *msg = "This is not a regular program, it is expected to be run from a browser.\n";
+        // Check if run as a browser extension
+        if (args.size() < 2) {
+            printf("%s", msg);
+            exit(1);
+        }
 
-        QCommandLineParser parser;
-        QCommandLineOption debug("debug");
-        QCommandLineOption doquit("quit");
-        parser.addOption(debug);
-        parser.addOption(doquit);
-        parser.process(arguments());
-        this->dbg = parser.isSet(debug);
+        // Allow to signal quit from command line
+        if (!args.contains("--quit")) {
+            browser = "unknown";
+            if (args.at(1).startsWith("chrome-extension://")) {
+                browser = "chrome";
+            } else if (QFile::exists(args.at(1))) {
+                browser = "firefox";
+            }
+            // Check that input is a pipe (the app is not run from command line)
+            bool isPipe = false;
+#ifdef _WIN32
+            isPipe = GetFileType(GetStdHandle(STD_INPUT_HANDLE)) == FILE_TYPE_PIPE;
+#else
+            struct stat sb;
+            if (fstat(fileno(stdin), &sb) != 0) {
+                exit(1);
+            }
+            isPipe = S_ISFIFO(sb.st_mode);
+#endif
+            if (!isPipe) {
+                printf("%s", msg);
+// FIXME        exit(1);
+            }
+#ifdef _WIN32
+            // Set files to binary mode, to be able to read the uint32 msg size
+            _setmode(_fileno(stdin), O_BINARY);
+            _setmode(_fileno(stdout), O_BINARY);
+#endif
+        }
 
         // TODO: figure out the right paths depending on free-form app location
 #if defined(Q_OS_MACOS)
@@ -120,7 +150,7 @@ public:
                     // TODO: possibly use QFileSystemWatcher ?
                     QTimer::singleShot(1000, [this] {sock->connectToServer(serverName);});
                     // TODO: set working folder
-                    if (QProcess::startDetached(serverApp, this->dbg ? QStringList("--debug") : QStringList())) {
+                    if (QProcess::startDetached(serverApp, args.contains("--debug") ? QStringList("--debug") : QStringList())) {
                         server_started++;
                         _log("Started %s", qPrintable(serverApp));
                     } else {
@@ -140,7 +170,7 @@ public:
 
         out.open(stdout, QFile::WriteOnly);
         input = new InputChecker(this);
-        connect(input, &InputChecker::messageReceived, this, &NMBridge::messageFromBrowser, Qt::QueuedConnection);
+        connect(input, &InputChecker::fromBrowser, this, &NMBridge::toApp, Qt::QueuedConnection);
 
         connect(sock, &QLocalSocket::disconnected, [this] {
             // XXX: on Linux, error() with QLocalSocket::PeerClosedError is also thrown
@@ -182,7 +212,7 @@ public slots:
                 qint64 readsize = sock->read(msg.data(), msgsize) ;
                 if (readsize == msgsize) {
                     _log("Read message of %d bytes", msgsize);
-                    // Pass verbatim
+                    // Pass verbatim from app to browser
                     quint32 responseLength = msg.size();
                     _log("Response(%u) %s", responseLength, msg.constData());
                     out.write((const char*)&responseLength, sizeof(responseLength));
@@ -198,25 +228,29 @@ public slots:
                 sock->abort();
             }
         });
-        
-        // Quit the 
-        if (doQuit()) {
-            // Send {"internal": "quit"} to server and handle it accordingly
+
+        // Quit the app
+        if (args.contains("--quit")) {
+            toApp({{"internal", "quit"}});
+            return quit();
         }
-        
+
         // Start input reading thread, if not already running
         if (!input->isRunning()) {
             input->start();
         }
     }
 
-    void messageFromBrowser(const QByteArray &msg) {
+    void toApp(QVariantMap msg) {
         _log("Handling message from browser");
-        quint32 responseLength = msg.size();
+        // Enrich with information about browser
+        msg["browser"] = browser;
+        QByteArray json =  QJsonDocument::fromVariant(msg).toJson();
+        quint32 msglen = json.size();
         // TODO: error handling?
-        // TODO: add browser type (means parsign JSON)
-        sock->write((const char*)&responseLength, sizeof(responseLength));
-        sock->write(msg);
+        sock->write((const char*)&msglen, sizeof(msglen));
+        sock->write(json);
+        sock->flush();
     }
 
 private:
@@ -228,45 +262,11 @@ private:
     InputChecker *input;
     QFile out;
     QString browser;
-    bool dbg = false;
+    QStringList args;
 };
 
-int main(int argc, char *argv[])
-{
-    const char *msg = "This is not a regular program, it is expected to be run from a browser.\n";
-    // Check if run as a browser extension
-    if (argc < 2) {
-        printf("%s", msg);
-        exit(1);
-    }
-    std::string arg1(argv[1]);
-    QString browser = "unknown";
-    if (arg1.find("chrome-extension://") == 0) {
-        browser = "chrome";
-    } else if (QFile::exists(QString::fromStdString(arg1))) {
-        browser = "firefox";
-    }
-    // Check that input is a pipe (the app is not run from command line)
-    bool isPipe = false;
-#ifdef _WIN32
-    isPipe = GetFileType(GetStdHandle(STD_INPUT_HANDLE)) == FILE_TYPE_PIPE;
-#else
-    struct stat sb;
-    if (fstat(fileno(stdin), &sb) != 0) {
-        exit(1);
-    }
-    isPipe = S_ISFIFO(sb.st_mode);
-#endif
-    if (!isPipe) {
-        printf("%s", msg);
-// FIXME        exit(1);
-    }
-#ifdef _WIN32
-    // Set files to binary mode, to be able to read the uint32 msg size
-    _setmode(_fileno(stdin), O_BINARY);
-    _setmode(_fileno(stdout), O_BINARY);
-#endif
-    return NMBridge(argc, argv, browser).exec();
+int main(int argc, char *argv[]) {
+    return NMBridge(argc, argv).exec();
 }
 
 #include "nm-bridge.moc"
