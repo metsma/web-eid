@@ -51,12 +51,15 @@ public:
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-        connect(select, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [=](const QString &text) {
+        connect(select, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this] (const QString &text) {
             _log("New item is %s", qPrintable(text));
+            selected = text;
         });
-        connect(this, &QDialog::accepted, [=] {
-            _log("Selected reader %s", qPrintable(select->currentText()));
-            emit readerSelected(select->currentText());
+        connect(this, &QDialog::accepted, [this] {
+            if (!selected.isEmpty()) {
+                _log("Selected reader %s", qPrintable(selected));
+                emit readerSelected(selected);
+            }
         });
         show();
     }
@@ -69,11 +72,13 @@ public slots:
             ok->hide();
             cancel->setDefault(true);
             cancel->setFocus();
+            selected.clear();
         } else if (readers.size() == 1) {
             ok->setText(tr("Allow"));
             ok->show();
             select->hide();
             QString reader = readers.keys().at(0);
+            selected = reader;
             if (readers[reader].contains("EXCLUSIVE")) {
                 message->setText(tr("%1 can not be used.\nIt is used exclusively by some other application").arg(reader));
                 ok->setEnabled(false);
