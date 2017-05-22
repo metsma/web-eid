@@ -10,6 +10,8 @@
 
 #include "dialogs/betterdialog.h"
 #include <QVBoxLayout>
+#include <QApplication>
+#include <QDesktopWidget>
 #include <QStandardItemModel>
 #include <QComboBox>
 #include <QLabel>
@@ -112,6 +114,15 @@ public slots:
             }
             select->show();
         }
+
+        // Position in center of the screen
+        adjustSize();
+        QRect screen =  QApplication::desktop()->screenGeometry();
+        int x = (screen.width() - width()) / 2;
+        int y = (screen.height() - height()) / 2;
+        move(x, y);
+
+        // make focused
         activateWindow();
         raise();
     }
