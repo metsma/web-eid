@@ -69,7 +69,9 @@ public:
 
         QCommandLineParser parser;
         QCommandLineOption debug("debug");
+        QCommandLineOption doquit("quit");
         parser.addOption(debug);
+        parser.addOption(doquit);
         parser.process(arguments());
         this->dbg = parser.isSet(debug);
 
@@ -160,10 +162,6 @@ public slots:
     void connected() {
         _log("Connected to %s", qPrintable(sock->fullServerName()));
         server_started = 0;
-        // Start input reading thread, if not already running
-        if (!input->isRunning()) {
-            input->start();
-        }
 
         connect(sock, &QLocalSocket::readyRead, [this] {
             // Data available from app, read message and pass to browser
@@ -200,6 +198,16 @@ public slots:
                 sock->abort();
             }
         });
+        
+        // Quit the 
+        if (doQuit()) {
+            // Send {"internal": "quit"} to server and handle it accordingly
+        }
+        
+        // Start input reading thread, if not already running
+        if (!input->isRunning()) {
+            input->start();
+        }
     }
 
     void messageFromBrowser(const QByteArray &msg) {
