@@ -15,6 +15,7 @@
 
 class QtHost;
 
+// Clickable label
 class SurpriseLabel: public QLabel {
     Q_OBJECT
 public:
@@ -48,7 +49,9 @@ public:
 
         connect(img, &SurpriseLabel::clicked, [this] {
             counter++;
-            if (counter == 8) {
+            if (counter == 5) {
+                setWindowTitle(tr("Almost there ..."));
+            } else if (counter == 8) {
                 setWindowTitle(tr("Supplies!"));
                 text->setText(text->text() + "<p>Send me an e-mail with the window title<br>to get a free JavaCard for smart card development!</p>");
                 counter = 0;
@@ -56,7 +59,7 @@ public:
                 QTimer::singleShot(3000, this, &QDialog::accept);
             }
         });
-        // pushbutton flat
+
         layout->addWidget(text);
         layout->addWidget(buttons);
 
