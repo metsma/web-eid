@@ -120,12 +120,7 @@ public slots:
             select->show();
         }
 
-        // Position in center of the screen
-        adjustSize();
-        QRect screen =  QApplication::desktop()->screenGeometry();
-        int x = (screen.width() - width()) / 2;
-        int y = (screen.height() - height()) / 2;
-        move(x, y);
+        centrify();
 
         // make focused
         activateWindow();
