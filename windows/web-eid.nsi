@@ -8,11 +8,14 @@ InstallDir "$LOCALAPPDATA\Web eID"
 
 
 Section
+MessageBox MB_OK "Please be aware: this is an evaluation release and will expire on 11. July 2017!"
 SetAutoClose true
 SetOutPath "$INSTDIR"
 AllowSkipFiles off
 IfFileExists $INSTDIR\Web-eID.exe 0 +2
-MessageBox MB_OK "If you are upgrading, make sure Web eID app is closed before continuing"
+MessageBox MB_OK "As you are upgrading, we need to quit the current Web eID app before installing the new one.$\nYou will have to re-load open browser sessions that are using it."
+ExecWait '"$INSTDIR\web-eid-bridge.exe" --quit'
+Sleep 1000
 
 File src\release\Web-eID.exe
 File src\nm-bridge\release\web-eid-bridge.exe
@@ -69,14 +72,17 @@ SectionEnd
 
 Section "uninstall"
 SetAutoClose true
-MessageBox MB_OK "Make sure Web eID app is closed before continuing"
+ExecWait '"$INSTDIR\web-eid-bridge.exe" --quit'
+Sleep 1000
 rmDir /r "$LOCALAPPDATA\Web eID"
 rmDir /r "$SMPROGRAMS\Web eID"
 Delete "$DESKTOP\Web eID.lnk"
 SetRegView 32
 DeleteRegKey HKCU "SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native"
 DeleteRegKey HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native"
+DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Run\Web eID"
 SetRegView 64
 DeleteRegKey HKCU "SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native"
 DeleteRegKey HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native"
+DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Run\Web eID"
 SectionEnd
