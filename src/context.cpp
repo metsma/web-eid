@@ -304,9 +304,9 @@ void WebContext::outgoing(QVariantMap message) {
 
 void WebContext::terminate() {
     if (ws) {
-        ws->close();
+        ws->abort();
     } else if(ls) {
-        ls->close();
+        ls->abort();
     }
 }
 
@@ -316,8 +316,13 @@ QString WebContext::friendlyOrigin() const {
     if (url.scheme() == "file") {
         return "localhost";
     } else {
-        // FIXME: port, if not standard
-        return url.host();
+        if (url.scheme() == "https" && url.port(443) != 443) {
+            return  QString("%1:%2").arg(url.host()).arg(url.port(443));
+        } else if (url.scheme() == "http" && url.port(80) != 80) {
+            return QString("%1:%2").arg(url.host()).arg(url.port(80));
+        } else {
+            return url.host();
+        }
     }
 }
 
