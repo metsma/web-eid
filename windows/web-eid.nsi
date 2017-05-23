@@ -12,9 +12,10 @@ MessageBox MB_OK "Please be aware: this is an evaluation release and will expire
 SetAutoClose true
 SetOutPath "$INSTDIR"
 AllowSkipFiles off
-IfFileExists $INSTDIR\Web-eID.exe 0 +2
+IfFileExists $INSTDIR\Web-eID.exe 0 +5
 MessageBox MB_OK "As you are upgrading, we need to quit the current Web eID app before installing the new one.$\nYou will have to re-load open browser sessions that are using it."
-ExecWait '"$INSTDIR\web-eid-bridge.exe" --quit'
+DetailPrint "Stopping Web eID app ..."
+nsExec::Exec '"$INSTDIR\web-eid-bridge.exe" --quit'
 Sleep 1000
 
 File src\release\Web-eID.exe
@@ -64,15 +65,15 @@ CreateShortCut "$SMPROGRAMS\Web eID\Uninstall Web eID.lnk" "$INSTDIR\uninstall.e
 writeUninstaller "$INSTDIR\uninstall.exe"
 
 ExecShell "open" "$INSTDIR\Web-eID.exe"
+DetailPrint "Starting Web eID app"
 Sleep 1000
 ExecShell "open" "https://web-eid.com/?installer=windows-local&version=${VERSION}"
-
 SectionEnd
-
 
 Section "uninstall"
 SetAutoClose true
-ExecWait '"$INSTDIR\web-eid-bridge.exe" --quit'
+DetailPrint "Stopping Web eID app ..."
+nsExec::Exec '"$INSTDIR\web-eid-bridge.exe" --quit'
 Sleep 1000
 rmDir /r "$LOCALAPPDATA\Web eID"
 rmDir /r "$SMPROGRAMS\Web eID"
