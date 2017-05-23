@@ -6,10 +6,10 @@ from chrome import ChromeTest
 
 class TestPCSC(ChromeTest):
   def test_pcsc_open(self):
-      cmd = {"SCardConnect": {"protocol": "*"}, "origin": "https://example.com/"}
+      cmd = {"SCardConnect": {"protocol": "*"}, "origin": "https://example.com:1234"}
       resp = self.transact(cmd)
       for x in range(10):
-        cmd = {"SCardTransmit": {"bytes": "00a4000400"}, "origin": "https://example.com/"}
+        cmd = {"SCardTransmit": {"bytes": "00a4000400"}, "origin": "https://example.com"}
         resp = self.transact(cmd)
         time.sleep(1)
       cmd = {"SCardDisconnect": {}, "origin": "https://example.com/"}
