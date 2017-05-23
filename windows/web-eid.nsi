@@ -1,5 +1,5 @@
 Name "Web eID per-user installer"
-OutFile "Web-eID_${VERSION}-local.exe"
+OutFile "Web-eID_${VERSION}.exe"
 ShowInstDetails hide
 SilentInstall normal
 RequestExecutionLevel user
