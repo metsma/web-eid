@@ -1,3 +1,4 @@
+SetCompressor /solid /FINAL lzma
 Name "Web eID per-user installer"
 OutFile "Web-eID_${VERSION}.exe"
 ShowInstDetails hide
