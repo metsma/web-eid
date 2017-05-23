@@ -150,7 +150,6 @@ void WebContext::processMessage(const QVariantMap &message) {
         return outgoing({{"id", msgid}, {"version", VERSION}});
     } else if (message.contains("SCardConnect")) {
         // Show reader selection or confirmation dialog
-        // TODO: suppress PKI insertion/removal detection until connect or disconnect
         // to avoid races for card reader resources
         dialog = new QtSelectReader(this); // FIXME
         PKI->pause();

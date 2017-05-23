@@ -222,10 +222,17 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         connect(ls, &QLocalServer::newConnection, this, &QtHost::processConnectLocal);
     }
 
+    tray.setContextMenu(menu);
+    tray.setToolTip(tr("Web eID is running on port %1").arg(12345)); // FIXME
+
     if (QSystemTrayIcon::isSystemTrayAvailable()) {
-        tray.setContextMenu(menu);
-        tray.setToolTip(tr("Web eID is running on port %1").arg(12345));
         tray.show();
+    } else {
+        _log("Tray is not (yet) available");
+#ifdef Q_OS_LINUX
+        // Tray can start later, so show the icon later
+        QTimer::singleShot(1000, [this] {tray.show();});
+#endif
     }
     //tray.showMessage(tr("Web eID started"), tr("Click the icon for more information"), QSystemTrayIcon::Information, 2000); // Show message for 2 seconds
 
