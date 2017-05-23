@@ -102,7 +102,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
                     QList<WebContext *> all(contexts.values());
                     for (const auto &c: this->contexts) {
                         if (c->friendlyOrigin() == o) {
-                           all.append(c);
+                            all.append(c);
                         }
                     }
                     for (const auto &c: all) {
@@ -223,7 +223,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     }
 
     if (!QSystemTrayIcon::isSystemTrayAvailable()) {
-         _log("Tray is not (yet) available");
+        _log("Tray is not (yet) available");
     }
     tray.setContextMenu(menu);
     tray.setToolTip(tr("Web eID is running on port %1").arg(12345)); // FIXME

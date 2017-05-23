@@ -52,15 +52,24 @@ public:
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
         connect(select, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this] (const QString &text) {
-            _log("New item is %s", qPrintable(text));
-            selected = text;
-        });
-        connect(this, &QDialog::accepted, [this] {
-            if (!selected.isEmpty()) {
-                _log("Selected reader %s", qPrintable(selected));
-                emit readerSelected(selected);
+            if (!text.isEmpty()) {
+                _log("New item is %s", qPrintable(text));
+                ok->setEnabled(true);
+                ok->setDefault(true);
+                ok->setFocus();
             }
         });
+        connect(this, &QDialog::accepted, [this] {
+            QString reader;
+            if (select->count() > 1) {
+                reader = select->currentText();
+            } else {
+                reader = selected;
+            }
+            _log("Selected reader %s", qPrintable(reader));
+            emit readerSelected(reader);
+        });
+        centrify();
         show();
     }
 
@@ -94,28 +103,27 @@ public slots:
         } else {
             select->clear();
             select->addItems(readers.keys());
+            // Remove selected reader is not in list any more
+            if (!readers.keys().contains(selected)) {
+                selected.clear();
+            }
+
             ok->setText(tr("Select"));
             ok->show();
             message->setText(tr("Please select a smart card reader to use"));
             // Disable readers
             QStandardItemModel* model = qobject_cast<QStandardItemModel*>(select->model());
             for (const auto &reader: readers.keys()) {
-                _log("REader %s has %s", qPrintable(reader), qPrintable(readers[reader].join(",")));
+                _log("Reader %s has %s", qPrintable(reader), qPrintable(readers[reader].join(",")));
                 QStandardItem *item = model->findItems(reader).at(0);
                 // Disable some elements, if necessary
                 if (readers[reader].contains("EXCLUSIVE")) {
                     _log("Disabling combo %s", qPrintable(reader));
                     item->setEnabled(false);
-                    item->setToolTip(tr("Reader is used in exclusive mode"));
-                } else if ((select->currentIndex() == -1) || (selected == reader)) {
+                    item->setToolTip(tr("Reader is in exclusive use by some other application"));
+                } else if ((select->currentIndex()) == -1 || (selected == reader)) {
                     select->setCurrentText(reader);
                 }
-            }
-            if (select->currentIndex() != -1) {
-                ok->setEnabled(true);
-                ok->setDefault(true);
-                ok->setFocus();
-                cancel->setDefault(false);
             }
             select->show();
         }
@@ -131,7 +139,7 @@ public slots:
         (void)atr;
         // If a card is inserted while the dialog is open, we select the reader by default
         selected = reader;
-        select->setCurrentText(selected);
+        select->setCurrentText(reader);
 
         if (flags.contains("MUTE")) {
             message->setText(tr("Card inserted to %1 can not be used.\nPlease check the card").arg(reader));
@@ -142,6 +150,7 @@ public slots:
         // Reset message after a possibly mute message
         message->setText(tr("Please select a smart card reader"));
         selected = reader;
+        select->setCurrentText(reader);
     }
 
     void readerAttached(const QString &reader) {

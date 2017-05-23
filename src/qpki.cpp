@@ -66,9 +66,9 @@ void QPKIWorker::refresh(const QByteArray &atr) {
         certificates = certs;
         emit refreshed(certificates);
     }  else {
-       if (!atr.isEmpty()) {
+        if (!atr.isEmpty()) {
             emit noDriver(0, atr, 0);
-       }
+        }
     }
 }
 

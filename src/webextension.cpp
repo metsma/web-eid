@@ -29,8 +29,8 @@ bool WebExtensionHelper::isEnabled() {
     if (QDir::home().exists("Library/Application Support/Google/Chrome/NativeMessagingHosts/com.web-eid.app.json")) {
         enabled = true
     }
- // ~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.my_company.my_application.json
- // ~/Library/Application Support/Chromium/NativeMessagingHosts/com.my_company.my_application.json
+// ~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.my_company.my_application.json
+// ~/Library/Application Support/Chromium/NativeMessagingHosts/com.my_company.my_application.json
 #elif defined(Q_OS_WIN32)
     QSettings startup("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
     enabled = startup.value("Web eID").toString() == QDir::toNativeSeparators(QCoreApplication::applicationFilePath());

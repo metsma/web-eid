@@ -276,14 +276,14 @@ void QtPCSC::run()
                     continue;
                 }
                 if ((i.dwEventState & SCARD_STATE_PRESENT) && !(known[reader] & SCARD_STATE_PRESENT)) {
-                        QByteArray atr((const char *)i.rgbAtr, i.cbAtr);
-                        if (!atr.isEmpty()) {
-                            _log("  atr:%s", atr.toHex().toStdString().c_str());
-                        }
-                        emit cardInserted(QString::fromStdString(reader), atr, stateNames(i.dwEventState & ~SCARD_STATE_CHANGED));
-                        // Only emit reader list change if the card is not mute
-                        if (!(i.dwEventState & SCARD_STATE_MUTE))
-                            change = true;
+                    QByteArray atr((const char *)i.rgbAtr, i.cbAtr);
+                    if (!atr.isEmpty()) {
+                        _log("  atr:%s", atr.toHex().toStdString().c_str());
+                    }
+                    emit cardInserted(QString::fromStdString(reader), atr, stateNames(i.dwEventState & ~SCARD_STATE_CHANGED));
+                    // Only emit reader list change if the card is not mute
+                    if (!(i.dwEventState & SCARD_STATE_MUTE))
+                        change = true;
                 } else if ((i.dwEventState & SCARD_STATE_EMPTY) && (known[reader] & SCARD_STATE_PRESENT)) {
                     emit cardRemoved(QString::fromStdString(reader));
                     change = true;
@@ -338,7 +338,7 @@ QPCSCReader *QtPCSC::connectReader(WebContext *webcontext, const QString &reader
     QPCSCReader *result = new QPCSCReader(webcontext, this, reader, protocol);
 
     connect(this, &QtPCSC::readerRemoved, result, &QPCSCReader::readerRemoved, Qt::QueuedConnection);
-    
+
     if ((!rdrs[reader].contains("PRESENT") || rdrs[reader].contains("MUTE")) && wait) {
         _log("Showing insert reader dialog");
         QtInsertCard *dlg = new QtInsertCard(webcontext->friendlyOrigin(), result);
