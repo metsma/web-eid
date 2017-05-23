@@ -143,7 +143,7 @@ public slots:
         select->setCurrentText(reader);
 
         if (flags.contains("MUTE")) {
-            message->setText(tr("Card inserted to %1 can not be used.\nPlease check the card").arg(reader));
+            message->setText(tr("Inserted card is not working.\nPlease check the card.").arg(reader));
         }
     }
 

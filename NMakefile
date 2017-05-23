@@ -41,7 +41,7 @@ pkg: x86 x64
 nsis: $(EXE)
 	"C:\Program Files (x86)\NSIS\makensis.exe" /nocd /DVERSION=$(VERSION) windows\web-eid.nsi
 	timeout /t 1
-	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION)-local.exe)
+	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION).exe)
 
 clean:
 	git clean -dfx
