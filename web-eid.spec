@@ -43,4 +43,4 @@ sed -i 's/\/usr\/lib/\/usr\/libexec/g' %{buildroot}/usr/lib64/mozilla/native-mes
 /etc/chromium/native-messaging-hosts/org.hwcrypto.native.json
 /usr/lib64/mozilla/native-messaging-hosts/org.hwcrypto.native.json
 
-%license LICENSE.LGPL
+%license LICENSE
