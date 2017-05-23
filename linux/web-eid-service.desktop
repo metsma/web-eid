@@ -3,4 +3,6 @@ Type=Application
 Terminal=false
 Exec=/usr/bin/web-eid
 TryExec=web-eid
-Name=Web eID service
+Icon=web-eid
+Name=Web eID
+Comment=Use your eID on the Web

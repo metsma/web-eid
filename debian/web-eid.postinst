@@ -17,6 +17,6 @@ exec >/dev/null 2>&1
 VERSION=$(zcat /usr/share/doc/$DPKG_MAINTSCRIPT_PACKAGE/changelog*.gz | head -1 | perl -ne '$_=~ /.*\((.*)\).*/; print $1;')
 if [ -n "${DISPLAY}" ]; then
   if [ -n "${SUDO_USER-$USERNAME}" ]; then
-    su - ${SUDO_USER-$USERNAME} sh -c "which xdg-open && xdg-open https://web-eid.com/?installer=`lsb_release -cs`-`dpkg --print-architecture`&version=${VERSION}; exit 0"
+    su - ${SUDO_USER-$USERNAME} sh -c "which xdg-open && xdg-open https://web-eid.com/?installer=`lsb_release -cs`-`dpkg --print-architecture`&version=${VERSION}; exit 0" &
   fi
 fi

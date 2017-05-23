@@ -9,3 +9,7 @@ include /usr/share/dpkg/buildflags.mk
 
 override_dh_auto_build:
 	make app
+
+override_dh_auto_install:
+	mkdir -p $(CURDIR)/debian/web-eid/usr/share/icons/hicolor
+	cp -Rv artwork/icons/* $(CURDIR)/debian/web-eid/usr/share/icons/hicolor

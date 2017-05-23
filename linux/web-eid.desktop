@@ -2,5 +2,7 @@
 Type=Application
 Terminal=false
 Exec=/usr/bin/web-eid
-Name=Web eID app
+Name=Web eID
 Categories=Network
+Icon=web-eid
+Comment=Use your eID on the Web
