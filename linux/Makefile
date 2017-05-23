@@ -1,10 +1,7 @@
 # This file is included by the parent Makefile in ..
 
-src/web-eid:
-	$(MAKE) -C src
-
 .PHONY: pkg
-pkg: src/web-eid
+pkg: app
 	test -f /etc/debian_version && $(MAKE) pkg-deb; exit 0
 	test -f /etc/redhat-release && $(MAKE) pkg-rpm; exit 0
 
