@@ -35,6 +35,7 @@ public:
         layout->addWidget(buttons);
         layout->setSizeConstraint(QLayout::SetFixedSize);
         select->setFocusPolicy(Qt::StrongFocus);
+        select->setSizeAdjustPolicy(QComboBox::AdjustToContents);
         setWindowFlags(Qt::WindowStaysOnTopHint);
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) &
                        ~(Qt::WindowMaximizeButtonHint|Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint));
