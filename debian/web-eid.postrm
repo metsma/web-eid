@@ -1,8 +1,10 @@
 #!/bin/bash
-set -e
+
 # Remove files installed in postinst
 rm -f /etc/opt/chrome/native-messaging-hosts/org.hwcrypto.native.json
-rmdir -p --ignore-fail-on-non-empty /etc/opt/chrome/native-messaging-hosts
+test -d /etc/opt/chrome/native-messaging-hosts && rmdir -p --ignore-fail-on-non-empty /etc/opt/chrome/native-messaging-hosts
 
 rm -f /etc/opt/chrome/policies/managed/com.web-eid.policy.json
-rmdir -p --ignore-fail-on-non-empty /etc/opt/chrome/policies/managed
+test -d /etc/opt/chrome/policies/managed && rmdir -p --ignore-fail-on-non-empty /etc/opt/chrome/policies/managed
+
+exit 0
