@@ -65,7 +65,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     }
 
     // Construct tray icon and related menu
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     tray.setIcon(QIcon(":/inactive-web-eid.png"));
 #else
     tray.setIcon(QIcon(":/web-eid.png"));
@@ -222,19 +222,12 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         connect(ls, &QLocalServer::newConnection, this, &QtHost::processConnectLocal);
     }
 
+    if (!QSystemTrayIcon::isSystemTrayAvailable()) {
+         _log("Tray is not (yet) available");
+    }
     tray.setContextMenu(menu);
     tray.setToolTip(tr("Web eID is running on port %1").arg(12345)); // FIXME
-
-    if (QSystemTrayIcon::isSystemTrayAvailable()) {
-        tray.show();
-    } else {
-        _log("Tray is not (yet) available");
-#ifdef Q_OS_LINUX
-        // Tray can start later, so show the icon later
-        QTimer::singleShot(1000, [this] {tray.show();});
-#endif
-    }
-    //tray.showMessage(tr("Web eID started"), tr("Click the icon for more information"), QSystemTrayIcon::Information, 2000); // Show message for 2 seconds
+    tray.show();
 
     setWindowIcon(QIcon(":/web-eid.png"));
     setQuitOnLastWindowClosed(false);
@@ -302,7 +295,7 @@ void QtHost::processConnect() {
 
 void QtHost::newConnection(WebContext *ctx) {
     contexts[ctx->id] = ctx;
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     tray.setIcon(QIcon(":/web-eid.png"));
 #endif
     // Keep count of active contexts
@@ -314,7 +307,7 @@ void QtHost::newConnection(WebContext *ctx) {
             usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
             ctx->deleteLater();
             if (contexts.size() == 0) {
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
                 tray.setIcon(QIcon(":/inactive-web-eid.png"));
 #endif
                 if (once) {

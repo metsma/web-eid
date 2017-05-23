@@ -64,7 +64,10 @@ public:
         layout->addWidget(buttons);
 
         setWindowTitle(tr("About"));
+#ifndef Q_OS_LINUX
+        // We get a stock app icon otherwise
         setWindowIcon(QIcon());
+#endif
         setWindowFlags(Qt::WindowStaysOnTopHint);
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) &
                        ~(Qt::WindowMaximizeButtonHint|Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint));
