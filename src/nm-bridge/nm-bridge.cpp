@@ -107,7 +107,7 @@ public:
 
         // TODO: figure out the right paths depending on free-form app location
 #if defined(Q_OS_MACOS)
-        serverApp = "open -b com.web-eid.app";
+        serverApp = QDir::toNativeSeparators(QDir(QCoreApplication::applicationDirPath()).filePath("Web eID"));
         // /tmp/martin-webeid
         serverName = QDir("/tmp").filePath(qgetenv("USER") + "-webeid");
 #elif defined(Q_OS_WIN32)
@@ -157,7 +157,7 @@ public:
                         _log("Could not start server");
                     }
                 } else {
-                    if (server_started < 10) {
+                    if (server_started < 4) {
                         _log("Server has already been started, trying to reconnect (%d)", server_started);
                         server_started++;
                         QTimer::singleShot(500, [this] {sock->connectToServer(serverName);});
