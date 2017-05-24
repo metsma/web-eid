@@ -31,7 +31,7 @@ public:
                        ~(Qt::WindowMaximizeButtonHint|Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint));
 
         text->setText(tr("Windows CryptoAPI"));
-      
+
     };
 
     void display(const QString &message = QString()) {
