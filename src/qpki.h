@@ -139,6 +139,7 @@ private:
     QFutureWatcher<QWinCrypt::ErroredResponse> winop; // Refreshes windows cert stores on demand.
     QFutureWatcher<QWinCrypt::ErroredResponse> wincerts; // Refreshes windows cert stores on demand.
     WinOpNotice winopNotice;
+    bool firstrun = true;
 #endif
 
     QtPCSC *PCSC;
