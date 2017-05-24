@@ -14,6 +14,7 @@
 #include "pkcs11module.h"
 #include "qpcsc.h"
 
+#include "dialogs/winop.h"
 
 /*
 PKI keeps track of available certificates
@@ -76,6 +77,14 @@ public:
         connect(&worker, &QPKIWorker::noDriver, this, &QPKI::noDriver, Qt::QueuedConnection);
         // Start listening for pcsc events.
         resume();
+
+#ifdef Q_OS_WIN
+        // If the winop notice has not been shon before, the cryptui windows will not become topmost.
+        // So utilize the notice to also say that we started
+        // TODO: this is not very nice or understandable currently. Better try to fix the first invocation.
+        QTimer::singleShot(1000, this, [this] { winopNotice.display("Starting Web eID ..."); });
+        QTimer::singleShot(2500, &winopNotice, &WinOpNotice::hide);
+#endif
     }
 
     ~QPKI() {
@@ -129,6 +138,7 @@ private:
     // Windows operation
     QFutureWatcher<QWinCrypt::ErroredResponse> winop; // Refreshes windows cert stores on demand.
     QFutureWatcher<QWinCrypt::ErroredResponse> wincerts; // Refreshes windows cert stores on demand.
+    WinOpNotice winopNotice;
 #endif
 
     QtPCSC *PCSC;

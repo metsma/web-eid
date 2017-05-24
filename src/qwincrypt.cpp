@@ -8,7 +8,6 @@
 
 #include "Logger.h"
 
-#include <Windows.h>
 #include <WinError.h>
 #include <ncrypt.h>
 #include <WinCrypt.h>
@@ -166,7 +165,7 @@ BOOL WINAPI filter_sign(PCCERT_CONTEXT certContext, BOOL *pfInitialSelectedCert,
 }
 
 // Show a certificate selection window
-QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type, const QString &title, const QString &message) {
+QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type, const QString &title, const QString &message, const HWND parent) {
 
     HCERTSTORE store = CertOpenSystemStore(0, L"MY");
     if (!store)	{
@@ -201,6 +200,7 @@ QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type,
     }
     // pcsc.dwFlags = CRYPTUI_SELECTCERT_PUT_WINDOW_TOPMOST; Windows 7 sp1 onwards, not available
     pcsc.szTitle = LPWSTR(title.utf16());
+    pcsc.hwndParent = parent;
     pcsc.szDisplayString = LPWSTR(message.utf16());
     pcsc.pvCallbackData = nullptr; // TODO: use a single callback with arguments instead ?
     pcsc.cDisplayStores = 1;
@@ -220,7 +220,7 @@ QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type,
     return {CKR_OK, {result}};
 }
 
-QWinCrypt::ErroredResponse QWinCrypt::sign(const QByteArray &cert, const QByteArray &hash, const HashType hashtype) {
+QWinCrypt::ErroredResponse QWinCrypt::sign(const QByteArray &cert, const QByteArray &hash, const HashType hashtype, const HWND parent) {
     _log("Cert for signing is: %s", qPrintable(cert.toHex()));
     QByteArray result;
     CK_RV rv = CKR_OK;
@@ -270,12 +270,13 @@ QWinCrypt::ErroredResponse QWinCrypt::sign(const QByteArray &cert, const QByteAr
         return {CKR_KEY_NEEDED}; // FIXME: TBS
     }
 
-    DWORD flags = obtainKeyStrategy | CRYPT_ACQUIRE_COMPARE_KEY_FLAG;
+    DWORD flags = obtainKeyStrategy | CRYPT_ACQUIRE_COMPARE_KEY_FLAG | CRYPT_ACQUIRE_WINDOW_HANDLE_FLAG;
     DWORD spec = 0;
     BOOL freeKeyHandle = false;
     HCRYPTPROV_OR_NCRYPT_KEY_HANDLE key = NULL;
     BOOL gotKey = true;
-    gotKey = CryptAcquireCertificatePrivateKey(certInStore, flags, 0, &key, &spec, &freeKeyHandle);
+    // HWND
+    gotKey = CryptAcquireCertificatePrivateKey(certInStore, flags, (void *)&parent, &key, &spec, &freeKeyHandle);
     CertFreeCertificateContext(certInStore);
     CertCloseStore(store, 0);
 

@@ -127,6 +127,7 @@ void QPKI::select(const WebContext *context, const CertificatePurpose type) {
 #ifdef Q_OS_WIN
     connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, this, [this, context] {
         this->winop.disconnect(); // remove signals
+        this->winopNotice.hide(); // close window
         QWinCrypt::ErroredResponse result = this->winop.result();
         _log("Winop done: %s %d", QPKI::errorName(result.error), result.result.size());
         if (result.error == CKR_OK) {
@@ -136,7 +137,9 @@ void QPKI::select(const WebContext *context, const CertificatePurpose type) {
         }
     });
     // run future
-    winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, type, context->friendlyOrigin(), QStringLiteral("Dummy text about type")));
+    winopNotice.display("Select certificate");
+    QString msg = tr("Select certificate for %1").arg(type == Signing ? "signing" : "authentication");
+    winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, type, context->friendlyOrigin(), msg, HWND(winopNotice.winId())));
 #endif
     //return emit certificate(context->id, CKR_FUNCTION_CANCELED, 0);
 }
@@ -178,6 +181,7 @@ void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteAr
 #ifdef Q_OS_WIN
     connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, this, [this, context] {
         this->winop.disconnect(); // remove signals
+        winopNotice.hide();
         QWinCrypt::ErroredResponse result = this->winop.result();
         _log("Winop done: %s %d", QPKI::errorName(result.error), result.result.size());
         if (result.error == CKR_OK) {
@@ -187,7 +191,8 @@ void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteAr
         }
     });
     // run future
-    winop.setFuture(QtConcurrent::run(&QWinCrypt::sign, cert, hash, QWinCrypt::HashType::SHA256));
+    winopNotice.display("Enter PIN");
+    winop.setFuture(QtConcurrent::run(&QWinCrypt::sign, cert, hash, QWinCrypt::HashType::SHA256, HWND(winopNotice.winId())));
 #endif
 
 }

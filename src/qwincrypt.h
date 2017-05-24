@@ -5,10 +5,12 @@
 #pragma once
 #include <QtGlobal>
 #ifdef Q_OS_WIN
+#include <Windows.h>
 #include "Common.h"
 #include "pkcs11.h"
 #include <QVariant>
 #include <QByteArray>
+#include "dialogs/winop.h"
 
 typedef const wchar_t *LPCWSTR;
 
@@ -26,8 +28,8 @@ public:
     };
 
     static ErroredResponse getCertificates();
-    static ErroredResponse sign(const QByteArray &cert, const QByteArray &hash, const HashType hashtype);
-    static ErroredResponse selectCertificate(CertificatePurpose type, const QString &title, const QString &message);
+    static ErroredResponse sign(const QByteArray &cert, const QByteArray &hash, const HashType hashtype, const HWND parent);
+    static ErroredResponse selectCertificate(CertificatePurpose type, const QString &title, const QString &message, const HWND parent);
 };
 
 #endif
