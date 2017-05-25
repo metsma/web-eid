@@ -30,9 +30,13 @@ bool StartAtLoginHelper::isEnabled() {
     // startup script, eg disabled (X-MATE-Autostart-enabled=false or something similar)
     //if (QFile(QDir::homePath().filePath(".config/autostart/web-eid-service.desktop")))
 #elif defined(Q_OS_MACOS)
+    CFURLRef url = (CFURLRef)CFAutorelease((CFURLRef)CFBundleCopyBundleURL(CFBundleGetMainBundle()));
+    QString bundlepath = QUrl::fromCFURL(url).path();
     // XXX: we cast the list to a string in applescript, for simple osascript() function
-    QString output = osascript("set text item delimiters to \",\"\ntell application \"System Events\" to get the name of every login item as text");
-    enabled = output.simplified().split(",").contains("Web eID");
+    QString names = osascript("set text item delimiters to \",\"\ntell application \"System Events\" to get the name of every login item as text");
+    QString paths = osascript("set text item delimiters to \",\"\ntell application \"System Events\" to get the path of every login item as text");
+    // Check that path matches
+    enabled = names.simplified().split(",").contains("Web eID") && paths.split(",").contains(bundlepath);
 #elif defined(Q_OS_WIN32)
     QSettings startup("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
     enabled = startup.value("Web eID").toString() == QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
@@ -52,6 +56,8 @@ bool StartAtLoginHelper::setEnabled(bool enabled) {
     QString bundlepath = QUrl::fromCFURL(url).path();
     _log("Current bundle is: %s", qPrintable(bundlepath));
     if (enabled) {
+        // Delete any existing items before adding a new one.
+        setEnabled(false);
         _log("result: %s", qPrintable(osascript(QString("tell application \"System Events\" to make login item at end with properties {name:\"Web eID\", path:\"%1\", hidden:false}").arg(bundlepath))));
     } else {
         _log("result: %s", qPrintable(osascript("tell application \"System Events\" to delete login item \"Web eID\"")));

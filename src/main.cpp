@@ -60,9 +60,11 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     // Enable autostart, if not explicitly disabled
     QSettings settings;
-    if (settings.value("startAtLogin", 1).toBool()) {
+    if (settings.value("startAtLogin", 1).toBool() && !StartAtLoginHelper::isEnabled()) {
         StartAtLoginHelper::setEnabled(true);
     }
+
+    // Enable browser extension, if not explicitly disabled
 
     // Construct tray icon and related menu
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
