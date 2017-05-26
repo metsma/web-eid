@@ -24,11 +24,12 @@ class QtSelectReader: public BetterDialog {
 
 public:
     // FIXME: optional list of wanted ATR-s
-    QtSelectReader(WebContext *ctx):
+    QtSelectReader(WebContext *ctx, QList<QByteArray> atrs):
         layout(new QVBoxLayout(this)),
         message(new QLabel(this)),
         select(new QComboBox(this)),
-        buttons(new QDialogButtonBox(this))
+        buttons(new QDialogButtonBox(this)),
+        atrs(atrs)
     {
         layout->addWidget(message);
         layout->addWidget(select);
@@ -170,4 +171,5 @@ private:
     QPushButton *ok;
     QPushButton *cancel;
     QString selected;
+    QList<QByteArray> atrs;
 };

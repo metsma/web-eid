@@ -149,9 +149,16 @@ void WebContext::processMessage(const QVariantMap &message) {
     if (message.contains("version")) {
         return outgoing({{"id", msgid}, {"version", VERSION}});
     } else if (message.contains("SCardConnect")) {
+        auto params = message.value("SCardConnect").toMap();
         // Show reader selection or confirmation dialog
         // to avoid races for card reader resources
-        dialog = new QtSelectReader(this); // FIXME
+        QList<QByteArray> atrs;
+        if (params.contains("atrs")) {
+            for (const auto &a: params.value("atrs").toList()) {
+                atrs.append(QByteArray::fromBase64(a.toString().toLatin1()));
+            }
+        }
+        dialog = new QtSelectReader(this, atrs); // FIXME
         PKI->pause();
         ((QtSelectReader *)dialog)->update(PCSC->getReaders());
         connect(PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)dialog, &QtSelectReader::update, Qt::QueuedConnection);
@@ -164,8 +171,8 @@ void WebContext::processMessage(const QVariantMap &message) {
             outgoing({{"error", QtPCSC::errorName(SCARD_E_CANCELLED)}});
         });
         // Connect to the reader once the reader name is known
-        connect((QtSelectReader *)dialog, &QtSelectReader::readerSelected, this, [this, message] (QString name) {
-            QPCSCReader *r = PCSC->connectReader(this, name, message.value("SCardConnect").toMap().value("protocol", "*").toString(), true);
+        connect((QtSelectReader *)dialog, &QtSelectReader::readerSelected, this, [this, params] (QString name) {
+            QPCSCReader *r = PCSC->connectReader(this, name, params.value("protocol", "*").toString(), true);
             readers[name] = r;
             connect(r, &QPCSCReader::disconnected, this, [this, name] (LONG err) {
                 _log("Disconnected: %s", QtPCSC::errorName(err));
@@ -199,20 +206,29 @@ void WebContext::processMessage(const QVariantMap &message) {
             });
         });
     } else if (message.contains("SCardDisconnect")) {
-        if (!readers.isEmpty()) {
-            QPCSCReader *r = readers.first(); // FIXME
-            r->disconnect();
-        } else {
-            // Already disconnected, do nothing
-            outgoing({});
-        }
+        auto params = message.value("SCardDisconnect").toMap();
+        if (!params.contains("reader"))
+            return outgoing({{"error", "protocol"}});
+        if (!readers.contains(params.value("reader").toString()))
+            return outgoing({{"error", QtPCSC::errorName(SCARD_E_READER_UNAVAILABLE)}});
+        QPCSCReader *r = readers[params.value("reader").toString()];
+        r->disconnect();
     } else if (message.contains("SCardTransmit")) {
-        if (!readers.isEmpty()) {
-            QPCSCReader *r = readers.first(); // FIXME
-            r->transmit(QByteArray::fromBase64(message.value("SCardTransmit").toMap().value("bytes").toString().toLatin1()));
-        } else {
-            outgoing({{"error", QtPCSC::errorName(SCARD_E_NO_SMARTCARD)}});
-        }
+        auto params = message.value("SCardTransmit").toMap();
+        if (!params.contains("reader") || !params.contains("bytes"))
+            return outgoing({{"error", "protocol"}});
+        if (!readers.contains(params.value("reader").toString()))
+            return outgoing({{"error", QtPCSC::errorName(SCARD_E_READER_UNAVAILABLE)}});
+        QPCSCReader *r = readers[params.value("reader").toString()];
+        r->transmit(QByteArray::fromBase64(params.value("bytes").toString().toLatin1()));
+    } else if (message.contains("SCardReconnect")) {
+        auto params = message.value("SCardReconnect").toMap();
+        if (!params.contains("reader") || !params.contains("protocol"))
+            return outgoing({{"error", "protocol"}});
+        if (!readers.contains(params.value("reader").toString()))
+            return outgoing({{"error", QtPCSC::errorName(SCARD_E_READER_UNAVAILABLE)}});
+        QPCSCReader *r = readers[params.value("reader").toString()];
+        r->reconnect(params.value("protocol").toString());
     } else if (message.contains("sign")) {
         QVariantMap sign = message.value("sign").toMap();
         const QByteArray cert = QByteArray::fromBase64(sign.value("certificate").toString().toLatin1());

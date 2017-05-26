@@ -31,11 +31,13 @@ public slots:
     // establish context in thread and connect to reader
     void connectCard(const QString &reader, const QString &protocol);
     void transmit(const QByteArray &bytes);
+    void reconnectCard(const QString &protocol);
     void disconnectCard();
 
 signals:
     // When the connection has been established
     void connected(const QByteArray &atr, const QString &protocol);
+    void reconnected(const QByteArray &atr, const QString &protocol);
     // When reader is disconnected, either implicitly during connect or transmit
     // or explicitly via disconnect()
     void disconnected(const LONG err);
@@ -46,6 +48,8 @@ private:
     SCARDCONTEXT context = 0; // Only required on unix
     SCARDHANDLE card = 0;
     DWORD protocol = SCARD_PROTOCOL_UNDEFINED;
+    DWORD mode = SCARD_SHARE_EXCLUSIVE;
+    QString name;
 };
 
 // Represents a connection to a reader and a card.
@@ -70,6 +74,7 @@ public:
 public slots:
     void open();
     void transmit(const QByteArray &apdu);
+    void reconnect(const QString &protocol);
     void disconnect();
 
     void cardInserted(const QString &reader, const QByteArray &atr, const QStringList &flags);
@@ -78,6 +83,7 @@ public slots:
 signals:
     // command signals
     void connectCard(const QString &reader, const QString &protocol);
+    void reconnectCard(const QString &protocol);
     void disconnectCard();
     void transmitBytes(const QByteArray &bytes);
 
@@ -85,6 +91,7 @@ signals:
     void received(const QByteArray &apdu);
     void disconnected(const LONG err);
     void connected(const QByteArray &atr, const QString &protocol);
+    void reconnected(const QByteArray &atr, const QString &protocol);
 
 private:
     bool isOpen = false;
