@@ -6,6 +6,7 @@
 
 #include <QThread>
 #include <QMutex>
+#include <QPair>
 
 #ifdef __APPLE__
 #include <PCSC/winscard.h>
@@ -109,7 +110,7 @@ public:
     void run();
     void cancel();
 
-    QMap<QString, QStringList> getReaders();
+    QMap<QString, QPair<QByteArray, QStringList>> getReaders();
     QPCSCReader *connectReader(WebContext *webcontext, const QString &reader, const QString &protocol, bool wait);
 
     static const char *errorName(LONG err);
@@ -121,7 +122,7 @@ signals:
     void readerAttached(const QString &name);
     void readerRemoved(const QString &name);
 
-    void readerListChanged(const QMap<QString, QStringList> &readers); // if any of the above triggered, this will trigger as well
+    void readerListChanged(const QMap<QString, QPair<QByteArray, QStringList>> &readers); // if any of the above triggered, this will trigger as well
 
     void error(const QString &reader, const LONG err);
 
@@ -132,7 +133,7 @@ private:
     };
 
     SCARDCONTEXT context = 0;
-    QMap<std::string, DWORD> known; // Known readers
+    QMap<QString, QPair<QByteArray, DWORD>> known; // Known readers
     QMutex mutex; // Lock that guards the known readers
     bool pnp = true;
 };

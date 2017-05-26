@@ -14,9 +14,12 @@
 #include <QDesktopWidget>
 #include <QStandardItemModel>
 #include <QComboBox>
+#include <QCheckBox>
 #include <QLabel>
 #include <QDialogButtonBox>
 #include <QPushButton>
+#include <QSettings>
+#include <QTimeLine>
 
 // Reader selection dialog
 class QtSelectReader: public BetterDialog {
@@ -25,14 +28,28 @@ class QtSelectReader: public BetterDialog {
 public:
     // FIXME: optional list of wanted ATR-s
     QtSelectReader(WebContext *ctx, QList<QByteArray> atrs):
+        context(ctx),
         layout(new QVBoxLayout(this)),
         message(new QLabel(this)),
         select(new QComboBox(this)),
+        remember(new QCheckBox(this)),
         buttons(new QDialogButtonBox(this)),
-        atrs(atrs)
+        atrs(atrs),
+        autoaccept(new QTimeLine(3000, this))
     {
+        remembered = settings.value(context->friendlyOrigin() + "/" + "reader").toString();
+        oktext = tr("OK");
         layout->addWidget(message);
         layout->addWidget(select);
+        remember->setText(tr("Always use this reader"));
+        connect(remember, &QCheckBox::stateChanged, [this] (int state) {
+            if (state == Qt::Unchecked) {
+                autoaccept->stop();
+                // FIXME: keep the OK text as a separate variable
+                ok->setText(oktext);
+            }
+        });
+        layout->addWidget(remember);
         layout->addWidget(buttons);
         layout->setSizeConstraint(QLayout::SetFixedSize);
         select->setFocusPolicy(Qt::StrongFocus);
@@ -43,8 +60,7 @@ public:
         setAttribute(Qt::WA_DeleteOnClose);
         setWindowTitle(ctx->friendlyOrigin());
 
-        message->setText("Reader will be made available to remote site!");
-        ok = buttons->addButton(tr("Select"), QDialogButtonBox::AcceptRole);
+        ok = buttons->addButton(oktext, QDialogButtonBox::AcceptRole);
         ok->setFocusPolicy(Qt::StrongFocus);
         ok->setEnabled(false);
 
@@ -53,14 +69,27 @@ public:
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
+        connect(autoaccept, &QTimeLine::finished, this, &QDialog::accept);
+
         connect(select, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this] (const QString &text) {
             if (!text.isEmpty()) {
                 _log("New item is %s", qPrintable(text));
                 ok->setEnabled(true);
                 ok->setDefault(true);
                 ok->setFocus();
+                remember->setChecked(text == remembered);
+                if (!this->atrs.isEmpty() && !readers[text].first.isEmpty()) {
+                    if  (this->atrs.contains(readers[text].first)) {
+                        message->setText(tr("The card in this reader is the expected card"));
+                    } else {
+                        message->setText(tr("The card in this reader is not the expected card"));
+                    }
+                } else {
+                    message->setText(defaultmessage);
+                }
             }
         });
+
         connect(this, &QDialog::accepted, [this] {
             QString reader;
             if (select->count() > 1) {
@@ -69,6 +98,14 @@ public:
                 reader = selected;
             }
             _log("Selected reader %s", qPrintable(reader));
+
+            if (remember->isChecked()) {
+                settings.beginGroup(context->friendlyOrigin());
+                settings.setValue("reader", reader);
+                settings.endGroup();
+            } else if (!remembered.isEmpty() && !remember->isChecked()) {
+                settings.remove(QStringLiteral("%1/reader").arg(context->friendlyOrigin()));
+            }
             emit readerSelected(reader);
         });
         centrify();
@@ -76,21 +113,26 @@ public:
     }
 
 public slots:
-    void update(QMap<QString, QStringList> readers) {
+    void update(QMap<QString, QPair<QByteArray, QStringList>> readers) {
+        message->clear();
+        select->clear();
+
         if (readers.size() == 0) {
-            message->setText(tr("Please connect a smart card reader!"));
+            defaultmessage = tr("Please connect a smart card reader!");
             select->hide();
             ok->hide();
             cancel->setDefault(true);
             cancel->setFocus();
             selected.clear();
         } else if (readers.size() == 1) {
-            ok->setText(tr("Allow"));
+            oktext = tr("Allow");
             ok->show();
             select->hide();
             QString reader = readers.keys().at(0);
             selected = reader;
-            if (readers[reader].contains("EXCLUSIVE")) {
+            remember->setChecked(remembered == selected);
+
+            if (readers[reader].second.contains("EXCLUSIVE")) {
                 message->setText(tr("%1 can not be used.\nIt is used exclusively by some other application").arg(reader));
                 ok->setEnabled(false);
                 cancel->setDefault(true);
@@ -103,56 +145,124 @@ public slots:
                 ok->setFocus();
             }
         } else {
-            select->clear();
+            oktext = tr("Select");
+            defaultmessage = tr("Please select a smart card reader to use");
             select->addItems(readers.keys());
             // Remove selected reader is not in list any more
             if (!readers.keys().contains(selected)) {
                 selected.clear();
             }
-
-            ok->setText(tr("Select"));
+            // Set reader if remembered
+            if (readers.keys().contains(remembered)) {
+                select->setCurrentText(remembered);
+            }
             ok->show();
-            message->setText(tr("Please select a smart card reader to use"));
             // Disable readers
             QStandardItemModel* model = qobject_cast<QStandardItemModel*>(select->model());
             for (const auto &reader: readers.keys()) {
-                _log("Reader %s has %s", qPrintable(reader), qPrintable(readers[reader].join(",")));
+                _log("Reader %s has %s", qPrintable(reader), qPrintable(readers[reader].second.join(",")));
                 QStandardItem *item = model->findItems(reader).at(0);
                 // Disable some elements, if necessary
-                if (readers[reader].contains("EXCLUSIVE")) {
+                if (readers[reader].second.contains("EXCLUSIVE")) {
                     _log("Disabling combo %s", qPrintable(reader));
                     item->setEnabled(false);
                     item->setToolTip(tr("Reader is in exclusive use by some other application"));
-                } else if ((select->currentIndex()) == -1 || (selected == reader)) {
-                    select->setCurrentText(reader);
+                } else {
+                    if (!atrs.isEmpty() && atrs.contains(readers[reader].first)) {
+                        message->setText(tr("This reader has the expected card"));
+                        select->setCurrentText(reader);
+                    }
+                    if ((select->currentIndex()) == -1 || (selected == reader)) {
+                        select->setCurrentText(reader);
+                    }
                 }
             }
+            remember->setChecked(remembered == select->currentText());
             select->show();
         }
-
+        ok->setText(oktext);
+        if (message->text().isEmpty())
+            message->setText(defaultmessage);
+        if (remember->isChecked()) {
+            ok->setText(QStringLiteral("%1 (3s)").arg(oktext));
+            autoaccept->setCurveShape(QTimeLine::LinearCurve);
+            autoaccept->setFrameRange(3, 0);
+            connect(autoaccept, &QTimeLine::frameChanged, this, [this] (int frame) {
+                ok->setText(QStringLiteral("%1 (%2s)").arg(oktext).arg(frame));
+            });
+            autoaccept->start();
+        } else {
+            autoaccept->stop();
+        }
+        // Use manual centrify to reduce "hopping"
         centrify();
-
         // make focused
         activateWindow();
         raise();
+        // So that change event would know the ATR
+        this->readers = readers;
     }
 
     void cardInserted(const QString &reader, const QByteArray &atr, const QStringList &flags) {
-        (void)atr;
+        // Update our view
+        readers[reader].first = atr;
+        readers[reader].second = flags;
+
+        // Disable a reader as needed
+        QStandardItemModel* model = qobject_cast<QStandardItemModel*>(select->model());
+        for (const auto &reader: readers.keys()) {
+            _log("Reader %s has %s", qPrintable(reader), qPrintable(readers[reader].second.join(",")));
+            QStandardItem *item = model->findItems(reader).at(0);
+            // Disable some elements, if necessary
+            if (readers[reader].second.contains("EXCLUSIVE")) {
+                _log("Disabling combo %s", qPrintable(reader));
+                item->setEnabled(false);
+                item->setToolTip(tr("Reader is in exclusive use by some other application"));
+            } else {
+                item->setEnabled(true);
+                item->setToolTip(QString());
+            }
+        }
+        // If it was a "exclusive" signal, do nothing
+        if (flags.contains("EXCLUSIVE"))
+            return;
+
         // If a card is inserted while the dialog is open, we select the reader by default
         selected = reader;
         select->setCurrentText(reader);
+        if (!atrs.isEmpty()) {
+            if (atrs.contains(atr)) {
+                message->setText(tr("Inserted card is the expected card"));
+            } else {
+                message->setText(tr("Inserted card is not the expected card"));
+            }
+        } else {
+            message->setText(defaultmessage);
+        }
 
         if (flags.contains("MUTE")) {
-            message->setText(tr("Inserted card is not working.\nPlease check the card.").arg(reader));
+            message->setText(tr("Inserted card is not working, please check the card."));
         }
     }
 
     void cardRemoved(const QString &reader) {
+        // Update our view
+        readers[reader].first.clear();
+        readers[reader].second.clear();
+
         // Reset message after a possibly mute message
-        message->setText(tr("Please select a smart card reader"));
+        message->setText(defaultmessage);
+        // By default select the reader where a card was removed
         selected = reader;
         select->setCurrentText(reader);
+
+        // But override if a usable card with the wanted ATR is present
+        for (const auto &r: readers.keys()) {
+            _log("Reader %s has %s", qPrintable(r), qPrintable(readers[r].second.join(",")));
+            if (!atrs.isEmpty() && atrs.contains(readers[r].first) && !readers[r].second.contains("EXCLUSIVE")) {
+                select->setCurrentText(r);
+            }
+        }
     }
 
     void readerAttached(const QString &reader) {
@@ -164,12 +274,20 @@ signals:
     void readerSelected(const QString &reader);
 
 private:
+    WebContext *context;
     QVBoxLayout *layout;
     QLabel *message;
     QComboBox *select;
+    QCheckBox *remember;
     QDialogButtonBox *buttons;
     QPushButton *ok;
     QPushButton *cancel;
     QString selected;
     QList<QByteArray> atrs;
+    QSettings settings;
+    QString remembered;
+    QTimeLine *autoaccept;
+    QString oktext;
+    QString defaultmessage;
+    QMap<QString, QPair<QByteArray, QStringList>> readers;
 };

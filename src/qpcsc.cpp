@@ -161,7 +161,6 @@ void QtPCSC::run()
     }
 
     bool list = true;
-    bool change = false; // if a list change signal should be emitted
     std::set<std::string> readernames;
     DWORD pnpstate = SCARD_STATE_UNAWARE;
     // Wait for events
@@ -196,25 +195,25 @@ void QtPCSC::run()
             }
             // Remove unknown readers
             for (auto &e: known.keys()) {
-                if (readernames.count(e) == 0) {
+                if (!readernames.count(e.toStdString())) {
                     mutex.lock();
                     known.remove(e);
                     mutex.unlock();
                     _log("Emitting remove signal");
-                    emit readerRemoved(QString::fromStdString(e));
+                    emit readerRemoved(e);
                     // card removed event was done in previous loop
                     emit readerListChanged(getReaders());
                 }
             }
             // Add new readers
             for (auto &e: readernames) {
-                if (!known.contains(e)) {
+                if (!known.contains(QString::fromStdString(e))) {
+                    QString qe = QString::fromStdString(e);
                     // New reader detected
                     mutex.lock();
-                    known[e] = SCARD_STATE_UNAWARE;
+                    known[qe].second = SCARD_STATE_UNAWARE;
                     mutex.unlock();
-                    emit readerAttached(QString::fromStdString(e));
-                    change = true; // after we know the possibly interesting state
+                    emit readerAttached(qe);
                 }
             }
             // Do not list on next round, unless necessary
@@ -223,8 +222,8 @@ void QtPCSC::run()
 
         // Construct status query vector
         statuses.resize(0);
-        for (auto &r: readernames) {
-            statuses.push_back({r.c_str(), nullptr, known[r], SCARD_STATE_UNAWARE, 0, {0}});
+        for (const auto &r: readernames) {
+            statuses.push_back({r.c_str(), nullptr, known[QString::fromStdString(r)].second, SCARD_STATE_UNAWARE, 0, {0}});
         }
         // Append PnP, if supported
         if (pnp) {
@@ -236,11 +235,11 @@ void QtPCSC::run()
 
         // Debug
         for (auto &r: statuses) {
-            _log("Querying %s: %s (0x%x)", r.szReader, stateNames(r.dwCurrentState).join(" ").toStdString().c_str(), r.dwCurrentState);
+            _log("Querying %s: %s (0x%x)", r.szReader, qPrintable(stateNames(r.dwCurrentState).join(" ")), r.dwCurrentState);
         }
 
         // Query statuses
-        rv = SCard(GetStatusChange, context, 600000, &statuses[0], DWORD(statuses.size()));
+        rv = SCard(GetStatusChange, context, 600000, &statuses[0], DWORD(statuses.size())); // FIXME: magic constant
         if (rv == LONG(SCARD_E_UNKNOWN_READER)) {
             // List changed while in air, try again
             list = true;
@@ -258,48 +257,37 @@ void QtPCSC::run()
                 statuses.pop_back();
             }
             for (auto &i: statuses) {
-                std::string reader(i.szReader);
-                _log("%s: %s (0x%x)", reader.c_str(), qPrintable(stateNames(i.dwEventState).join(" ")), i.dwEventState);
+                QString reader(i.szReader);
+                _log("%s: %s (0x%x)", qPrintable(reader), qPrintable(stateNames(i.dwEventState).join(" ")), i.dwEventState);
                 if (!(i.dwEventState & SCARD_STATE_CHANGED)) {
-                    _log("No change: %s", reader.c_str());
+                    _log("No change: %s", qPrintable(reader));
                     continue;
                 }
-
+                QByteArray atr((const char *)i.rgbAtr, i.cbAtr);
+                if (!atr.isEmpty()) {
+                    _log("  atr:%s", atr.toHex().toStdString().c_str());
+                    known[reader].first = atr;
+                }
                 if (i.dwEventState & SCARD_STATE_UNKNOWN) {
-                    _log("reader removed: %s", reader.c_str());
+                    _log("reader removed: %s", qPrintable(reader));
                     list = true;
-                    // Also emit card removed signal, if card was present
-                    if (known[reader] & SCARD_STATE_PRESENT) {
-                        emit cardRemoved(QString::fromStdString(reader));
-                        // reader list change will be in next loop
+                    // Emit card removed signal, if card was present
+                    if (known[reader].second & SCARD_STATE_PRESENT) {
+                        emit cardRemoved(reader);
                     }
-                    continue;
-                }
-                if ((i.dwEventState & SCARD_STATE_PRESENT) && !(known[reader] & SCARD_STATE_PRESENT)) {
-                    QByteArray atr((const char *)i.rgbAtr, i.cbAtr);
-                    if (!atr.isEmpty()) {
-                        _log("  atr:%s", atr.toHex().toStdString().c_str());
-                    }
-                    emit cardInserted(QString::fromStdString(reader), atr, stateNames(i.dwEventState & ~SCARD_STATE_CHANGED));
-                    // Only emit reader list change if the card is not mute
-                    if (!(i.dwEventState & SCARD_STATE_MUTE))
-                        change = true;
-                } else if ((i.dwEventState & SCARD_STATE_EMPTY) && (known[reader] & SCARD_STATE_PRESENT)) {
-                    emit cardRemoved(QString::fromStdString(reader));
-                    change = true;
-                } else if ((i.dwEventState ^ known[reader]) & SCARD_STATE_EXCLUSIVE) {
+                    // reader list change and associated signal will be in next loop
+                } else if ((i.dwEventState & SCARD_STATE_PRESENT) && !(known[reader].second & SCARD_STATE_PRESENT)) {
+                    emit cardInserted(reader, atr, stateNames(i.dwEventState & ~SCARD_STATE_CHANGED));
+                } else if ((i.dwEventState & SCARD_STATE_EMPTY) && (known[reader].second & SCARD_STATE_PRESENT)) {
+                    emit cardRemoved(reader);
+                } else if ((i.dwEventState ^ known[reader].second) & SCARD_STATE_EXCLUSIVE) {
                     // if exclusive access changes, trigger UI change
-                    change = true;
+                    emit cardInserted(reader, atr, stateNames(i.dwEventState & ~SCARD_STATE_CHANGED));
                 }
-
+                // Update view
                 mutex.lock();
-                known[reader] = i.dwEventState & ~SCARD_STATE_CHANGED;
+                known[reader].second = i.dwEventState & ~SCARD_STATE_CHANGED;
                 mutex.unlock();
-            }
-            // card related list change
-            if (change) {
-                emit readerListChanged(getReaders());
-                change = false;
             }
         }
     } while ((rv == LONG(SCARD_S_SUCCESS) || rv == LONG(SCARD_E_TIMEOUT)) && !isInterruptionRequested());
@@ -312,16 +300,17 @@ void QtPCSC::cancel() {
     SCard(Cancel, getContext());
 }
 
-QMap<QString, QStringList> QtPCSC::getReaders() {
+QMap<QString, QPair<QByteArray, QStringList>> QtPCSC::getReaders() {
     // If the resource manager was not running before, run it now.
     // FIXME: probably not the right thing to do, relates to TODO on line 157
     if (!isRunning())
         start();
     QMutexLocker locker(&mutex);
 
-    QMap<QString, QStringList> result;
+    QMap<QString, QPair<QByteArray, QStringList>> result;
     for (const auto &e: known.keys()) {
-        result[QString::fromStdString(e)] = stateNames(known[e]);
+        result[e].first = known[e].first;
+        result[e].second = stateNames(known[e].second);
     }
     return result;
 }
@@ -339,7 +328,7 @@ QPCSCReader *QtPCSC::connectReader(WebContext *webcontext, const QString &reader
 
     connect(this, &QtPCSC::readerRemoved, result, &QPCSCReader::readerRemoved, Qt::QueuedConnection);
 
-    if ((!rdrs[reader].contains("PRESENT") || rdrs[reader].contains("MUTE")) && wait) {
+    if ((!rdrs[reader].second.contains("PRESENT") || rdrs[reader].second.contains("MUTE")) && wait) {
         _log("Showing insert reader dialog");
         QtInsertCard *dlg = new QtInsertCard(webcontext->friendlyOrigin(), result);
         connect(this, &QtPCSC::cardInserted, dlg, &QtInsertCard::cardInserted, Qt::QueuedConnection);
@@ -370,8 +359,8 @@ void QPCSCReader::open() {
 
     // proxy signals
     connect(&worker, &QPCSCReaderWorker::disconnected, this, &QPCSCReader::disconnected, Qt::QueuedConnection);
-    connect(&worker, &QPCSCReaderWorker::reconnected, this, &QPCSCReader::connected, Qt::QueuedConnection);
-    connect(&worker, &QPCSCReaderWorker::reconnected, this, &QPCSCReader::connected, Qt::QueuedConnection);
+    connect(&worker, &QPCSCReaderWorker::connected, this, &QPCSCReader::connected, Qt::QueuedConnection);
+    connect(&worker, &QPCSCReaderWorker::reconnected, this, &QPCSCReader::reconnected, Qt::QueuedConnection);
     connect(&worker, &QPCSCReaderWorker::received, this, &QPCSCReader::received, Qt::QueuedConnection);
 
     // Open the "in use"" dialog.
@@ -559,6 +548,8 @@ void QPCSCReaderWorker::reconnectCard(const QString &protocol) {
 
     return emit reconnected(atr, this->protocol == SCARD_PROTOCOL_T0 ? "T=0" : "T=1");
 }
+
+
 void QPCSCReaderWorker::transmit(const QByteArray &apdu) {
     SCARD_IO_REQUEST req;
     QByteArray response(4096, 0); // Should be enough

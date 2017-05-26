@@ -316,6 +316,7 @@ void QtHost::newConnection(WebContext *ctx) {
             usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
             ctx->deleteLater();
             if (contexts.size() == 0) {
+                usage->menuAction()->setVisible(false);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
                 tray.setIcon(QIcon(":/inactive-web-eid.png"));
 #endif

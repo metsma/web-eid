@@ -142,7 +142,6 @@ void WebContext::processMessage(const QVariantMap &message) {
         }
     */
 
-    // FIXME: Check if timeout specified
     timer.setSingleShot(true);
     timer.start(5000); // 5 seconds
     // Command dispatch
@@ -159,6 +158,11 @@ void WebContext::processMessage(const QVariantMap &message) {
             }
         }
         dialog = new QtSelectReader(this, atrs); // FIXME
+        if (params.contains("timeout")) {
+            timer.setSingleShot(true);
+            timer.setInterval(params.value("timeout", 60).toInt() * 1000); // FIXME: define "infinity"
+            connect(&timer, &QTimer::timeout, dialog, &QDialog::reject);
+        }
         PKI->pause();
         ((QtSelectReader *)dialog)->update(PCSC->getReaders());
         connect(PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)dialog, &QtSelectReader::update, Qt::QueuedConnection);
