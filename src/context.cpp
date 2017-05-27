@@ -202,7 +202,7 @@ void WebContext::processMessage(const QVariantMap &message) {
             connect(r, &QPCSCReader::connected, this, [=] (QByteArray atr, QString proto) {
                 _log("connected: %s %s", qPrintable(proto), qPrintable(atr.toHex()));
                 PKI->resume();
-                outgoing({{"reader", name}, {"protocol", proto}, {"atr", atr.toHex()}});
+                outgoing({{"name", name}, {"protocol", proto}, {"atr", atr.toBase64()}});
             });
             connect(r, &QPCSCReader::received, this, [=] (QByteArray apdu) {
                 _log("Received apdu");
@@ -244,7 +244,7 @@ void WebContext::processMessage(const QVariantMap &message) {
             }
             disconnect(PKI, &QPKI::signature, this, 0);
             if (result == CKR_OK) {
-                outgoing({{"signature", value.toBase64()}}); // FIXME
+                outgoing({{"signature", value.toBase64()}});
             } else {
                 outgoing({{"error", QPKI::errorName(result)}});
             }
@@ -258,7 +258,7 @@ void WebContext::processMessage(const QVariantMap &message) {
             }
             disconnect(PKI, &QPKI::certificate, this, 0);
             if (result == CKR_OK) {
-                outgoing({{"certificate", value.toBase64()}}); // FIXME
+                outgoing({{"certificate", value.toBase64()}});
             } else {
                 outgoing({{"error", QPKI::errorName(result)}});
             }

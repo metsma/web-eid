@@ -35,6 +35,15 @@
 Connecting to a reader will create another QObject, living in a separat thread, that owns the connection
 until an error occures or it is closed and provides APDU transport to the reader.
 
+Signals emitted happen in the following order
+
+- readerAttached
+- readerRemoved
+- readerListChanged
+- cardInserted
+- cardRemoved
+- readerAvailable
+
 */
 
 template <typename Func, typename... Args>
@@ -47,19 +56,6 @@ LONG SCCall(const char *fun, const char *file, int line, const char *function, F
 }
 #define SCard(API, ...) SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard" #API, SCard##API, __VA_ARGS__)
 
-// return the rv is not CKR_OK
-#define check_SCard(API, ...)                                                                            \
-    do                                                                                                   \
-    {                                                                                                    \
-        LONG _ret = SCCall(__FUNCTION__, __FILE__, __LINE__, "SCard" #API, SCard##API, __VA_ARGS__);     \
-        if (_ret != SCARD_S_SUCCESS)                                                                     \
-        {                                                                                                \
-            Logger::writeLog(__FUNCTION__, __FILE__, __LINE__, "returning %s", QtPCSC::errorName(_ret)); \
-            return _ret;                                                                                 \
-        }                                                                                                \
-    } while (0)
-
-#define PNP_READER_NAME "\\\\?PnP?\\Notification"
 
 // List taken from pcsc-lite source
 const char *QtPCSC::errorName(LONG err)
@@ -152,7 +148,7 @@ void QtPCSC::run()
     // Check if PnP is NOT supported
     SCARD_READERSTATE state;
     state.dwCurrentState = SCARD_STATE_UNAWARE;
-    state.szReader = PNP_READER_NAME;
+    state.szReader = pnpReaderName;
     rv = SCard(GetStatusChange, context, 0, &state, DWORD(1));
 
     if ((rv == LONG(SCARD_E_TIMEOUT)) && (state.dwEventState & SCARD_STATE_UNKNOWN)) {
@@ -166,7 +162,7 @@ void QtPCSC::run()
     // Wait for events
     do {
         std::vector<SCARD_READERSTATE> statuses;
-
+        bool change = false;
         if (list)  {
             // List readers
             readernames.clear();
@@ -193,6 +189,19 @@ void QtPCSC::run()
                 readernames.insert(name);
                 _log("Listed %s", name.c_str());
             }
+            // Add new readers
+            for (auto &e: readernames) {
+                if (!known.contains(QString::fromStdString(e))) {
+                    QString qe = QString::fromStdString(e);
+                    // New reader detected
+                    mutex.lock();
+                    known[qe].second = SCARD_STATE_UNAWARE;
+                    mutex.unlock();
+                    _log("Emitting attach signal");
+                    emit readerAttached(qe);
+                    change = true;
+                }
+            }
             // Remove unknown readers
             for (auto &e: known.keys()) {
                 if (!readernames.count(e.toStdString())) {
@@ -202,20 +211,10 @@ void QtPCSC::run()
                     _log("Emitting remove signal");
                     emit readerRemoved(e);
                     // card removed event was done in previous loop
-                    emit readerListChanged(getReaders());
+                    change = true;
                 }
             }
-            // Add new readers
-            for (auto &e: readernames) {
-                if (!known.contains(QString::fromStdString(e))) {
-                    QString qe = QString::fromStdString(e);
-                    // New reader detected
-                    mutex.lock();
-                    known[qe].second = SCARD_STATE_UNAWARE;
-                    mutex.unlock();
-                    emit readerAttached(qe);
-                }
-            }
+
             // Do not list on next round, unless necessary
             list = false;
         }
@@ -230,7 +229,7 @@ void QtPCSC::run()
 #ifdef Q_OS_MAC
             pnpstate = SCARD_STATE_UNAWARE;
 #endif
-            statuses.push_back({PNP_READER_NAME, nullptr, pnpstate, SCARD_STATE_UNAWARE, 0, {0}});
+            statuses.push_back({pnpReaderName, nullptr, pnpstate, SCARD_STATE_UNAWARE, 0, {0}});
         }
 
         // Debug
@@ -256,38 +255,58 @@ void QtPCSC::run()
                 }
                 statuses.pop_back();
             }
+
+            // Collect previous statuses for changed readers
+            // And update all changed readers
+            QMap<QString, DWORD> previous;
+            // FIXME: lock for known
             for (auto &i: statuses) {
                 QString reader(i.szReader);
                 _log("%s: %s (0x%x)", qPrintable(reader), qPrintable(stateNames(i.dwEventState).join(" ")), i.dwEventState);
+                // Did anything change?
                 if (!(i.dwEventState & SCARD_STATE_CHANGED)) {
                     _log("No change: %s", qPrintable(reader));
                     continue;
+                } else {
+                    // Store previous state for comparison
+                    previous[reader] = known[reader].second;
+                    // Save new state for changed reader, except the changed bit itself
+                    known[reader].second = i.dwEventState & ~SCARD_STATE_CHANGED;
                 }
+                // Save ATR, if present
                 QByteArray atr((const char *)i.rgbAtr, i.cbAtr);
                 if (!atr.isEmpty()) {
                     _log("  atr:%s", atr.toHex().toStdString().c_str());
                     known[reader].first = atr;
                 }
-                if (i.dwEventState & SCARD_STATE_UNKNOWN) {
+            }
+
+            // Emit reader list change before card insertion or removal events
+            if (change) {
+                emit readerListChanged(getReaders());
+            }
+            change = false;
+
+            // Process readers that have a previous state, which means a change in state
+            for (const auto &reader: previous.keys()) {
+                DWORD current = known[reader].second;
+                // Analyze change
+                if (current & SCARD_STATE_UNKNOWN) {
                     _log("reader removed: %s", qPrintable(reader));
                     list = true;
                     // Emit card removed signal, if card was present
-                    if (known[reader].second & SCARD_STATE_PRESENT) {
+                    if (previous[reader] & SCARD_STATE_PRESENT) {
                         emit cardRemoved(reader);
                     }
-                    // reader list change and associated signal will be in next loop
-                } else if ((i.dwEventState & SCARD_STATE_PRESENT) && !(known[reader].second & SCARD_STATE_PRESENT)) {
-                    emit cardInserted(reader, atr, stateNames(i.dwEventState & ~SCARD_STATE_CHANGED));
-                } else if ((i.dwEventState & SCARD_STATE_EMPTY) && (known[reader].second & SCARD_STATE_PRESENT)) {
+                } else if ((current & SCARD_STATE_PRESENT) && !(previous[reader] & SCARD_STATE_PRESENT)) {
+                    // emit signal about reader list change before card inserted event
+                    emit cardInserted(reader, known[reader].first, stateNames(current));
+                } else if ((current & SCARD_STATE_EMPTY) && (previous[reader] & SCARD_STATE_PRESENT)) {
                     emit cardRemoved(reader);
-                } else if ((i.dwEventState ^ known[reader].second) & SCARD_STATE_EXCLUSIVE) {
+                } else if ((current ^ previous[reader]) & SCARD_STATE_EXCLUSIVE) {
                     // if exclusive access changes, trigger UI change
-                    emit cardInserted(reader, atr, stateNames(i.dwEventState & ~SCARD_STATE_CHANGED));
+                    emit cardInserted(reader, known[reader].first, stateNames(current));
                 }
-                // Update view
-                mutex.lock();
-                known[reader].second = i.dwEventState & ~SCARD_STATE_CHANGED;
-                mutex.unlock();
             }
         }
     } while ((rv == LONG(SCARD_S_SUCCESS) || rv == LONG(SCARD_E_TIMEOUT)) && !isInterruptionRequested());

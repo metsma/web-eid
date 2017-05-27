@@ -27,7 +27,7 @@ bool WebExtensionHelper::isEnabled() {
 #elif defined(Q_OS_MACOS)
     // Check for Chrome and for Firefox
     if (QDir::home().exists("Library/Application Support/Google/Chrome/NativeMessagingHosts/com.web-eid.app.json")) {
-        enabled = true
+        enabled = true;
     }
 // ~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.my_company.my_application.json
 // ~/Library/Application Support/Chromium/NativeMessagingHosts/com.my_company.my_application.json
@@ -45,14 +45,12 @@ bool WebExtensionHelper::setEnabled(bool enabled) {
     // disable: add a file to ~/.config with "disabled" flag.
     // enable: make sure global autostart exists and user file is removed
 #elif defined(Q_OS_MACOS)
-    // Get current bundle path
-    CFURLRef url = (CFURLRef)CFAutorelease((CFURLRef)CFBundleCopyBundleURL(CFBundleGetMainBundle()));
-    QString bundlepath = QUrl::fromCFURL(url).path();
-    _log("Current bundle is: %s", qPrintable(bundlepath));
+    QString nmpath = QDir(QCoreApplication::applicationDirPath()).filePath("web-eid-bridge");
     if (enabled) {
-        _log("result: %s", qPrintable(osascript(QString("tell application \"System Events\" to make login item at end with properties {name:\"Web eID\", path:\"%1\", hidden:false}").arg(bundlepath))));
+        // bundle files as resources
+        //_log("result: %s", qPrintable(osascript(QString("tell application \"System Events\" to make login item at end with properties {name:\"Web eID\", path:\"%1\", hidden:false}").arg(bundlepath))));
     } else {
-        _log("result: %s", qPrintable(osascript("tell application \"System Events\" to delete login item \"Web eID\"")));
+        //_log("result: %s", qPrintable(osascript("tell application \"System Events\" to delete login item \"Web eID\"")));
     }
 #elif defined(Q_OS_WIN32)
     // Add registry entry. Utilizing  QCoreApplication::applicationFilePath()

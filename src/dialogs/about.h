@@ -12,6 +12,7 @@
 #include <QPushButton>
 #include <QDialogButtonBox>
 #include <QTimer>
+#include <QSettings>
 
 class QtHost;
 
@@ -53,6 +54,8 @@ public:
                 setWindowTitle(tr("Almost there ..."));
             } else if (counter == 8) {
                 setWindowTitle(tr("Supplies!"));
+                QSettings settings;
+                settings.setValue("debug", true);
                 text->setText(text->text() + "<p>Send me an e-mail with the window title<br>to get a free JavaCard for smart card development!</p>");
                 counter = 0;
                 centrify(true, false);

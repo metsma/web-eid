@@ -38,13 +38,13 @@ public:
 
     // Any running UI widget, associated with the context
     QDialog *dialog = nullptr;
+    void outgoing(QVariantMap message); // So that main.cpp could send version on connect
 
 signals:
     void disconnected();
 
 private:
     void processMessage(const QVariantMap &message); // Message received from client
-    void outgoing(QVariantMap message);
 
     // message transport
     QWebSocket *ws = nullptr;

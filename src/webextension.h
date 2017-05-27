@@ -4,8 +4,8 @@
 
 #pragma once
 
-// Make the application start at login or query status
-class StartAtLoginHelper {
+// Check native messaging registration
+class WebExtensionHelper {
 
 public:
     static bool isEnabled();

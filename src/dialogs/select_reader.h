@@ -114,12 +114,14 @@ public:
 
 public slots:
     void update(QMap<QString, QPair<QByteArray, QStringList>> readers) {
+        _log("Update reader in dialog");
         message->clear();
         select->clear();
 
         if (readers.size() == 0) {
             defaultmessage = tr("Please connect a smart card reader!");
             select->hide();
+            remember->hide();
             ok->hide();
             cancel->setDefault(true);
             cancel->setFocus();
@@ -128,6 +130,7 @@ public slots:
             oktext = tr("Allow");
             ok->show();
             select->hide();
+            remember->show();
             QString reader = readers.keys().at(0);
             selected = reader;
             remember->setChecked(remembered == selected);
@@ -209,18 +212,33 @@ public slots:
         readers[reader].second = flags;
 
         // Disable a reader as needed
-        QStandardItemModel* model = qobject_cast<QStandardItemModel*>(select->model());
-        for (const auto &reader: readers.keys()) {
-            _log("Reader %s has %s", qPrintable(reader), qPrintable(readers[reader].second.join(",")));
-            QStandardItem *item = model->findItems(reader).at(0);
-            // Disable some elements, if necessary
-            if (readers[reader].second.contains("EXCLUSIVE")) {
-                _log("Disabling combo %s", qPrintable(reader));
-                item->setEnabled(false);
-                item->setToolTip(tr("Reader is in exclusive use by some other application"));
+        if (select->count() > 1) {
+            QStandardItemModel* model = qobject_cast<QStandardItemModel*>(select->model());
+            for (const auto &reader: readers.keys()) {
+                _log("Reader %s has %s", qPrintable(reader), qPrintable(readers[reader].second.join(",")));
+                QStandardItem *item = model->findItems(reader).at(0);
+                // Disable some elements, if necessary
+                if (readers[reader].second.contains("EXCLUSIVE")) {
+                    _log("Disabling combo %s", qPrintable(reader));
+                    item->setEnabled(false);
+                    item->setToolTip(tr("Reader is in exclusive use by some other application"));
+                } else {
+                    item->setEnabled(true);
+                    item->setToolTip(QString());
+                }
+            }
+        } else {
+            if (flags.contains("EXCLUSIVE")) {
+                message->setText(tr("%1 can not be used.\nIt is used exclusively by some other application").arg(reader));
+                ok->setEnabled(false);
+                cancel->setDefault(true);
+                cancel->setFocus();
             } else {
-                item->setEnabled(true);
-                item->setToolTip(QString());
+                message->setText(tr("Allow access to %1?").arg(reader));
+                cancel->setDefault(false);
+                ok->setEnabled(true);
+                ok->setDefault(true);
+                ok->setFocus();
             }
         }
         // If it was a "exclusive" signal, do nothing

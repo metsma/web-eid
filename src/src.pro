@@ -46,6 +46,7 @@ SOURCES += \
     qpcsc.cpp \
     qpki.cpp \
     autostart.cpp \
+    webextension.cpp \
     context.cpp
 HEADERS += $$files(*.h) $$files(dialogs/*.h)
 RESOURCES += web-eid.qrc translations/strings.qrc

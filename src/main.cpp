@@ -5,6 +5,7 @@
 #include "main.h"
 
 #include "autostart.h"
+#include "webextension.h"
 
 #include "util.h"
 #include "Logger.h" // TODO: rename
@@ -73,8 +74,12 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     tray.setIcon(QIcon(":/web-eid.png"));
 #endif
     connect(&tray, &QSystemTrayIcon::activated, this, [this] (QSystemTrayIcon::ActivationReason reason) {
-        // TODO: show some generic dialog here.
+        QSettings settings;
+
         autostart->setChecked(StartAtLoginHelper::isEnabled());
+        debugMenu->menuAction()->setVisible(settings.value("debug").toBool());
+        debugEnabled->setChecked(settings.value("debug").toBool());
+
         // Construct active sites menu.
         usage->clear();
         usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
@@ -120,6 +125,8 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
                     c->terminate();
                 }
             });
+        } else {
+            usage->menuAction()->setVisible(false);
         }
         _log("activated: %d", reason);
     });
@@ -144,12 +151,45 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     });
 
     // Debug menu
-    if (parser.isSet(debug)) {
-        QAction *dbg = menu->addAction(tr("Debug"));
-        connect(dbg, &QAction::triggered, this, [=] {
-            new QtDebugDialog(this);
-        });
-    }
+    debugMenu = new QMenu(tr("Debug"), menu);
+    menu->addMenu(debugMenu);
+
+    debugEnabled = debugMenu->addAction(tr("Debug enabled"));
+    debugEnabled->setCheckable(true);
+    debugEnabled->setChecked(true);
+    connect(debugEnabled, &QAction::toggled, this, [=] (bool checked) {
+        QSettings settings;
+        settings.setValue("debug", checked);
+    });
+
+    QAction *websocket = debugMenu->addAction(tr("WebSocket enabled"));
+    websocket->setCheckable(true);
+    websocket->setChecked(true);
+    connect(websocket, &QAction::toggled, this, [=] (bool checked) {
+        wsEnabled = checked;
+        if (checked) {
+            ws->pauseAccepting();
+            ws6->pauseAccepting();
+        } else {
+            ws->resumeAccepting();
+            ws6->resumeAccepting();
+        }
+    });
+
+    QAction *localsocket = debugMenu->addAction(tr("WebExtension enabled"));
+    localsocket->setCheckable(true);
+    localsocket->setChecked(true);
+    connect(localsocket, &QAction::toggled, this, [=] (bool checked) {
+        lsEnabled = checked;
+    });
+
+    // FIXME: maybe read start state from disk?
+    QAction *native = debugMenu->addAction(tr("WebExtension registered"));
+    native->setCheckable(true);
+    native->setChecked(true);
+    connect(native, &QAction::toggled, this, [=] (bool checked) {
+        WebExtensionHelper::setEnabled(checked);
+    });
 
     // Number of active sites
     menu->addSeparator();
@@ -235,9 +275,6 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 #endif
     }
 
-
-
-
     setWindowIcon(QIcon(":/web-eid.png"));
     setQuitOnLastWindowClosed(false);
 
@@ -283,6 +320,8 @@ void QtHost::checkOrigin(QWebSocketCorsAuthenticator *authenticator) {
 void QtHost::processConnectLocal() {
     QLocalSocket *socket = ls->nextPendingConnection();
     _log("New connection to local socket");
+    if (!lsEnabled)
+        return socket->abort();
     WebContext *ctx = new WebContext(this, socket);
     newConnection(ctx);
 }
@@ -298,6 +337,9 @@ void QtHost::processConnect() {
     }
     _log("Connection to %s from %s:%d (%s)", qPrintable(client->requestUrl().toString()), qPrintable(client->peerAddress().toString()), client->peerPort(), qPrintable(client->origin()));
     _log("UA: %s", qPrintable(client->request().header(QNetworkRequest::UserAgentHeader).toString()));
+    if (!wsEnabled) {
+        return client->close(QWebSocketProtocol::CloseCodePolicyViolated);
+    }
     WebContext *ctx = new WebContext(this, client);
     newConnection(ctx);
 }
@@ -310,6 +352,7 @@ void QtHost::newConnection(WebContext *ctx) {
     // Keep count of active contexts
     tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
     usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
+    usage->menuAction()->setVisible(true);
     connect(ctx, &WebContext::disconnected, this, [this, ctx] {
         if (contexts.remove(ctx->id)) {
             tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));

@@ -51,13 +51,19 @@ public slots:
 
 private:
     void newConnection(WebContext *ctx);
+    // Tray and interesting elements of it
     QSystemTrayIcon tray;
     QAction *autostart;
     QMenu *usage;
+    QMenu *debugMenu;
+    QAction *debugEnabled;
 
     QWebSocketServer *ws; // IPv4
     QWebSocketServer *ws6; // IPv6
+    bool wsEnabled = true;
+
     QLocalServer *ls; // localsocket
+    bool lsEnabled = true;
 
     // Active contexts
     QMap<QString, WebContext *> contexts;

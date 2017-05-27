@@ -136,4 +136,5 @@ private:
     QMap<QString, QPair<QByteArray, DWORD>> known; // Known readers
     QMutex mutex; // Lock that guards the known readers
     bool pnp = true;
+    const char *pnpReaderName = "\\\\?PnP?\\Notification";
 };
