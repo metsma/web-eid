@@ -3,6 +3,11 @@
  */
 
 #include "Logger.h"
+
+#include <QStandardPaths>
+#include <QDir>
+#include <QFile>
+
 #include <cstdio>
 #include <string>
 #ifndef _WIN32
@@ -13,10 +18,7 @@
 #include <time.h>
 #endif
 
-using namespace std;
-
-static bool output = false;
-static string logfile = "web-eid.log";
+static QString logfile = "web-eid.log";
 
 static void printCurrentDateTime(FILE *log) {
     time_t now = time(0);
@@ -31,41 +33,29 @@ static void printCurrentDateTime(FILE *log) {
             ltm->tm_sec);
 }
 
-static string getLogFilePath() {
-#ifdef _WIN32
-    return string(getenv("TEMP"))+ "\\" + logfile;
-#else
-    return string(getenv("HOME"))+ "/tmp/" + logfile;
-#endif
+QString Logger::getLogFilePath() {
+    return QDir(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).filePath(logfile);
 }
 
-static bool logFileExist() {
-    FILE *file = fopen(getLogFilePath().c_str(), "r");
-    if (!file) {
-        return false;
-    }
-    fclose(file);
-    return true;
+static bool logFileExists() {
+    return QFile(Logger::getLogFilePath()).exists();
 }
 
-void Logger::setOutput(const bool value) {
-    output = value;
-}
-
-void Logger::setFile(const string &name) {
+void Logger::setFile(const QString &name) {
     logfile = name;
 }
 
+bool Logger::isEnabled() {
+    return logFileExists();
+}
+ 
 void Logger::writeLog(const char *functionName, const char *fileName, int lineNumber, const char *message, ...) {
-    FILE *log = stdout;
-    if (!output) {
-        if (!logFileExist()) {
+    if (!logFileExists()) {
             return;
-        }
-        log = fopen(getLogFilePath().c_str(), "a");
-        if (!log) {
-            return;
-        }
+    }
+    FILE *log = fopen(getLogFilePath().toStdString().c_str(), "a");
+    if (!log) {
+        return;
     }
     printCurrentDateTime(log);
 #ifndef _WIN32
@@ -78,7 +68,5 @@ void Logger::writeLog(const char *functionName, const char *fileName, int lineNu
     va_end(args);
     fprintf(log, "\n");
     fflush(log);
-    if (!output) {
-        fclose(log);
-    }
+    fclose(log);
 }

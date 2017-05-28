@@ -57,6 +57,7 @@ private:
     QMenu *usage;
     QMenu *debugMenu;
     QAction *debugEnabled;
+    QAction *debugLogEnabled;
 
     QWebSocketServer *ws; // IPv4
     QWebSocketServer *ws6; // IPv6

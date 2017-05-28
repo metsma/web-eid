@@ -5,12 +5,13 @@
 #pragma once
 
 #include <cstdarg>
-#include <string>
+#include <QString>
 
 namespace Logger {
-void writeLog(const char *functionName, const char *fileName, int lineNumber, const char *message, ...);
-void setOutput(const bool value);
-void setFile(const std::string &name);
+    void writeLog(const char *functionName, const char *fileName, int lineNumber, const char *message, ...);
+    void setFile(const QString &name);
+    bool isEnabled();
+    QString getLogFilePath();
 }
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L

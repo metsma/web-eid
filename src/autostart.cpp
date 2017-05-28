@@ -32,6 +32,8 @@ bool StartAtLoginHelper::isEnabled() {
 #elif defined(Q_OS_MACOS)
     CFURLRef url = (CFURLRef)CFAutorelease((CFURLRef)CFBundleCopyBundleURL(CFBundleGetMainBundle()));
     QString bundlepath = QUrl::fromCFURL(url).path();
+    bundlepath.resize(bundlepath.size()-1); // Remove trailing slash
+
     // XXX: we cast the list to a string in applescript, for simple osascript() function
     QString names = osascript("set text item delimiters to \",\"\ntell application \"System Events\" to get the name of every login item as text");
     QString paths = osascript("set text item delimiters to \",\"\ntell application \"System Events\" to get the path of every login item as text");

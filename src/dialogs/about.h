@@ -50,14 +50,15 @@ public:
 
         connect(img, &SurpriseLabel::clicked, [this] {
             counter++;
-            if (counter == 5) {
+            if (counter == 3) {
+                setWindowTitle(tr("Debug mode unlocked"));
+                QSettings settings;
+                settings.setValue("debug", true);
+            } else if (counter == 5) {
                 setWindowTitle(tr("Almost there ..."));
             } else if (counter == 8) {
                 setWindowTitle(tr("Supplies!"));
-                QSettings settings;
-                settings.setValue("debug", true);
                 text->setText(text->text() + "<p>Send me an e-mail with the window title<br>to get a free JavaCard for smart card development!</p>");
-                counter = 0;
                 centrify(true, false);
                 QTimer::singleShot(3000, this, &QDialog::accept);
             }

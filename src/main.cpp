@@ -50,23 +50,28 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     QCoreApplication::setOrganizationDomain("web-eid.com");
     QCoreApplication::setApplicationName("Web eID");
 
+    QSettings settings;
+  
     QCommandLineParser parser;
     QCommandLineOption debug("debug");
     parser.addOption(debug);
     parser.process(arguments());
     if (parser.isSet(debug)) {
         once = true;
-        // TODO: set debug mode
+        settings.setValue("debug", true);
     }
 
+    if (settings.value("firstRun", true).toBool()) {
+        QDesktopServices::openUrl(QUrl("https://web-eid.com/welcome"));
+        settings.setValue("firstRun", false);
+    }
     // Enable autostart, if not explicitly disabled
-    QSettings settings;
-    if (settings.value("startAtLogin", 1).toBool()) {
+    if (settings.value("startAtLogin", true).toBool()) {
         // We always overwrite
         StartAtLoginHelper::setEnabled(true);
     }
     // Register extension, if not explicitly disabled
-    if (settings.value("registerExtension", 1).toBool()) {
+    if (settings.value("registerExtension", true).toBool()) {
         WebExtensionHelper::setEnabled(true);
     }
 
@@ -82,7 +87,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         autostart->setChecked(StartAtLoginHelper::isEnabled());
         debugMenu->menuAction()->setVisible(settings.value("debug").toBool());
         debugEnabled->setChecked(settings.value("debug").toBool());
-
+        debugLogEnabled->setChecked(QFile(Logger::getLogFilePath()).exists());
         // Construct active sites menu.
         usage->clear();
         usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
@@ -97,6 +102,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
             }
         }
         if (active.size() > 0 ) {
+            usage->menuAction()->setVisible(true);
             QAction *instruction = usage->addAction(tr("Click to terminate"));
             instruction->setEnabled(false);
             usage->addSeparator();
@@ -157,12 +163,21 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     debugMenu = new QMenu(tr("Debug"), menu);
     menu->addMenu(debugMenu);
 
-    debugEnabled = debugMenu->addAction(tr("Debug enabled"));
+    debugEnabled = debugMenu->addAction(tr("Debug menu enabled"));
     debugEnabled->setCheckable(true);
     debugEnabled->setChecked(true);
     connect(debugEnabled, &QAction::toggled, this, [=] (bool checked) {
         QSettings settings;
         settings.setValue("debug", checked);
+    });
+
+    debugLogEnabled = debugMenu->addAction(tr("Debug logging enabled"));
+    debugLogEnabled->setCheckable(true);
+    debugLogEnabled->setChecked(Logger::isEnabled());
+    connect(debugLogEnabled, &QAction::toggled, this, [=] (bool checked) {
+        // create file.
+        QFile logfile(Logger::getLogFilePath());
+        logfile.open(QIODevice::WriteOnly | QIODevice::Text);
     });
 
     QAction *websocket = debugMenu->addAction(tr("WebSocket enabled"));
@@ -192,6 +207,14 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     native->setChecked(WebExtensionHelper::isEnabled());
     connect(native, &QAction::toggled, this, [=] (bool checked) {
         WebExtensionHelper::setEnabled(checked);
+    });
+    QAction *clearsettings = debugMenu->addAction(tr("Clear settings"));
+    connect(clearsettings, &QAction::triggered, this, [=] {
+        QSettings settings;
+        settings.remove("firstRun");
+        settings.remove("debug");
+        settings.remove("startAtLogin");
+        settings.remove("registerExtension");
     });
 
     // Number of active sites
