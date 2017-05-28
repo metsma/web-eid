@@ -61,11 +61,14 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     // Enable autostart, if not explicitly disabled
     QSettings settings;
-    if (settings.value("startAtLogin", 1).toBool() && !StartAtLoginHelper::isEnabled()) {
+    if (settings.value("startAtLogin", 1).toBool()) {
+        // We always overwrite
         StartAtLoginHelper::setEnabled(true);
     }
-
-    // Enable browser extension, if not explicitly disabled
+    // Register extension, if not explicitly disabled
+    if (settings.value("registerExtension", 1).toBool()) {
+        WebExtensionHelper::setEnabled(true);
+    }
 
     // Construct tray icon and related menu
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
@@ -186,7 +189,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     // FIXME: maybe read start state from disk?
     QAction *native = debugMenu->addAction(tr("WebExtension registered"));
     native->setCheckable(true);
-    native->setChecked(true);
+    native->setChecked(WebExtensionHelper::isEnabled());
     connect(native, &QAction::toggled, this, [=] (bool checked) {
         WebExtensionHelper::setEnabled(checked);
     });

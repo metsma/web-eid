@@ -114,11 +114,12 @@ public:
 
 public slots:
     void update(QMap<QString, QPair<QByteArray, QStringList>> readers) {
-        _log("Update reader in dialog");
+        _log("Update readers in dialog");
         message->clear();
         select->clear();
 
         if (readers.size() == 0) {
+            // TODO: start active waiting for PC/SC context on Windows
             defaultmessage = tr("Please connect a smart card reader!");
             select->hide();
             remember->hide();
@@ -130,19 +131,21 @@ public slots:
             oktext = tr("Allow");
             ok->show();
             select->hide();
-            remember->show();
             QString reader = readers.keys().at(0);
             selected = reader;
             remember->setChecked(remembered == selected);
 
+            // TODO: call readerChanged() with the current data to set dialog content
             if (readers[reader].second.contains("EXCLUSIVE")) {
                 message->setText(tr("%1 can not be used.\nIt is used exclusively by some other application").arg(reader));
                 ok->setEnabled(false);
+                remember->hide();
                 cancel->setDefault(true);
                 cancel->setFocus();
             } else {
                 message->setText(tr("Allow access to %1?").arg(reader));
                 cancel->setDefault(false);
+                remember->show();
                 ok->setEnabled(true);
                 ok->setDefault(true);
                 ok->setFocus();
@@ -186,7 +189,7 @@ public slots:
         ok->setText(oktext);
         if (message->text().isEmpty())
             message->setText(defaultmessage);
-        if (remember->isChecked()) {
+        if (remember->isChecked() && remember->isEnabled()) {
             ok->setText(QStringLiteral("%1 (3s)").arg(oktext));
             autoaccept->setCurveShape(QTimeLine::LinearCurve);
             autoaccept->setFrameRange(3, 0);
@@ -262,6 +265,13 @@ public slots:
             message->setText(tr("Inserted card is not working, please check the card."));
         }
     }
+
+    void readerChanged(const QString &reader, const QByteArray &atr, const QStringList &flags) {
+        // Update our view
+        readers[reader].first = atr;
+        readers[reader].second = flags;
+    }
+
 
     void cardRemoved(const QString &reader) {
         // Update our view

@@ -303,9 +303,9 @@ void QtPCSC::run()
                     emit cardInserted(reader, known[reader].first, stateNames(current));
                 } else if ((current & SCARD_STATE_EMPTY) && (previous[reader] & SCARD_STATE_PRESENT)) {
                     emit cardRemoved(reader);
-                } else if ((current ^ previous[reader]) & SCARD_STATE_EXCLUSIVE) {
+                } else if ((current ^ previous[reader]) & SCARD_STATE_EXCLUSIVE) { // FIXME: compare ATR as well
                     // if exclusive access changes, trigger UI change
-                    emit cardInserted(reader, known[reader].first, stateNames(current));
+                    emit readerChanged(reader, known[reader].first, stateNames(current));
                 }
             }
         }

@@ -122,6 +122,8 @@ signals:
     void readerAttached(const QString &name);
     void readerRemoved(const QString &name);
 
+    void readerChanged(const QString &reader, const QByteArray &atr, const QStringList flags);
+
     void readerListChanged(const QMap<QString, QPair<QByteArray, QStringList>> &readers); // if any of the above triggered, this will trigger as well
 
     void error(const QString &reader, const LONG err);
