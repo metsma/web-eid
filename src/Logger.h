@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <cstdarg>
 #include <QString>
 
 namespace Logger {
@@ -14,8 +13,4 @@ namespace Logger {
     QString getLogFilePath();
 }
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
-#define _log(...) Logger::writeLog(__func__, __FILE__, __LINE__, __VA_ARGS__)
-#else
 #define _log(...) Logger::writeLog(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__)
-#endif

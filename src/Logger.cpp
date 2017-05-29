@@ -5,14 +5,13 @@
 #include "Logger.h"
 
 #include <QStandardPaths>
+#include <QThread>
 #include <QDir>
 #include <QFile>
 
 #include <cstdio>
-#include <string>
 #ifndef _WIN32
 #include <unistd.h>
-#include <pthread.h>
 #include <iostream>
 #else
 #include <time.h>
@@ -58,10 +57,8 @@ void Logger::writeLog(const char *functionName, const char *fileName, int lineNu
         return;
     }
     printCurrentDateTime(log);
-#ifndef _WIN32
-    fprintf(log, "[%i %lu] ", getpid(), pthread_self());
-#endif
-    fprintf(log, "%s() [%s:%i] ", functionName, fileName, lineNumber);
+    // TODO: QString QString::asprintf
+    fprintf(log, "[%p] %s() [%s:%i] ", QThread::currentThreadId(),  functionName, fileName, lineNumber);
     va_list args;
     va_start(args, message);
     vfprintf(log, message, args);

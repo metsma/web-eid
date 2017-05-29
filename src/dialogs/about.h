@@ -6,6 +6,7 @@
 
 #include "dialogs/betterdialog.h"
 #include <QLabel>
+#include <QSvgWidget>
 #include <QPixmap>
 #include <QIcon>
 #include <QVBoxLayout>
@@ -17,10 +18,10 @@
 class QtHost;
 
 // Clickable label
-class SurpriseLabel: public QLabel {
+class SurpriseLabel: public QSvgWidget {
     Q_OBJECT
 public:
-    SurpriseLabel(QWidget* parent) : QLabel(parent) {};
+    SurpriseLabel(const QString &file, QWidget *parent = Q_NULLPTR) : QSvgWidget(file, parent) {};
     ~SurpriseLabel() {};
 
 signals:
@@ -39,14 +40,15 @@ class AboutDialog: public BetterDialog {
 public:
     AboutDialog():
         layout(new QVBoxLayout(this)),
-        img(new SurpriseLabel(this)),
+        img(new SurpriseLabel(":/web-eid.svg", this)),
         text(new QLabel(this)),
         buttons(new QDialogButtonBox(this))
     {
-        QPixmap pm(":/web-eid.png");
+        //QPixmap pm(":/web-eid.png");
         layout->addWidget(img);
-        img->setPixmap(pm);
-        img->setAlignment(Qt::AlignHCenter);
+        img->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
+        //img->setPixmap(pm);
+        layout->setAlignment(img, Qt::AlignHCenter);
 
         connect(img, &SurpriseLabel::clicked, [this] {
             counter++;

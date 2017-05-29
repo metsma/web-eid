@@ -1,3 +1,5 @@
+lessThan(QT_MAJOR_VERSION, 5): error("requires Qt 5")
+lessThan(QT_MINOR_VERSION, 6): error("requires Qt 5.6 or later")
 OBJECTS_DIR = build
 MOC_DIR = build
 RCC_DIR = build
@@ -9,7 +11,7 @@ isEmpty(VERSION) {
     VERSION=$$VERSION"."$$BUILD_NUMBER
 }
 CONFIG += c++11
-QT += widgets network websockets concurrent
+QT += widgets network websockets concurrent svg
 RC_ICONS = ../artwork/win_icon.ico
 macx {
     LIBS += -framework PCSC -framework ServiceManagement -framework CoreFoundation -framework AppKit

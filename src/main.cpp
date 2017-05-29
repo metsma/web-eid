@@ -77,9 +77,9 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     // Construct tray icon and related menu
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
-    tray.setIcon(QIcon(":/inactive-web-eid.png"));
+    tray.setIcon(QIcon(":/inactive-web-eid.svg"));
 #else
-    tray.setIcon(QIcon(":/web-eid.png"));
+    tray.setIcon(QIcon(":/web-eid.svg"));
 #endif
     connect(&tray, &QSystemTrayIcon::activated, this, [this] (QSystemTrayIcon::ActivationReason reason) {
         QSettings settings;
@@ -179,13 +179,16 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         QFile logfile(Logger::getLogFilePath());
         logfile.open(QIODevice::WriteOnly | QIODevice::Text);
     });
-
+    QAction *viewLog = debugMenu->addAction(tr("View log"));
+    connect(viewLog, &QAction::triggered, this, [=] {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(Logger::getLogFilePath()));
+    });
     QAction *websocket = debugMenu->addAction(tr("WebSocket enabled"));
     websocket->setCheckable(true);
     websocket->setChecked(true);
     connect(websocket, &QAction::toggled, this, [=] (bool checked) {
         wsEnabled = checked;
-        if (checked) {
+        if (wsEnabled) {
             ws->pauseAccepting();
             ws6->pauseAccepting();
         } else {
@@ -301,7 +304,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 #endif
     }
 
-    setWindowIcon(QIcon(":/web-eid.png"));
+    setWindowIcon(QIcon(":/web-eid.svg"));
     setQuitOnLastWindowClosed(false);
 
     // Register slots and signals
@@ -373,7 +376,7 @@ void QtHost::processConnect() {
 void QtHost::newConnection(WebContext *ctx) {
     contexts[ctx->id] = ctx;
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
-    tray.setIcon(QIcon(":/web-eid.png"));
+    tray.setIcon(QIcon(":/web-eid.svg"));
 #endif
     // Keep count of active contexts
     tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
@@ -387,7 +390,7 @@ void QtHost::newConnection(WebContext *ctx) {
             if (contexts.size() == 0) {
                 usage->menuAction()->setVisible(false);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
-                tray.setIcon(QIcon(":/inactive-web-eid.png"));
+                tray.setIcon(QIcon(":/inactive-web-eid.svg"));
 #endif
                 if (once) {
                     _log("Context count is zero, quitting");
