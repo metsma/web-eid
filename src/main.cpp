@@ -51,7 +51,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     QCoreApplication::setApplicationName("Web eID");
 
     QSettings settings;
-  
+
     QCommandLineParser parser;
     QCommandLineOption debug("debug");
     parser.addOption(debug);

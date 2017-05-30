@@ -44,11 +44,10 @@ public:
         text(new QLabel(this)),
         buttons(new QDialogButtonBox(this))
     {
-        //QPixmap pm(":/web-eid.png");
         layout->addWidget(img);
         img->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
-        //img->setPixmap(pm);
         layout->setAlignment(img, Qt::AlignHCenter);
+        layout->setAlignment(text, Qt::AlignTop);
 
         connect(img, &SurpriseLabel::clicked, [this] {
             counter++;
@@ -74,6 +73,7 @@ public:
         // We get a stock app icon otherwise
         setWindowIcon(QIcon());
 #endif
+        setSizeGripEnabled(false);
         setWindowFlags(Qt::WindowStaysOnTopHint);
         setWindowFlags((windowFlags()|Qt::CustomizeWindowHint) &
                        ~(Qt::WindowMaximizeButtonHint|Qt::WindowMinimizeButtonHint|Qt::WindowCloseButtonHint));
@@ -81,11 +81,15 @@ public:
 
         buttons->addButton(tr("OK"), QDialogButtonBox::AcceptRole);
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
-        text->setText(tr("<h3>Web eID v%1</h3><div>Use your eID smart card on the Web!</div><p>&copy; 2017 <a href=\"mailto:martin@martinpaljak.net\">Martin Paljak</a> & contributors</p><p>More information on <a href=\"https://web-eid.com\">web-eid.com</a></p>").arg(VERSION));
+        text->setText(tr("<h3>Web eID v%1</h3><div>Use your eID smart card on the Web!</div>").arg(VERSION));
+        text->setText(text->text() + tr("<p>&copy; 2017 <a href=\"mailto:martin@martinpaljak.net\">Martin Paljak</a> & contributors</p>"));
+        text->setText(text->text() + tr("<p>More information on <a href=\"https://web-eid.com\">web-eid.com</a></p>"));
+        text->setText(text->text() + tr("<p>Built from %2</p>").arg(GIT_REVISION));
         text->setAlignment(Qt::AlignCenter);
         text->setTextFormat(Qt::RichText);
-        //text->setTextInteractionFlags(Qt::TextBrowserInteraction);
         text->setOpenExternalLinks(true);
+
+        centrify(true, true);
         show();
         raise();
         activateWindow();

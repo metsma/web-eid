@@ -47,10 +47,10 @@ void Logger::setFile(const QString &name) {
 bool Logger::isEnabled() {
     return logFileExists();
 }
- 
+
 void Logger::writeLog(const char *functionName, const char *fileName, int lineNumber, const char *message, ...) {
     if (!logFileExists()) {
-            return;
+        return;
     }
     FILE *log = fopen(getLogFilePath().toStdString().c_str(), "a");
     if (!log) {

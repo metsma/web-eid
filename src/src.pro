@@ -36,6 +36,7 @@ win32 {
     TARGET = "Web-eID"
 }
 DEFINES += VERSION=\\\"$$VERSION\\\"
+DEFINES += "GIT_REVISION=\"\\\"$$system(git describe --tags --always)\\\"\""
 SOURCES += \
     Logger.cpp \
     modulemap.cpp \
