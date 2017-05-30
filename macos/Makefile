@@ -20,6 +20,13 @@ $(APP): app
 	cp src/nm-bridge/web-eid-bridge $(APP)/Contents/MacOS/web-eid-bridge
 	$(QTPATH)/bin/macdeployqt $(APP) -always-overwrite
 
+node_modules/.bin/appdmg:
+	npm install
+
+dmg: Web-eID_$(VERSION).dmg
+Web-eID_$(VERSION).dmg: $(APP) node_modules/.bin/appdmg
+	npm run dmg $@
+
 codesign: $(APP)
 	# Use a sandbox
 	codesign -f --entitlements macos/web-eid.entitlements --deep -s "Developer ID Application: $(SIGNER)" $(APP)
@@ -64,7 +71,3 @@ signed: Web-eID_$(VERSION).pkg
 .PHONY: Web-eID_$(VERSION).pkg
 Web-eID_$(VERSION).pkg: pkg
 	productsign --sign "Developer ID Installer: $(SIGNER)" Web-eID_$(VERSION)-unsigned.pkg $@
-
-dmg: Web-eID.dmg
-Web-eID.dmg: Web-eID.pkg
-	hdiutil create $@ -ov -volname "Web eID installer" -srcfolder $<

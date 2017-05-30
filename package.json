@@ -1,0 +1,21 @@
+{
+  "name": "web-eid-app",
+  "version": "1.0.0",
+  "description": "Web eID app installer",
+  "scripts": {
+    "dmg": "appdmg macos/dmg.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/web-eid/web-eid.git"
+  },
+  "author": "Martin Paljak <martin@martinpaljak.net>",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/web-eid/web-eid/issues"
+  },
+  "homepage": "https://github.com/web-eid/web-eid#readme",
+  "devDependencies": {
+    "appdmg": "^0.4.5"
+  }
+}

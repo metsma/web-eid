@@ -14,7 +14,7 @@
 	<string>/private/var/run/pcscd.pub</string>
 	<key>com.apple.security.temporary-exception.files.home-relative-path.read-write</key>
 	<array>
-		<string>/tmp/web-eid.log</string>
+		<string>~/Desktop/web-eid.log</string>
 	</array>
 </dict>
 </plist>
