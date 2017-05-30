@@ -115,12 +115,13 @@ bool WebExtensionHelper::isEnabled() {
 #elif defined(Q_OS_WIN)
     bool chrome = false;
     bool firefox = false;
+    bool firefox64 = false;
 
     // FIXME: reduce code amount if single json has been verified
     QString nmpath = QDir::toNativeSeparators(QDir(QCoreApplication::applicationDirPath()).filePath("web-eid-bridge.exe"));
 
-    QSettings chrome("HKEY_CURRENT_USER\\SOFTWARE\\Google\\Chrome\\NativeMessagingHosts", QSettings::NativeFormat);
-    QString jsonFile = chrome.value(nativeName).toString();
+    QSettings chromeReg("HKEY_CURRENT_USER\\SOFTWARE\\Google\\Chrome\\NativeMessagingHosts", QSettings::NativeFormat);
+    QString jsonFile = chromeReg.value(nativeName).toString();
     QFile chromeManifest(jsonFile);
     if (chromeManifest.exists()) {
         auto manifest = readManifest(chromeManifest);
@@ -130,8 +131,8 @@ bool WebExtensionHelper::isEnabled() {
     }
 
     // FIXME: the WOW thing
-    QSettings firefox("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::NativeFormat);
-    QString firefoxJsonFile = firefox.value(nativeName).toString();
+    QSettings firefoxReg("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::NativeFormat);
+    QString firefoxJsonFile = firefoxReg.value(nativeName).toString();
     QFile firefoxManifest(firefoxJsonFile);
     if (firefoxManifest.exists()) {
         auto manifest = readManifest(firefoxManifest);
@@ -140,7 +141,17 @@ bool WebExtensionHelper::isEnabled() {
         }
     }
 
-    enabled = chrome && firefox;
+    QSettings firefox64Reg("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::Registry64Format);
+    QString firefox64JsonFile = firefox64Reg.value(nativeName).toString();
+    QFile firefox64Manifest(firefox64JsonFile);
+    if (firefox64Manifest.exists()) {
+        auto manifest = readManifest(firefox64Manifest);
+        if (manifest["name"] == nativeName && manifest["path"] == nmpath) {
+            firefox64 = true;
+        }
+    }
+
+    enabled = chrome && firefox && firefox64;
 #else
 #error "Unsupported platform"
 #endif
@@ -190,6 +201,8 @@ bool WebExtensionHelper::setEnabled(bool enabled) {
     // Add registry entry.
     QSettings chrome("HKEY_CURRENT_USER\\SOFTWARE\\Google\\Chrome\\NativeMessagingHosts", QSettings::NativeFormat);
     QSettings firefox("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::NativeFormat);
+    QSettings firefox64("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::Registry64Format);
+    
 
     QString nmpath = QDir::toNativeSeparators(QDir(QCoreApplication::applicationDirPath()).filePath("web-eid-bridge.exe"));
     QString jsonPath = QDir(QCoreApplication::applicationDirPath()).filePath(nativeName + ".json");
@@ -203,10 +216,14 @@ bool WebExtensionHelper::setEnabled(bool enabled) {
         // Set in registry.
         chrome.setValue(nativeName, QDir::toNativeSeparators(jsonPath));
         firefox.setValue(nativeName, QDir::toNativeSeparators(jsonPath));
+        firefox64.setValue(nativeName, QDir::toNativeSeparators(jsonPath));
     } else {
         chrome.remove(nativeName);
         firefox.remove(nativeName);
+        firefox64.remove(nativeName);
         // Do not touch the json File, it is harmless
+        QFile jsonFile(jsonPath);
+        jsonFile.remove();
     }
 #else
 #error "Unsupported platform"

@@ -29,6 +29,7 @@ File C:\Qt\5.8\msvc2015\bin\Qt5Core.dll
 File C:\Qt\5.8\msvc2015\bin\Qt5Gui.dll
 File C:\Qt\5.8\msvc2015\bin\Qt5Network.dll
 File C:\Qt\5.8\msvc2015\bin\Qt5PrintSupport.dll
+File C:\Qt\5.8\msvc2015\bin\Qt5Svg.dll
 File C:\Qt\5.8\msvc2015\bin\Qt5Widgets.dll
 File C:\Qt\5.8\msvc2015\bin\Qt5WinExtras.dll
 File C:\Qt\5.8\msvc2015\bin\Qt5WebSockets.dll
@@ -47,15 +48,8 @@ File C:\Windows\System32\msvcr120.dll
 SetOutPath "$INSTDIR\platforms"
 File C:\Qt\5.8\msvc2015\plugins\platforms\qwindows.dll
 
-SetRegView 32
-WriteRegStr HKCU "SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native" '' '$INSTDIR\org.hwcrypto.native.firefox.json'
-WriteRegStr HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native" '' '$INSTDIR\org.hwcrypto.native.json'
-SetRegView 64
-WriteRegStr HKCU "SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native" '' '$INSTDIR\org.hwcrypto.native.firefox.json'
-WriteRegStr HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native" '' '$INSTDIR\org.hwcrypto.native.json'
-
-; By default start on login
-WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" 'Web eID' '$INSTDIR\Web-eID.exe'
+SetOutPath "$INSTDIR\iconengines"
+File C:\Qt\5.8\msvc2015\plugins\iconengines\qsvgicon.dll
 
 ; Make shortcut on desktop
 CreateShortCut "$DESKTOP\Web eID.lnk" "$INSTDIR\Web-eID.exe"
@@ -67,8 +61,6 @@ writeUninstaller "$INSTDIR\uninstall.exe"
 
 ExecShell "open" "$INSTDIR\Web-eID.exe"
 DetailPrint "Starting Web eID app"
-Sleep 1000
-ExecShell "open" "https://web-eid.com/?installer=windows-local&version=${VERSION}"
 SectionEnd
 
 Section "uninstall"
@@ -79,12 +71,4 @@ Sleep 1000
 rmDir /r "$LOCALAPPDATA\Web eID"
 rmDir /r "$SMPROGRAMS\Web eID"
 Delete "$DESKTOP\Web eID.lnk"
-SetRegView 32
-DeleteRegKey HKCU "SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native"
-DeleteRegKey HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native"
-DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Run\Web eID"
-SetRegView 64
-DeleteRegKey HKCU "SOFTWARE\Mozilla\NativeMessagingHosts\org.hwcrypto.native"
-DeleteRegKey HKCU "SOFTWARE\Google\Chrome\NativeMessagingHosts\org.hwcrypto.native"
-DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Run\Web eID"
 SectionEnd

@@ -42,6 +42,7 @@ public:
         layout(new QVBoxLayout(this)),
         img(new SurpriseLabel(":/web-eid.svg", this)),
         text(new QLabel(this)),
+        revision(new QLabel(this)),
         buttons(new QDialogButtonBox(this))
     {
         layout->addWidget(img);
@@ -55,6 +56,7 @@ public:
                 setWindowTitle(tr("Debug mode unlocked"));
                 QSettings settings;
                 settings.setValue("debug", true);
+                revision->show();
             } else if (counter == 5) {
                 setWindowTitle(tr("Almost there ..."));
             } else if (counter == 8) {
@@ -66,6 +68,7 @@ public:
         });
 
         layout->addWidget(text);
+        layout->addWidget(revision);
         layout->addWidget(buttons);
 
         setWindowTitle(tr("About"));
@@ -84,11 +87,17 @@ public:
         text->setText(tr("<h3>Web eID v%1</h3><div>Use your eID smart card on the Web!</div>").arg(VERSION));
         text->setText(text->text() + tr("<p>&copy; 2017 <a href=\"mailto:martin@martinpaljak.net\">Martin Paljak</a> & contributors</p>"));
         text->setText(text->text() + tr("<p>More information on <a href=\"https://web-eid.com\">web-eid.com</a></p>"));
-        text->setText(text->text() + tr("<p>Built from %2</p>").arg(GIT_REVISION));
         text->setAlignment(Qt::AlignCenter);
         text->setTextFormat(Qt::RichText);
         text->setOpenExternalLinks(true);
 
+        revision->setText(tr("Built from %1").arg(GIT_REVISION));
+        revision->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        revision->setAlignment(Qt::AlignCenter);
+        revision->hide();
+        QSettings settings;
+        if (settings.value("debug", false).toBool())
+            revision->show();
         centrify(true, true);
         show();
         raise();
@@ -99,5 +108,6 @@ private:
     QVBoxLayout *layout;
     SurpriseLabel *img;
     QLabel *text;
+    QLabel *revision;
     QDialogButtonBox *buttons;
 };
