@@ -1,15 +1,11 @@
 lessThan(QT_MAJOR_VERSION, 5): error("requires Qt 5")
 lessThan(QT_MINOR_VERSION, 6): error("requires Qt 5.6 or later")
+include(../VERSION.mk)
+
 OBJECTS_DIR = build
 MOC_DIR = build
 RCC_DIR = build
 TEMPLATE = app
-isEmpty(VERSION) {
-    include(../VERSION.mk)
-    BUILD_NUMBER = $$(BUILD_NUMBER)
-    isEmpty(BUILD_NUMBER) BUILD_NUMBER = 1
-    VERSION=$$VERSION"."$$BUILD_NUMBER
-}
 CONFIG += c++11
 QT += widgets network websockets concurrent svg
 RC_ICONS = ../artwork/win_icon.ico
