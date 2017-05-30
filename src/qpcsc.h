@@ -8,6 +8,8 @@
 #include <QMutex>
 #include <QPair>
 
+#include "Logger.h"
+
 #ifdef __APPLE__
 #include <PCSC/winscard.h>
 #include <PCSC/wintypes.h>
@@ -58,7 +60,9 @@ private:
 class QPCSCReader: public QObject {
     Q_OBJECT
 public:
-    QPCSCReader(WebContext *webcontext, QtPCSC *pcsc, const QString &name, const QString &proto): QObject(webcontext), name(name), PCSC(pcsc), protocol(proto) {};
+    QPCSCReader(WebContext *webcontext, QtPCSC *pcsc, const QString &name, const QString &proto): QObject(webcontext), name(name), PCSC(pcsc), protocol(proto) {
+        setObjectName(name);
+    };
 
     ~QPCSCReader() {
         if (thread.isRunning()) {
@@ -102,20 +106,22 @@ private:
     QPCSCReaderWorker worker;
 };
 
-// Synthesizes PC/SC events to Qt signals
-class QtPCSC: public QThread {
+
+class QPCSCEventWorker: public QObject {
     Q_OBJECT
 
-public:
-    void run();
-    void cancel();
+public slots:
+    void start();
+    SCARDCONTEXT getContext() {
+        QMutexLocker locker(&mutex);
+        return context;
+    };
 
     QMap<QString, QPair<QByteArray, QStringList>> getReaders();
-    QPCSCReader *connectReader(WebContext *webcontext, const QString &reader, const QString &protocol, bool wait);
-
-    static const char *errorName(LONG err);
 
 signals:
+    void stopped(LONG rv);
+
     void cardInserted(const QString &reader, const QByteArray &atr, const QStringList flags);
     void cardRemoved(const QString &reader);
 
@@ -126,17 +132,78 @@ signals:
 
     void readerListChanged(const QMap<QString, QPair<QByteArray, QStringList>> &readers); // if any of the above triggered, this will trigger as well
 
-    void error(const QString &reader, const LONG err);
-
 private:
-    SCARDCONTEXT getContext() {
-        QMutexLocker locker(&mutex);
-        return context;
-    };
-
     SCARDCONTEXT context = 0;
-    QMap<QString, QPair<QByteArray, DWORD>> known; // Known readers
-    QMutex mutex; // Lock that guards the known readers
     bool pnp = true;
     const char *pnpReaderName = "\\\\?PnP?\\Notification";
+    QMap<QString, QPair<QByteArray, DWORD>> known; // Known readers
+    QMutex mutex; // Lock that guards the known readers
+};
+
+
+// Synthesizes PC/SC events to Qt signals
+class QtPCSC: public QObject {
+    Q_OBJECT
+
+public:
+    QtPCSC() {
+        thread.start();
+        worker.moveToThread(&thread);
+        running = true;
+        connect(&worker, &QPCSCEventWorker::stopped, this, [this] (LONG rv) {
+            running = false;
+            _log("PCSC stopped: %s", errorName(rv));
+        }, Qt::QueuedConnection);
+        connect(&worker, &QPCSCEventWorker::cardInserted, this, &QtPCSC::cardInserted, Qt::QueuedConnection);
+        connect(&worker, &QPCSCEventWorker::cardRemoved, this, &QtPCSC::cardRemoved, Qt::QueuedConnection);
+        connect(&worker, &QPCSCEventWorker::readerAttached, this, &QtPCSC::readerAttached, Qt::QueuedConnection);
+        connect(&worker, &QPCSCEventWorker::readerRemoved, this, &QtPCSC::readerRemoved, Qt::QueuedConnection);
+        connect(&worker, &QPCSCEventWorker::readerChanged, this, &QtPCSC::readerChanged, Qt::QueuedConnection);
+        connect(&worker, &QPCSCEventWorker::readerListChanged, this, &QtPCSC::readerListChanged, Qt::QueuedConnection);
+        connect(this, &QtPCSC::startSignal, &worker, &QPCSCEventWorker::start, Qt::QueuedConnection);
+        emit startSignal();
+    }
+
+    void cancel();
+
+    void start() {
+        if (!running) {
+            running = true;
+            return emit startSignal();
+        } else {
+            _log("Already running");
+        }
+    }
+    QMap<QString, QPair<QByteArray, QStringList>> getReaders();
+    QPCSCReader *connectReader(WebContext *webcontext, const QString &reader, const QString &protocol, bool wait);
+
+    static const char *errorName(LONG err);
+
+    ~QtPCSC() {
+        if (running) {
+            cancel();
+        }
+        thread.quit();
+        thread.wait();
+    }
+signals:
+    void cardInserted(const QString &reader, const QByteArray &atr, const QStringList flags);
+    void cardRemoved(const QString &reader);
+
+    void readerAttached(const QString &name);
+    void readerRemoved(const QString &name);
+
+    void readerListChanged(const QMap<QString, QPair<QByteArray, QStringList>> &readers); // if any of the above triggered, this will trigger as well
+
+    void readerChanged(const QString &reader, const QByteArray &atr, const QStringList flags);
+
+    void error(const QString &reader, const LONG err);
+
+    void startSignal();
+private:
+    bool running = false;
+    QMap<QString, QPair<QByteArray, DWORD>> known; // Known readers
+
+    QThread thread;
+    QPCSCEventWorker worker;
 };

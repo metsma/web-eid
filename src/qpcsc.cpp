@@ -4,7 +4,6 @@
 
 #include "qpcsc.h"
 
-#include "Logger.h"
 #include "util.h"
 
 #include <set>
@@ -135,14 +134,13 @@ static QStringList readerStateNames(DWORD state) {
     return result;
 }
 
-void QtPCSC::run()
+void QPCSCEventWorker::start()
 {
     LONG rv = SCARD_S_SUCCESS;
 
-    // TODO: handle the case where the resource manager is not running.
     rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
     if (rv != SCARD_S_SUCCESS) {
-        return emit error("", rv);
+        return emit stopped(rv);
     }
 
     // Check if PnP is NOT supported
@@ -168,16 +166,19 @@ void QtPCSC::run()
             readernames.clear();
             DWORD size;
             rv = SCard(ListReaders, context, nullptr, nullptr, &size);
+            if (rv == LONG(SCARD_E_NO_READERS_AVAILABLE)) {
+                // The next event would be service stopped on Window
+                return emit stopped(rv);
+            }
             if (rv != SCARD_S_SUCCESS || !size) {
-                _log("SCardListReaders(size): %s %d", errorName(rv), size);
-                return emit error("", rv);
+                _log("SCardListReaders(size): %s %d", QtPCSC::errorName(rv), size);
             }
 
             std::string readers(size, 0);
             rv = SCard(ListReaders, context, nullptr, &readers[0], &size);
             if (rv != SCARD_S_SUCCESS) {
-                _log("SCardListReaders: %s", errorName(rv));
-                return emit error("", rv);
+                _log("SCardListReaders: %s", QtPCSC::errorName(rv));
+                return emit stopped(rv);
             }
             readers.resize(size);
             // Extract reader names
@@ -309,29 +310,28 @@ void QtPCSC::run()
                 }
             }
         }
-    } while ((rv == LONG(SCARD_S_SUCCESS) || rv == LONG(SCARD_E_TIMEOUT)) && !isInterruptionRequested());
+    } while ((rv == LONG(SCARD_S_SUCCESS) || rv == LONG(SCARD_E_TIMEOUT)));
     _log("Quitting PCSC thread");
     SCard(ReleaseContext, context);
 }
 
 // The rest are called from main thread
 void QtPCSC::cancel() {
-    SCard(Cancel, getContext());
+    SCard(Cancel, worker.getContext());
 }
 
-QMap<QString, QPair<QByteArray, QStringList>> QtPCSC::getReaders() {
-    // If the resource manager was not running before, run it now.
-    // FIXME: probably not the right thing to do, relates to TODO on line 157
-    if (!isRunning())
-        start();
+QMap<QString, QPair<QByteArray, QStringList>> QPCSCEventWorker::getReaders() {
     QMutexLocker locker(&mutex);
-
     QMap<QString, QPair<QByteArray, QStringList>> result;
     for (const auto &e: known.keys()) {
         result[e].first = known[e].first;
         result[e].second = stateNames(known[e].second);
     }
     return result;
+}
+
+QMap<QString, QPair<QByteArray, QStringList>> QtPCSC::getReaders() {
+    return worker.getReaders();
 }
 
 QPCSCReader *QtPCSC::connectReader(WebContext *webcontext, const QString &reader, const QString &protocol, bool wait) {

@@ -314,22 +314,13 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     qRegisterMetaType<CertificatePurpose>();
     qRegisterMetaType<P11Token>();
 
-    // Start PC/SC event thread
-    PCSC.start();
-
     connect(&PKI, &QPKI::certificateListChanged, [=] (QVector<QByteArray> certs) {
         printf("Certificate list changed, contains %d entries\n", certs.size());
-    });
-
-    // TODO: show UI on severe errors
-    connect(&PCSC, &QtPCSC::error, [=] (QString reader, LONG err) {
-        printf("error in %s %s\n", qPrintable(reader), QtPCSC::errorName(err));
     });
 
     connect(this, &QApplication::aboutToQuit, [this] {
         _log("About to quit");
         PCSC.cancel();
-        PCSC.wait();
         _log("Done");
     });
 #ifdef Q_OS_MAC
