@@ -289,6 +289,7 @@ QWinCrypt::ErroredResponse QWinCrypt::sign(const QByteArray &cert, const QByteAr
         if (freeKeyHandle) {
             NCryptFreeObject(key);
         }
+        result.resize(size);
         break;
     }
     case AT_SIGNATURE:
@@ -342,7 +343,7 @@ QWinCrypt::ErroredResponse QWinCrypt::sign(const QByteArray &cert, const QByteAr
         break;
     case NTE_INVALID_HANDLE: // TODO: document
         _log("NTE_INVALID_HANDLE");
-        rv =  CKR_GENERAL_ERROR;
+        rv = CKR_GENERAL_ERROR;
         break;
     default:
         _log("Signing failed: 0x%u08x", err);

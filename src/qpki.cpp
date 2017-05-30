@@ -139,7 +139,7 @@ void QPKI::select(const WebContext *context, const CertificatePurpose type) {
     // run future
     winopNotice.display("Select certificate");
     // XXX Give time to dialog to appear and become topmost
-    QTimer::singleShot(firstrun ? 700 : 0, this, [this, type, context] {
+    QTimer::singleShot(firstrun ? 1000 : 0, this, [this, type, context] {
         firstrun = false;
         QString msg = tr("Select certificate for %1").arg(type == Signing ? "signing" : "authentication");
         winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, type, context->friendlyOrigin(), msg, HWND(winopNotice.winId())));
