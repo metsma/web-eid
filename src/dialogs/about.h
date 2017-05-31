@@ -14,6 +14,7 @@
 #include <QDialogButtonBox>
 #include <QTimer>
 #include <QSettings>
+#include <QMouseEvent>
 
 class QtHost;
 
@@ -29,8 +30,9 @@ signals:
 
 protected:
     void mousePressEvent(QMouseEvent* event) {
-        (void)event;
-        emit clicked();
+        if(event->button() == Qt::RightButton) {
+            emit clicked();
+        }
     }
 };
 
