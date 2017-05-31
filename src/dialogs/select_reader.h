@@ -46,7 +46,6 @@ public:
         connect(remember, &QCheckBox::stateChanged, [this] (int state) {
             if (state == Qt::Unchecked) {
                 autoaccept->stop();
-                // FIXME: keep the OK text as a separate variable
                 ok->setText(oktext);
             }
         });
@@ -102,6 +101,10 @@ public:
                     message->setText(defaultmessage);
                 }
             }
+        });
+        connect(select, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::highlighted), [this](const QString &text) {
+            autoaccept->stop();
+            ok->setText(oktext);
         });
 
         connect(this, &QDialog::accepted, [this] {
@@ -258,7 +261,7 @@ public slots:
                 ok->setFocus();
             }
         }
-       
+
         // If a card is inserted while the dialog is open, we select the reader by default
         selected = reader;
         select->setCurrentText(reader);
