@@ -26,12 +26,15 @@ public:
     ~SurpriseLabel() {};
 
 signals:
-    void clicked();
+    void leftClicked();
+    void rightClicked();
 
 protected:
     void mousePressEvent(QMouseEvent* event) {
         if(event->button() == Qt::RightButton) {
-            emit clicked();
+            emit rightClicked();
+        } else if(event->button() == Qt::LeftButton) {
+            emit leftClicked();
         }
     }
 };
@@ -53,16 +56,21 @@ public:
         layout->setAlignment(img, Qt::AlignHCenter);
         layout->setAlignment(text, Qt::AlignTop);
 
-        connect(img, &SurpriseLabel::clicked, [this] {
-            counter++;
-            if (counter == 3) {
+        connect(img, &SurpriseLabel::leftClicked, [this] {
+            leftCounter++;
+            if (leftCounter == 3) {
                 setWindowTitle(tr("Debug mode unlocked"));
                 QSettings settings;
                 settings.setValue("debug", true);
                 revision->show();
-            } else if (counter == 5) {
+            }
+        });
+
+        connect(img, &SurpriseLabel::rightClicked, [this] {
+            rightCounter++;
+            if (rightCounter == 5) {
                 setWindowTitle(tr("Almost there ..."));
-            } else if (counter == 8) {
+            } else if (rightCounter == 8) {
                 setWindowTitle(tr("Supplies!"));
                 text->setText(text->text() + "<p>Send me an e-mail with the window title<br>to get a free JavaCard for smart card development!</p>");
                 centrify(true, false);
@@ -107,7 +115,8 @@ public:
         activateWindow();
     };
 private:
-    int counter = 0;
+    int leftCounter = 0;
+    int rightCounter = 0;
     QVBoxLayout *layout;
     SurpriseLabel *img;
     QLabel *text;
