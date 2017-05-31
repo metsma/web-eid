@@ -202,7 +202,7 @@ bool WebExtensionHelper::setEnabled(bool enabled) {
     QSettings chrome("HKEY_CURRENT_USER\\SOFTWARE\\Google\\Chrome\\NativeMessagingHosts", QSettings::NativeFormat);
     QSettings firefox("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::NativeFormat);
     QSettings firefox64("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::Registry64Format);
-    
+
 
     QString nmpath = QDir::toNativeSeparators(QDir(QCoreApplication::applicationDirPath()).filePath("web-eid-bridge.exe"));
     QString jsonPath = QDir(QCoreApplication::applicationDirPath()).filePath(nativeName + ".json");
