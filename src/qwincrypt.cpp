@@ -84,14 +84,14 @@ QWinCrypt::ErroredResponse QWinCrypt::getCertificates() {
     }
 
     // Enumerate certificates, so that no_certificates satus could be reported.
-    PCCERT_CONTEXT pCertContextForEnumeration = nullptr;
-    while (pCertContextForEnumeration = CertEnumCertificatesInStore(store, pCertContextForEnumeration)) {
-        if (isCardInReader(pCertContextForEnumeration)) {
-            result.append(QByteArray((const char *)pCertContextForEnumeration->pbCertEncoded, int(pCertContextForEnumeration->cbCertEncoded)));
+    PCCERT_CONTEXT cert = nullptr;
+    while (cert = CertEnumCertificatesInStore(store, cert)) {
+        if (isCardInReader(cert)) {
+            result.append(QByteArray((const char *)cert->pbCertEncoded, int(cert->cbCertEncoded)));
         }
     }
-    if (pCertContextForEnumeration) {
-        CertFreeCertificateContext(pCertContextForEnumeration);
+    if (cert) {
+        CertFreeCertificateContext(cert);
     }
     _log("Found a total of %d certs in MY store", result.size());
     CertCloseStore(store, 0);
@@ -174,16 +174,16 @@ QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type,
     }
 
     // Enumerate certificates, so that no_certificates satus could be reported.
-    PCCERT_CONTEXT pCertContextForEnumeration = nullptr;
+    PCCERT_CONTEXT cert = nullptr;
     int certificatesCount = 0;
-    while (pCertContextForEnumeration = CertEnumCertificatesInStore(store, pCertContextForEnumeration)) {
+    while (cert = CertEnumCertificatesInStore(store, cert)) {
         _log("Checking certificate during enumeration");
-        if (type == Signing ? isValidSigningCert(pCertContextForEnumeration) : isValidAuthenticationCert(pCertContextForEnumeration)) {
+        if (type == Signing ? isValidSigningCert(cert) : isValidAuthenticationCert(cert)) {
             certificatesCount++;
         }
     }
-    if (pCertContextForEnumeration) {
-        CertFreeCertificateContext(pCertContextForEnumeration);
+    if (cert) {
+        CertFreeCertificateContext(cert);
     }
     _log("Found a total of certs in MY store: %d for %d", certificatesCount, type);
 
@@ -351,7 +351,5 @@ QWinCrypt::ErroredResponse QWinCrypt::sign(const QByteArray &cert, const QByteAr
     }
     return {rv, {result}};
 }
-
-
 
 #endif
