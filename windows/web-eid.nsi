@@ -17,7 +17,7 @@ IfFileExists $INSTDIR\Web-eID.exe 0 +5
 MessageBox MB_OK "As you are upgrading, we need to quit the current Web eID app before installing the new one.$\nYou will have to re-load open browser sessions that are using it."
 DetailPrint "Stopping Web eID app ..."
 nsExec::Exec '"$INSTDIR\web-eid-bridge.exe" --quit'
-Sleep 1000
+Sleep 5000
 
 File src\release\Web-eID.exe
 File src\nm-bridge\release\web-eid-bridge.exe
@@ -67,7 +67,7 @@ Section "uninstall"
 SetAutoClose true
 DetailPrint "Stopping Web eID app ..."
 nsExec::Exec '"$INSTDIR\web-eid-bridge.exe" --quit'
-Sleep 1000
+Sleep 5000
 rmDir /r "$LOCALAPPDATA\Web eID"
 rmDir /r "$SMPROGRAMS\Web eID"
 Delete "$DESKTOP\Web eID.lnk"
