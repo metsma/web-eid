@@ -18,3 +18,4 @@ moc_*.h
 qrc_*.cpp
 QMakefile
 .qmake.stash
+/node_modules
