@@ -23,6 +23,7 @@ $(APP): app
 node_modules/.bin/appdmg:
 	npm install
 
+pkg: dmg
 dmg: Web-eID_$(VERSION).dmg
 Web-eID_$(VERSION).dmg: $(APP) node_modules/.bin/appdmg
 	npm run dmg $@
@@ -58,7 +59,7 @@ web-eid-app.pkg: $(APP)
 scripts.pkg: macos/installer-scripts/*
 	pkgbuild --nopayload --scripts macos/installer-scripts --id com.web-eid.scripts --version $(VERSION) $@
 
-pkg: Web-eID_$(VERSION)-unsigned.pkg
+pkg-pkg: Web-eID_$(VERSION)-unsigned.pkg
 Web-eID_$(VERSION)-unsigned.pkg: web-eid-app.pkg scripts.pkg
 	productbuild --distribution macos/web-eid.dist.xml \
 	--package-path . \
