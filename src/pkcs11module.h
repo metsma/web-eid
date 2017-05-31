@@ -9,7 +9,7 @@
 #include <map>
 
 #include "pkcs11.h"
-#include "Common.h"
+#include "webeid.h"
 
 #ifdef _WIN32
 #include <windows.h>

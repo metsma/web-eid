@@ -5,7 +5,7 @@
 #pragma once
 
 #include "qpcsc.h"
-#include "Logger.h"
+#include "debuglog.h"
 #include "context.h"
 
 #include "dialogs/betterdialog.h"

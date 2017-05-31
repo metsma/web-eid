@@ -6,8 +6,8 @@
 
 #include "qpki.h"
 
-#include "Logger.h"
-#include "Common.h"
+#include "debuglog.h"
+#include "webeid.h"
 #include "util.h"
 
 #include "dialogs/betterdialog.h"

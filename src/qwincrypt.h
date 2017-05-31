@@ -6,7 +6,7 @@
 #include <QtGlobal>
 #ifdef Q_OS_WIN
 #include <Windows.h>
-#include "Common.h"
+#include "webeid.h"
 #include "pkcs11.h"
 #include <QVariant>
 #include <QByteArray>

@@ -6,7 +6,7 @@
 
 #include "pkcs11module.h"
 #include "util.h" // helpers
-#include "Logger.h"
+#include "debuglog.h"
 
 #include "context.h"
 

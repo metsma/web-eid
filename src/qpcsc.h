@@ -8,7 +8,7 @@
 #include <QMutex>
 #include <QPair>
 
-#include "Logger.h"
+#include "debuglog.h"
 
 #ifdef __APPLE__
 #include <PCSC/winscard.h>

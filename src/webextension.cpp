@@ -4,7 +4,7 @@
 
 #include "webextension.h"
 #include <QFile>
-#include "Logger.h"
+#include "debuglog.h"
 
 #ifdef Q_OS_MACOS
 #include <CoreFoundation/CoreFoundation.h>

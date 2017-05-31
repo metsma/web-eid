@@ -7,8 +7,8 @@
 #include "autostart.h"
 #include "webextension.h"
 
-#include "util.h"
-#include "Logger.h" // TODO: rename
+//#include "util.h"
+#include "debuglog.h"
 
 #include "dialogs/debug.h"
 #include "dialogs/about.h"
@@ -61,15 +61,18 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         settings.setValue("debug", true);
     }
 
+    // On first run, open a welcome page
     if (settings.value("firstRun", true).toBool()) {
-        QDesktopServices::openUrl(QUrl("https://web-eid.com/welcome"));
+        QDesktopServices::openUrl(QUrl(settings.value("welcomeUrl", "https://web-eid.com/welcome").toString()));
         settings.setValue("firstRun", false);
     }
+
     // Enable autostart, if not explicitly disabled
     if (settings.value("startAtLogin", true).toBool()) {
         // We always overwrite
         StartAtLoginHelper::setEnabled(true);
     }
+
     // Register extension, if not explicitly disabled
     if (settings.value("registerExtension", true).toBool()) {
         WebExtensionHelper::setEnabled(true);
@@ -79,6 +82,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     tray.setIcon(QIcon(":/inactive-web-eid.svg"));
 #else
+    // Windows hides the icon and w10 has a dark bacground by default
     tray.setIcon(QIcon(":/web-eid.svg"));
 #endif
     connect(&tray, &QSystemTrayIcon::activated, this, [this] (QSystemTrayIcon::ActivationReason reason) {
@@ -142,7 +146,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     // Context menu
     QMenu *menu = new QMenu();
-    // TODO: have about dialog
+    // About dialog, that also enables debug menu
     QAction *about = menu->addAction(tr("About Web eID"));
     connect(about, &QAction::triggered, this, [=] {
         new AboutDialog();
@@ -187,6 +191,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     websocket->setCheckable(true);
     websocket->setChecked(true);
     connect(websocket, &QAction::toggled, this, [=] (bool checked) {
+        // XXX this is redundant if no accepts are done
         wsEnabled = checked;
         if (wsEnabled) {
             ws->pauseAccepting();
@@ -204,7 +209,6 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         lsEnabled = checked;
     });
 
-    // FIXME: maybe read start state from disk?
     QAction *native = debugMenu->addAction(tr("WebExtension registered"));
     native->setCheckable(true);
     native->setChecked(WebExtensionHelper::isEnabled());
@@ -220,7 +224,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
         settings.remove("registerExtension");
     });
 
-    // Number of active sites
+    // Number of active sites, visible only if > 0
     menu->addSeparator();
     usage = new QMenu(tr("0 active sites"), menu);
     menu->addMenu(usage);
@@ -238,15 +242,13 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     // Now this will probably get some bad publicity ...
     QSslConfiguration sslConfiguration;
-
-    // TODO: make this configurable
-    QFile keyFile(":/app.web-eid.com.key");
+    QFile keyFile(settings.value("localhostKey", ":/app.web-eid.com.key").toString());
     keyFile.open(QIODevice::ReadOnly);
     QSslKey sslKey(&keyFile, QSsl::Rsa, QSsl::Pem);
     keyFile.close();
 
     sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyNone);
-    sslConfiguration.setLocalCertificateChain(QSslCertificate::fromPath(QStringLiteral(":/app.web-eid.com.pem")));
+    sslConfiguration.setLocalCertificateChain(QSslCertificate::fromPath(settings.value("localhostCert", ":/app.web-eid.com.pem").toString()));
     sslConfiguration.setPrivateKey(sslKey);
     sslConfiguration.setProtocol(QSsl::TlsV1SslV3);
 
@@ -300,6 +302,8 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     } else {
         _log("Tray is not (yet) available");
 #ifdef Q_OS_LINUX
+        // Practically happen only on Linux where all session items are started at once
+        // Show the icon after 1 second.
         QTimer::singleShot(1000, &tray, &QSystemTrayIcon::show);
 #endif
     }
@@ -329,6 +333,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 #endif
 }
 
+// We allo websocket connections only from secure origins
 void QtHost::checkOrigin(QWebSocketCorsAuthenticator *authenticator) {
     if (WebContext::isSecureOrigin(authenticator->origin())) {
         authenticator->setAllowed(true);
@@ -365,18 +370,19 @@ void QtHost::processConnect() {
 }
 
 void QtHost::newConnection(WebContext *ctx) {
-    contexts[ctx->id] = ctx;
+    contexts[ctx->id] = ctx; // FIXME: have pointers instead
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
+    // Activate the system icon
     tray.setIcon(QIcon(":/web-eid.svg"));
 #endif
-    // Keep count of active contexts
-    tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
-    usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
+    // Keep count of active contexts XXX l10n
+    tray.setToolTip(tr("%1 active %2").arg(contexts.size()).arg(contexts.size() == 1 ? tr("site") : tr("sites")));
+    usage->setTitle(tr("%1 active %2").arg(contexts.size()).arg(contexts.size() == 1 ? tr("site") : tr("sites")));
     usage->menuAction()->setVisible(true);
     connect(ctx, &WebContext::disconnected, this, [this, ctx] {
         if (contexts.remove(ctx->id)) {
-            tray.setToolTip(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
-            usage->setTitle(tr("%1 active site%2").arg(contexts.size()).arg(contexts.size() == 1 ? "" : "s"));
+            tray.setToolTip(tr("%1 active %2").arg(contexts.size()).arg(contexts.size() == 1 ? tr("site") : tr("sites")));
+            usage->setTitle(tr("%1 active %2").arg(contexts.size()).arg(contexts.size() == 1 ? tr("site") : tr("sites")));
             ctx->deleteLater();
             if (contexts.size() == 0) {
                 usage->menuAction()->setVisible(false);
@@ -393,6 +399,7 @@ void QtHost::newConnection(WebContext *ctx) {
 }
 
 int main(int argc, char *argv[]) {
+    // web-eid-bridge starts the app, have a simple lockfile to avoid launching several instances
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
     QString lockfile_folder = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
 #elif defined (Q_OS_WIN)

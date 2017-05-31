@@ -3,7 +3,7 @@
  */
 
 #include "modulemap.h"
-#include "Logger.h"
+#include "debuglog.h"
 #include "util.h"
 
 #include <sstream>

@@ -6,7 +6,7 @@
 
 #ifdef Q_OS_WIN
 
-#include "Logger.h"
+#include "debuglog.h"
 
 #include <WinError.h>
 #include <ncrypt.h>

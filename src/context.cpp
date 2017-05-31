@@ -4,7 +4,7 @@
 
 #include "context.h"
 
-#include "Logger.h"
+#include "debuglog.h"
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QtConcurrent>

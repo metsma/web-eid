@@ -4,8 +4,8 @@
 
 #include "qpki.h"
 
-#include "Common.h"
-#include "Logger.h"
+#include "webeid.h"
+#include "debuglog.h"
 #include "util.h"
 
 #include "modulemap.h"

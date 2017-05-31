@@ -11,8 +11,6 @@
 #include <QTimer>
 #include <QFutureWatcher>
 
-#include "qwincrypt.h" // FIXME: remove
-
 class QtPCSC;
 class QPCSCReader;
 class QPKI;

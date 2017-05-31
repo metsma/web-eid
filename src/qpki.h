@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "Logger.h"
+#include "debuglog.h"
 
 #include <QThread>
 #include <QSslCertificate>

@@ -2,7 +2,7 @@
  * Copyright (C) 2017 Martin Paljak
  */
 
-#include "../Logger.h"
+#include "../debuglog.h"
 
 #include <QCoreApplication>
 #include <QCommandLineParser>
