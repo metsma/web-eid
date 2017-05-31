@@ -2,7 +2,7 @@
 !define MUI_ICON "artwork\win_icon.ico"
 SetCompressor /solid /FINAL lzma
 !insertmacro MUI_PAGE_INSTFILES
-Name "Web eID per-user installer"
+Name "Web eID for Windows"
 OutFile "Web-eID_${VERSION}.exe"
 ShowInstDetails nevershow
 SilentInstall normal
