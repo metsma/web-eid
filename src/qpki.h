@@ -8,9 +8,9 @@
 
 #include <QThread>
 #include <QSslCertificate>
-
 #include <QFutureWatcher>
 
+#include "qwincrypt.h"
 #include "pkcs11module.h"
 #include "qpcsc.h"
 

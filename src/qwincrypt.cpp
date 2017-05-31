@@ -187,9 +187,10 @@ QWinCrypt::ErroredResponse QWinCrypt::selectCertificate(CertificatePurpose type,
     }
     _log("Found a total of certs in MY store: %d for %d", certificatesCount, type);
 
+    // TODO: what do do with pkcs11 cards and capi cards mixed?
     if (certificatesCount == 0) {
-        CertCloseStore(store, 0);
-        return {CKR_KEY_NEEDED};
+        //CertCloseStore(store, 0);
+        //return {CKR_KEY_NEEDED};
     }
     // Show selection dialog
     CRYPTUI_SELECTCERTIFICATE_STRUCT pcsc = { sizeof(pcsc) };

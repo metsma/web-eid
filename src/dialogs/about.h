@@ -29,6 +29,7 @@ signals:
 
 protected:
     void mousePressEvent(QMouseEvent* event) {
+        (void)event;
         emit clicked();
     }
 };

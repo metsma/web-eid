@@ -121,6 +121,7 @@ public slots:
 
 signals:
     void stopped(LONG rv);
+    void started();
 
     void cardInserted(const QString &reader, const QByteArray &atr, const QStringList flags);
     void cardRemoved(const QString &reader);
@@ -153,6 +154,7 @@ public:
         connect(&worker, &QPCSCEventWorker::stopped, this, [this] (LONG rv) {
             running = false;
             _log("PCSC stopped: %s", errorName(rv));
+            emit stopped();
         }, Qt::QueuedConnection);
         connect(&worker, &QPCSCEventWorker::cardInserted, this, &QtPCSC::cardInserted, Qt::QueuedConnection);
         connect(&worker, &QPCSCEventWorker::cardRemoved, this, &QtPCSC::cardRemoved, Qt::QueuedConnection);
@@ -198,6 +200,8 @@ signals:
     void readerChanged(const QString &reader, const QByteArray &atr, const QStringList flags);
 
     void error(const QString &reader, const LONG err);
+    void started();
+    void stopped();
 
     void startSignal();
 private:

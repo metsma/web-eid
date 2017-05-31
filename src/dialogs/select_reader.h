@@ -19,6 +19,7 @@
 #include <QDialogButtonBox>
 #include <QPushButton>
 #include <QSettings>
+#include <QTimer>
 #include <QTimeLine>
 
 // Reader selection dialog
@@ -27,7 +28,7 @@ class QtSelectReader: public BetterDialog {
 
 public:
     // FIXME: optional list of wanted ATR-s
-    QtSelectReader(WebContext *ctx, QList<QByteArray> atrs):
+    QtSelectReader(WebContext *ctx, QtPCSC *PCSC, QList<QByteArray> atrs):
         context(ctx),
         layout(new QVBoxLayout(this)),
         message(new QLabel(this)),
@@ -71,6 +72,19 @@ public:
 
         connect(autoaccept, &QTimeLine::finished, this, &QDialog::accept);
 
+        connect(PCSC, &QtPCSC::readerListChanged, this, &QtSelectReader::update);
+        connect(PCSC, &QtPCSC::cardInserted, this, &QtSelectReader::cardInserted);
+        connect(PCSC, &QtPCSC::cardRemoved, this, &QtSelectReader::cardRemoved);
+        connect(PCSC, &QtPCSC::readerAttached, this, &QtSelectReader::readerAttached);
+        connect(ctx, &WebContext::disconnected, this, &QDialog::reject);
+#ifdef Q_OS_WIN
+        // Make sure PC/SC is running
+        PCSC->start();
+        connect(PCSC, &QtPCSC::stopped, this, [PCSC] {
+            // Try to re-start PCSC every 2 seconds, if there are no readers connected
+            QTimer::singleShot(2000, PCSC, &QtPCSC::start);
+        });
+#endif
         connect(select, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this] (const QString &text) {
             if (!text.isEmpty()) {
                 _log("New item is %s", qPrintable(text));
@@ -114,7 +128,7 @@ public:
 
 public slots:
     void update(QMap<QString, QPair<QByteArray, QStringList>> readers) {
-        _log("Update readers in dialog");
+        _log("Reader list changed");
         message->clear();
         select->clear();
 
@@ -134,7 +148,7 @@ public slots:
             QString reader = readers.keys().at(0);
             selected = reader;
             remember->setChecked(remembered == selected);
-
+            defaultmessage = tr("Allow access to %1?").arg(reader);
             // TODO: call readerChanged() with the current data to set dialog content
             if (readers[reader].second.contains("EXCLUSIVE")) {
                 message->setText(tr("%1 can not be used.\nIt is used exclusively by some other application").arg(reader));
@@ -143,7 +157,6 @@ public slots:
                 cancel->setDefault(true);
                 cancel->setFocus();
             } else {
-                message->setText(tr("Allow access to %1?").arg(reader));
                 cancel->setDefault(false);
                 remember->show();
                 ok->setEnabled(true);
@@ -190,9 +203,9 @@ public slots:
         if (message->text().isEmpty())
             message->setText(defaultmessage);
         if (remember->isChecked() && remember->isEnabled()) {
-            ok->setText(QStringLiteral("%1 (3s)").arg(oktext));
             autoaccept->setCurveShape(QTimeLine::LinearCurve);
             autoaccept->setFrameRange(3, 0);
+            ok->setText(QStringLiteral("%1 (%2s)").arg(oktext).arg(autoaccept->startFrame()));
             connect(autoaccept, &QTimeLine::frameChanged, this, [this] (int frame) {
                 ok->setText(QStringLiteral("%1 (%2s)").arg(oktext).arg(frame));
             });
@@ -210,6 +223,7 @@ public slots:
     }
 
     void cardInserted(const QString &reader, const QByteArray &atr, const QStringList &flags) {
+        _log("Card inserted: %s", qPrintable(reader));
         // Update our view
         readers[reader].first = atr;
         readers[reader].second = flags;
@@ -244,10 +258,7 @@ public slots:
                 ok->setFocus();
             }
         }
-        // If it was a "exclusive" signal, do nothing
-        if (flags.contains("EXCLUSIVE"))
-            return;
-
+       
         // If a card is inserted while the dialog is open, we select the reader by default
         selected = reader;
         select->setCurrentText(reader);
@@ -267,6 +278,8 @@ public slots:
     }
 
     void readerChanged(const QString &reader, const QByteArray &atr, const QStringList &flags) {
+        _log("Reader changed: %s", qPrintable(reader));
+
         // Update our view
         readers[reader].first = atr;
         readers[reader].second = flags;
@@ -274,6 +287,8 @@ public slots:
 
 
     void cardRemoved(const QString &reader) {
+        _log("Card removed: %s", qPrintable(reader));
+
         // Update our view
         readers[reader].first.clear();
         readers[reader].second.clear();
@@ -294,8 +309,10 @@ public slots:
     }
 
     void readerAttached(const QString &reader) {
+        _log("Reader attached: %s", qPrintable(reader));
         // If a new reader is attached while the dialog is open, we select it by default
         selected = reader;
+        // update() will do the rest
     }
 
 signals:

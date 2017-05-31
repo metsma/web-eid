@@ -166,19 +166,29 @@ void QPCSCEventWorker::start()
             readernames.clear();
             DWORD size;
             rv = SCard(ListReaders, context, nullptr, nullptr, &size);
-            if (rv == LONG(SCARD_E_NO_READERS_AVAILABLE)) {
+            if (rv == LONG(SCARD_E_SERVICE_STOPPED)) {
                 // The next event would be service stopped on Window
+                // Emit cleanup signals
+                _log("Doing cleanup");
+                for (auto &k: known.keys()) {
+                    if (known[k].second & SCARD_STATE_PRESENT)
+                        emit cardRemoved(k);
+                    emit readerRemoved(k);
+                }
+                known.clear();
+                emit readerListChanged(getReaders());
                 return emit stopped(rv);
             }
             if (rv != SCARD_S_SUCCESS || !size) {
                 _log("SCardListReaders(size): %s %d", QtPCSC::errorName(rv), size);
+                continue; // We re-list on next run
             }
 
             std::string readers(size, 0);
             rv = SCard(ListReaders, context, nullptr, &readers[0], &size);
             if (rv != SCARD_S_SUCCESS) {
                 _log("SCardListReaders: %s", QtPCSC::errorName(rv));
-                return emit stopped(rv);
+                continue; // We re-list on next run. XXX: deadloop possibility
             }
             readers.resize(size);
             // Extract reader names
@@ -215,7 +225,10 @@ void QPCSCEventWorker::start()
                     change = true;
                 }
             }
-
+            // If there is a chance of a reader appearing and another one disappearing
+            // at the same time, we lose events
+            if (change)
+                emit readerListChanged(getReaders());
             // Do not list on next round, unless necessary
             list = false;
         }
@@ -244,6 +257,9 @@ void QPCSCEventWorker::start()
             // List changed while in air, try again
             list = true;
             continue;
+        }
+        if (rv == LONG(SCARD_E_SERVICE_STOPPED)) {
+            continue; // SCardListReaders will do the cleanup and emit signals
         }
         if (rv == LONG(SCARD_E_TIMEOUT) || rv == LONG(SCARD_S_SUCCESS)) {
             // Check if PnP event, always remove from vector
@@ -313,6 +329,7 @@ void QPCSCEventWorker::start()
     } while ((rv == LONG(SCARD_S_SUCCESS) || rv == LONG(SCARD_E_TIMEOUT)));
     _log("Quitting PCSC thread");
     SCard(ReleaseContext, context);
+    emit stopped(rv);
 }
 
 // The rest are called from main thread

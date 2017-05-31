@@ -157,7 +157,7 @@ void WebContext::processMessage(const QVariantMap &message) {
                 atrs.append(QByteArray::fromBase64(a.toString().toLatin1()));
             }
         }
-        dialog = new QtSelectReader(this, atrs); // FIXME
+        dialog = new QtSelectReader(this, PCSC, atrs); // FIXME
         if (params.contains("timeout")) {
             timer.setSingleShot(true);
             timer.setInterval(params.value("timeout", 60).toInt() * 1000); // FIXME: define "infinity"
@@ -165,11 +165,6 @@ void WebContext::processMessage(const QVariantMap &message) {
         }
         PKI->pause();
         ((QtSelectReader *)dialog)->update(PCSC->getReaders());
-        connect(PCSC, &QtPCSC::readerListChanged, (QtSelectReader *)dialog, &QtSelectReader::update, Qt::QueuedConnection);
-        connect(PCSC, &QtPCSC::cardInserted, (QtSelectReader *)dialog, &QtSelectReader::cardInserted, Qt::QueuedConnection);
-        connect(PCSC, &QtPCSC::cardRemoved, (QtSelectReader *)dialog, &QtSelectReader::cardRemoved, Qt::QueuedConnection);
-        connect(PCSC, &QtPCSC::readerAttached, (QtSelectReader *)dialog, &QtSelectReader::readerAttached, Qt::QueuedConnection);
-        connect(this, &WebContext::disconnected, dialog, &QDialog::reject);
         connect(dialog, &QDialog::rejected, this, [=] {
             PKI->resume();
             outgoing({{"error", QtPCSC::errorName(SCARD_E_CANCELLED)}});
