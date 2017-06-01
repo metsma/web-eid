@@ -10,7 +10,7 @@ namespace WebExtensionHelper {
 bool isEnabled();
 bool setEnabled(bool enabled);
 
-static QString nativeName = "com.web-eid.app";
+static QString nativeName = "com.web_eid.app";
 static QStringList chromeOrigins = {
     "chrome-extension://ckjefchnfjhjfedoccjbhjpbncimppeg/",
     "chrome-extension://fmpfihjoladdfajbnkdfocnbcehjpogi/",
