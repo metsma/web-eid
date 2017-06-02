@@ -103,7 +103,7 @@ WebContext::WebContext(QObject *parent, QWebSocket *client): QObject(parent) {
     PKI = &((QtHost *)parent)->PKI;
 }
 
-// Process a message from a browsing context
+// Process a message from a browsing context, one by one
 void WebContext::processMessage(const QVariantMap &message) {
     _log("Processing message");
     QVariantMap resp;
@@ -230,6 +230,7 @@ void WebContext::processMessage(const QVariantMap &message) {
         r->reconnect(params.value("protocol").toString());
     } else if (message.contains("sign")) {
         QVariantMap sign = message.value("sign").toMap();
+        // TODO: check arguments
         const QByteArray cert = QByteArray::fromBase64(sign.value("certificate").toString().toLatin1());
         const QByteArray hash = QByteArray::fromBase64(sign.value("hash").toString().toLatin1());
         connect(PKI, &QPKI::signature, this, [this] (const WebContext *context, const CK_RV result, const QByteArray &value) {

@@ -6,17 +6,3 @@ ln -sf /usr/share/web-eid/org.hwcrypto.native.json /etc/opt/chrome/native-messag
 
 mkdir -p /etc/opt/chrome/policies/managed
 ln -sf /usr/share/web-eid/com.web-eid.policy.json /etc/opt/chrome/policies/managed/com.web-eid.policy.json
-
-# Nice trick to open the browser of the installing user
-# XXX: might be reasonable to do this only on the first install
-
-set +e
-exec >/dev/null 2>&1
-# Extract version from changelog
-# http://stackoverflow.com/questions/715313/how-to-get-the-newly-installed-version-within-a-debian-postinst-script
-VERSION=$(zcat /usr/share/doc/$DPKG_MAINTSCRIPT_PACKAGE/changelog*.gz | head -1 | perl -ne '$_=~ /.*\((.*)\).*/; print $1;')
-if [ -n "${DISPLAY}" ]; then
-  if [ -n "${SUDO_USER-$USERNAME}" ]; then
-    su - ${SUDO_USER-$USERNAME} sh -c "which xdg-open && xdg-open https://web-eid.com/?installer=`lsb_release -cs`-`dpkg --print-architecture`&version=${VERSION}; exit 0" &
-  fi
-fi

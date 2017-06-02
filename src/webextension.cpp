@@ -17,6 +17,7 @@
 #include <QVariantMap>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSysInfo>
 
 enum Browser {Chrome, Chromium, Firefox};
 
@@ -82,13 +83,35 @@ static QJsonObject readManifest(QFile &manifest) {
     return QJsonDocument::fromJson(json).object();
 }
 
+static QString getBridgePath() {
+    QString path;
+#if defined(Q_OS_MACOS)
+    path = QDir(QCoreApplication::applicationDirPath()).filePath("web-eid-bridge");
+#elif defined(Q_OS_LINUX)
+    _log("Product type == %s", qPrintable(QSysInfo::productType()));
+    if(QSysInfo::productType() == "debian")
+        path = "/usr/lib/web-eid-bridge";
+    else if (QSysInfo::productType() == "fedora") {
+        path = "/usr/lib64/web-eid-bridge";
+    } else {
+        path = "/usr/lib/web-eid-bridge";
+    }
+#elif defined(Q_OS_WIN)
+    path = QDir::toNativeSeparators(QDir(QCoreApplication::applicationDirPath()).filePath("web-eid-bridge.exe"));
+#else
+#error "Unsupported platform"
+#endif
+    return path;
+}
+
 bool WebExtensionHelper::isEnabled() {
     bool enabled = false;
+    QString nmpath = getBridgePath();
+
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
     bool chrome = false;
     bool chromium = false;
     bool firefox = false;
-    QString nmpath = QDir(QCoreApplication::applicationDirPath()).filePath("web-eid-bridge");
 
     QFile chromeManifest(getManifestFile(Chrome));
     if (chromeManifest.exists()) {
@@ -116,9 +139,6 @@ bool WebExtensionHelper::isEnabled() {
     bool chrome = false;
     bool firefox = false;
     bool firefox64 = false;
-
-    // FIXME: reduce code amount if single json has been verified
-    QString nmpath = QDir::toNativeSeparators(QDir(QCoreApplication::applicationDirPath()).filePath("web-eid-bridge.exe"));
 
     QSettings chromeReg("HKEY_CURRENT_USER\\SOFTWARE\\Google\\Chrome\\NativeMessagingHosts", QSettings::NativeFormat);
     QString jsonFile = chromeReg.value(nativeName).toString();
@@ -159,8 +179,8 @@ bool WebExtensionHelper::isEnabled() {
 }
 
 bool WebExtensionHelper::setEnabled(bool enabled) {
+    QString nmpath = getBridgePath();
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
-    QString nmpath = QDir(QCoreApplication::applicationDirPath()).filePath("web-eid-bridge");
 
     // All three browsers
     if (enabled) {
@@ -203,8 +223,6 @@ bool WebExtensionHelper::setEnabled(bool enabled) {
     QSettings firefox("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::NativeFormat);
     QSettings firefox64("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::Registry64Format);
 
-
-    QString nmpath = QDir::toNativeSeparators(QDir(QCoreApplication::applicationDirPath()).filePath("web-eid-bridge.exe"));
     QString jsonPath = QDir(QCoreApplication::applicationDirPath()).filePath(nativeName + ".json");
 
     if (enabled) {
