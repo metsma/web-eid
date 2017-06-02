@@ -140,8 +140,8 @@ bool WebExtensionHelper::isEnabled() {
     bool firefox = false;
     bool firefox64 = false;
 
-    QSettings chromeReg("HKEY_CURRENT_USER\\SOFTWARE\\Google\\Chrome\\NativeMessagingHosts", QSettings::NativeFormat);
-    QString jsonFile = chromeReg.value(nativeName).toString();
+    QSettings chromeReg("HKEY_CURRENT_USER\\SOFTWARE\\Google\\Chrome\\NativeMessagingHosts\\" + nativeName, QSettings::NativeFormat);
+    QString jsonFile = chromeReg.value("Default").toString();
     QFile chromeManifest(jsonFile);
     if (chromeManifest.exists()) {
         auto manifest = readManifest(chromeManifest);
@@ -151,8 +151,8 @@ bool WebExtensionHelper::isEnabled() {
     }
 
     // FIXME: the WOW thing
-    QSettings firefoxReg("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::NativeFormat);
-    QString firefoxJsonFile = firefoxReg.value(nativeName).toString();
+    QSettings firefoxReg("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts\\" + nativeName, QSettings::NativeFormat);
+    QString firefoxJsonFile = firefoxReg.value("Default").toString();
     QFile firefoxManifest(firefoxJsonFile);
     if (firefoxManifest.exists()) {
         auto manifest = readManifest(firefoxManifest);
@@ -161,8 +161,8 @@ bool WebExtensionHelper::isEnabled() {
         }
     }
 
-    QSettings firefox64Reg("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::Registry64Format);
-    QString firefox64JsonFile = firefox64Reg.value(nativeName).toString();
+    QSettings firefox64Reg("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts\\" + nativeName, QSettings::Registry64Format);
+    QString firefox64JsonFile = firefox64Reg.value("Default").toString();
     QFile firefox64Manifest(firefox64JsonFile);
     if (firefox64Manifest.exists()) {
         auto manifest = readManifest(firefox64Manifest);
@@ -219,9 +219,9 @@ bool WebExtensionHelper::setEnabled(bool enabled) {
     }
 #elif defined(Q_OS_WIN32)
     // Add registry entry.
-    QSettings chrome("HKEY_CURRENT_USER\\SOFTWARE\\Google\\Chrome\\NativeMessagingHosts", QSettings::NativeFormat);
-    QSettings firefox("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::NativeFormat);
-    QSettings firefox64("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts", QSettings::Registry64Format);
+    QSettings chrome("HKEY_CURRENT_USER\\SOFTWARE\\Google\\Chrome\\NativeMessagingHosts\\" + nativeName, QSettings::NativeFormat);
+    QSettings firefox("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts\\" + nativeName, QSettings::NativeFormat);
+    QSettings firefox64("HKEY_CURRENT_USER\\SOFTWARE\\Mozilla\\NativeMessagingHosts\\" + nativeName, QSettings::Registry64Format);
 
     QString jsonPath = QDir(QCoreApplication::applicationDirPath()).filePath(nativeName + ".json");
 
@@ -232,14 +232,14 @@ bool WebExtensionHelper::setEnabled(bool enabled) {
         jsonFile.write(getManifestJSON(nativeName, nmpath, chromeOrigins, firefoxExtensions));
         jsonFile.flush();
         // Set in registry.
-        chrome.setValue(nativeName, QDir::toNativeSeparators(jsonPath));
-        firefox.setValue(nativeName, QDir::toNativeSeparators(jsonPath));
-        firefox64.setValue(nativeName, QDir::toNativeSeparators(jsonPath));
+        chrome.setValue("Default", QDir::toNativeSeparators(jsonPath));
+        firefox.setValue("Default", QDir::toNativeSeparators(jsonPath));
+        firefox64.setValue("Default", QDir::toNativeSeparators(jsonPath));
     } else {
-        chrome.remove(nativeName);
-        firefox.remove(nativeName);
-        firefox64.remove(nativeName);
-        // Do not touch the json File, it is harmless
+        chrome.remove("Default");
+        firefox.remove("Default");
+        firefox64.remove("Default");
+        // Also remove the JSON file
         QFile jsonFile(jsonPath);
         jsonFile.remove();
     }
