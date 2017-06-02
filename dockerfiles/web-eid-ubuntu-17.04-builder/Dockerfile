@@ -8,6 +8,7 @@ RUN apt-get -y update && apt-get install --no-install-recommends -y \
   qtbase5-dev \
   qttools5-dev-tools \
   libqt5websockets5-dev \
+  libqt5svg5-dev \
   libpcsclite-dev \
   debhelper \
   devscripts \
