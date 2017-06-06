@@ -1,7 +1,9 @@
 # This file is included by the master Makefile in ..
 # We need Qt
-QTPATH ?= $(HOME)/Qt/5.8/clang_64
+QTPATH ?= $(HOME)/Qt/5.9/clang_64
 PATH := $(QTPATH)/bin:$(PATH)
+# override shell to use the new path
+SHELL := env PATH=$(PATH) $(SHELL)
 
 # Where to place files
 EXTERNAL_PATH = /Library/Application\ Support/Google/Chrome/External\ Extensions
