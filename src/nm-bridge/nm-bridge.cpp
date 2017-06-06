@@ -144,7 +144,9 @@ public:
             }
             if ((socketError == QLocalSocket::ConnectionRefusedError) || (socketError == QLocalSocket::ServerNotFoundError)) {
                 if (args.contains("--quit")) {
+                    _log("Quit, do nothing");
                     // Assume it is not running and quit the native agent
+                    _exit(1); // FIXME: quit() hangs on all platforms, aboutToQuit is not called
                     return quit();
                 }
                 // Start the server
@@ -171,19 +173,15 @@ public:
             }
         });
 
-        out.open(stdout, QFile::WriteOnly);
-        input = new InputChecker(this);
-        connect(input, &InputChecker::fromBrowser, this, &NMBridge::toApp, Qt::QueuedConnection);
-
         connect(sock, &QLocalSocket::disconnected, [this] {
             // XXX: on Linux, error() with QLocalSocket::PeerClosedError is also thrown
             _log("Socket disconnected");
             quit();
         });
-        sock->connectToServer(serverName);
         connect(this, &QCoreApplication::aboutToQuit, [this] {
             _log("Quitting ...");
-            out.close();
+            if (out.isOpen())
+                out.close();
 #ifdef Q_OS_WIN
             input->terminate();
 #else
@@ -191,12 +189,20 @@ public:
             input->wait();
 #endif
         });
+
+        // Try to establish connection to app
+        sock->connectToServer(serverName);
     }
 
 public slots:
     void connected() {
         _log("Connected to %s", qPrintable(sock->fullServerName()));
-        server_started = 0;
+
+        out.open(stdout, QFile::WriteOnly);
+        input = new InputChecker(this);
+        connect(input, &InputChecker::fromBrowser, this, &NMBridge::toApp, Qt::QueuedConnection);
+
+        server_started = 0; //FIXME: remove
 
         connect(sock, &QLocalSocket::readyRead, [this] {
             // Data available from app, read message and pass to browser
