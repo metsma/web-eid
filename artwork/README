@@ -1,5 +1,10 @@
-# Windows icon
+# Windows icon sizes
+16x16, 24x24, 32x32, 48x48, 64x64, 256x256
 
-apt-get install icoutils
-icotool -c icon48.png  -o  win_icon.ico
+# Generate from SVG
+python svg2png.py icon.svg
+
+# Construct .ICO
+apt-get install icoutils / brew install icoutils
+icotool -c -o win_icon.ico icon_16x16.png icon_24x24.png icon_32x32.png icon_48x48.png icon_64x64.png icon_128x128.png icon_256x256.png
 
