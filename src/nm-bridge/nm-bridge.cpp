@@ -136,14 +136,17 @@ public:
         connect(sock, static_cast<void(QLocalSocket::*)(QLocalSocket::LocalSocketError)>(&QLocalSocket::error), [this] (QLocalSocket::LocalSocketError socketError) {
             if (socketError == QLocalSocket::PeerClosedError) {
                 _log("QLocalSocket::PeerClosedError");
-                quit();
-                return;
+                return quit();
             } else if (socketError == QLocalSocket::ConnectionRefusedError) {
                 _log("QLocalSocket::ConnectionRefusedError");
             } else if (socketError == QLocalSocket::ServerNotFoundError) {
                 _log("QLocalSocket::ServerNotFoundError");
             }
             if ((socketError == QLocalSocket::ConnectionRefusedError) || (socketError == QLocalSocket::ServerNotFoundError)) {
+                if (args.contains("--quit")) {
+                    // Assume it is not running and quit the native agent
+                    return quit();
+                }
                 // Start the server
                 if (!server_started) {
                     // leave some time for startup
@@ -179,6 +182,8 @@ public:
         });
         sock->connectToServer(serverName);
         connect(this, &QCoreApplication::aboutToQuit, [this] {
+            _log("Quitting ...");
+            out.close();
 #ifdef Q_OS_WIN
             input->terminate();
 #else

@@ -34,6 +34,10 @@ win32 {
     HEADERS += qwincrypt.h
  #   QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease.exe
     TARGET = "Web-eID"
+    QMAKE_TARGET_COMPANY = "Web eID team"
+    QMAKE_TARGET_PRODUCT = "Web eID"
+    QMAKE_TARGET_DESCRIPTION = "Use your eID smart card on the Web"
+    QMAKE_TARGET_COPYRIGHT = "(C) 2017 Martin Paljak"
 }
 DEFINES += VERSION=\\\"$$VERSION\\\"
 DEFINES += "GIT_REVISION=\"\\\"$$system(git describe --tags --always)\\\"\""
