@@ -218,10 +218,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     QAction *clearsettings = debugMenu->addAction(tr("Clear settings"));
     connect(clearsettings, &QAction::triggered, this, [=] {
         QSettings settings;
-        settings.remove("firstRun");
-        settings.remove("debug");
-        settings.remove("startAtLogin");
-        settings.remove("registerExtension");
+        settings.clear();
     });
 
     // Number of active sites, visible only if > 0
