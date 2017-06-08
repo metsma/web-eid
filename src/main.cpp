@@ -51,6 +51,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     QCoreApplication::setApplicationName("Web eID");
 
     QSettings settings;
+    settings.setFallbacksEnabled(false);
 
     QCommandLineParser parser;
     QCommandLineOption debug("debug");
@@ -328,6 +329,13 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     // Never grab focus from other apps, even on starting
     nshideapp(true);
 #endif
+    for (auto &x: settings.childGroups()) {
+        _log("Settings group: %s", qPrintable(x));
+    }
+    for (auto &x: settings.childKeys()) {
+        _log("Settings key: %s", qPrintable(x));
+    }
+
 }
 
 // We allo websocket connections only from secure origins
