@@ -112,6 +112,7 @@ class QPCSCEventWorker: public QObject {
 
 public slots:
     void start();
+
     SCARDCONTEXT getContext() {
         QMutexLocker locker(&mutex);
         return context;
@@ -134,6 +135,7 @@ signals:
     void readerListChanged(const QMap<QString, QPair<QByteArray, QStringList>> &readers); // if any of the above triggered, this will trigger as well
 
 private:
+    LONG generate();
     SCARDCONTEXT context = 0;
     bool pnp = true;
     const char *pnpReaderName = "\\\\?PnP?\\Notification";

@@ -20,7 +20,6 @@
 #include <QMutexLocker>
 #include <QTime>
 
-
 #include "dialogs/reader_in_use.h"
 #include "dialogs/insert_card.h"
 
@@ -134,25 +133,69 @@ static QStringList readerStateNames(DWORD state) {
     return result;
 }
 
-void QPCSCEventWorker::start()
+// rename start
+void QPCSCEventWorker::start() {
+    LONG rv = SCARD_S_SUCCESS;
+    for (;;) {
+        // SCardEstablishContext works always on most machines.
+        rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
+        if (rv != SCARD_S_SUCCESS) {
+            _log("Failed to establish context: %s", QtPCSC::errorName(rv));
+            // Just sleep for one minute
+            QThread::currentThread()->sleep(60);
+            continue;
+        }
+
+        // Check for PnP
+        // Check if PnP is NOT supported
+        SCARD_READERSTATE state;
+        state.dwCurrentState = SCARD_STATE_UNAWARE;
+        state.szReader = pnpReaderName;
+        rv = SCard(GetStatusChange, context, 0, &state, DWORD(1));
+
+        if ((rv == LONG(SCARD_E_TIMEOUT)) && (state.dwEventState & SCARD_STATE_UNKNOWN)) {
+            _log("No PnP support");
+            pnp = false;
+        }
+        // Wait for events and emit them.
+        rv = generate();
+
+        _log("Generate returned %s", QtPCSC::errorName(rv));
+        // return from generate() means there are no more readers. Clean up
+         _log("Doing cleanup");
+                for (auto &k: known.keys()) {
+                    if (known[k].second & SCARD_STATE_PRESENT)
+                        emit cardRemoved(k);
+                    emit readerRemoved(k);
+                }
+                known.clear();
+                emit readerListChanged(getReaders());
+        // If the servive got stopped, wait for it to start, before continuing, on Windows
+#ifdef Q_OS_WIN
+        if (rv == SCARD_E_SERVICE_STOPPED) {
+            // Get a handle
+            _log("Starting to wait for pcscd");
+            HANDLE serviceStarted[] = {SCardAccessStartedEvent()};
+            if (serviceStarted[0] == NULL) {
+                _log("Could not get handle");
+            }
+            // Wait for service start, forever
+            if (WAIT_OBJECT_0 != WaitForMultipleObjects(1, serviceStarted, FALSE, INFINITE)) {
+                SCardReleaseStartedEvent();
+                _log("Could not wait for event!");
+                // Sleep for 1 minute.
+                QThread::currentThread()->sleep(60);
+            } else {
+                _log("Service started, starting again");
+            }
+        }
+#endif
+    }
+}
+
+LONG QPCSCEventWorker::generate()
 {
     LONG rv = SCARD_S_SUCCESS;
-
-    rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
-    if (rv != SCARD_S_SUCCESS) {
-        return emit stopped(rv);
-    }
-
-    // Check if PnP is NOT supported
-    SCARD_READERSTATE state;
-    state.dwCurrentState = SCARD_STATE_UNAWARE;
-    state.szReader = pnpReaderName;
-    rv = SCard(GetStatusChange, context, 0, &state, DWORD(1));
-
-    if ((rv == LONG(SCARD_E_TIMEOUT)) && (state.dwEventState & SCARD_STATE_UNKNOWN)) {
-        _log("No PnP support");
-        pnp = false;
-    }
 
     bool list = true;
     std::set<std::string> readernames;
@@ -164,7 +207,7 @@ void QPCSCEventWorker::start()
         if (list)  {
             // List readers
             readernames.clear();
-            DWORD size;
+            DWORD size = 0;
             rv = SCard(ListReaders, context, nullptr, nullptr, &size);
             if (rv == LONG(SCARD_E_SERVICE_STOPPED)) {
                 // The next event would be service stopped on Window
@@ -177,16 +220,20 @@ void QPCSCEventWorker::start()
                 }
                 known.clear();
                 emit readerListChanged(getReaders());
-                return emit stopped(rv);
+                return rv;
             }
-            if (rv != SCARD_S_SUCCESS || !size) {
+            if (rv != SCARD_S_SUCCESS && rv != SCARD_E_NO_READERS_AVAILABLE) {
                 _log("SCardListReaders(size): %s %d", QtPCSC::errorName(rv), size);
                 continue; // We re-list on next run
             }
-
+            if (!pnp && rv != SCARD_S_SUCCESS) {
+                _log("No PNP and no readers, returning rv");
+                return rv;
+            }
+            // TODO: Only meaningful if the size is > 0
             std::string readers(size, 0);
             rv = SCard(ListReaders, context, nullptr, &readers[0], &size);
-            if (rv != SCARD_S_SUCCESS) {
+            if (rv != SCARD_S_SUCCESS && rv != SCARD_E_NO_READERS_AVAILABLE) {
                 _log("SCardListReaders: %s", QtPCSC::errorName(rv));
                 continue; // We re-list on next run. XXX: deadloop possibility
             }
@@ -259,7 +306,8 @@ void QPCSCEventWorker::start()
             continue;
         }
         if (rv == LONG(SCARD_E_SERVICE_STOPPED)) {
-            continue; // SCardListReaders will do the cleanup and emit signals
+            return rv; // FIXME: do cleanup in start()
+            //continue; // SCardListReaders will do the cleanup and emit signals
         }
         if (rv == LONG(SCARD_E_TIMEOUT) || rv == LONG(SCARD_S_SUCCESS)) {
             // Check if PnP event, always remove from vector
@@ -326,10 +374,9 @@ void QPCSCEventWorker::start()
                 }
             }
         }
-    } while ((rv == LONG(SCARD_S_SUCCESS) || rv == LONG(SCARD_E_TIMEOUT)));
-    _log("Quitting PCSC thread");
+    } while ((rv == LONG(SCARD_S_SUCCESS) || rv == LONG(SCARD_E_TIMEOUT)) || rv == LONG(SCARD_E_NO_READERS_AVAILABLE));
     SCard(ReleaseContext, context);
-    emit stopped(rv);
+    return rv;
 }
 
 // The rest are called from main thread

@@ -36,7 +36,7 @@ $(DISTNAME)_$(VERSION)_x86.msi: $(EXE)
 	IF DEFINED SIGNER ($(SIGN) $(DISTNAME)_$(VERSION)-unsigned_x86.msi)
 	IF DEFINED SIGNER (ren $(DISTNAME)_$(VERSION)-unsigned_x86.msi $(DISTNAME)_$(VERSION)_x86.msi)
 
-pkg: x86 x64
+pkg: nsis
 
 nsis: $(EXE)
 	"C:\Program Files (x86)\NSIS\makensis.exe" /nocd /DVERSION=$(VERSION) windows\web-eid.nsi
