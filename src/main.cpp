@@ -322,7 +322,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     connect(this, &QApplication::aboutToQuit, [this] {
         _log("About to quit");
-       // Destructor cancels if necessary PCSC.cancel();
+        // Destructor cancels if necessary PCSC.cancel();
         _log("Done");
     });
 #ifdef Q_OS_MAC

@@ -129,7 +129,6 @@ public slots:
         select->clear();
 
         if (readers.size() == 0) {
-            // TODO: start active waiting for PC/SC context on Windows
             defaultmessage = tr("Please connect a smart card reader!");
             select->hide();
             remember->hide();

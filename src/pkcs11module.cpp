@@ -84,9 +84,6 @@ std::vector<CK_OBJECT_HANDLE> PKCS11Module::getKey(CK_SESSION_HANDLE session, co
 }
 
 
-
-
-
 CK_RV PKCS11Module::load(const std::string &module) {
     // Clear any present modules
     certs.clear();
@@ -169,7 +166,7 @@ CK_RV PKCS11Module::refresh() {
             continue;
         }
         std::string label = QString::fromUtf8((const char* )token.label, sizeof(token.label)).simplified().toStdString();
-        _log("Token has a label: \"%s\"", label.c_str());
+        _log("Token: \"%s\"", label.c_str());
         C(OpenSession, slot, CKF_SERIAL_SESSION, nullptr, nullptr, &sid);
         if (rv != CKR_OK) {
             _log("Could not open session, skipping slot %u", slot);
@@ -205,7 +202,7 @@ CK_RV PKCS11Module::refresh() {
 std::map<std::vector <unsigned char>, P11Token> PKCS11Module::getCerts() {
     std::map<std::vector<unsigned char>, P11Token> res;
     for(auto const &crts: certs) {
-        _log("certificate: %s", toHex(crts.first).c_str());
+        _log("returning certificate: %s", x509subject(crts.first).c_str());
         res.insert(std::make_pair(crts.first, crts.second.first));
     }
     return res;

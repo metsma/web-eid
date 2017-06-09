@@ -22,38 +22,45 @@
 void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
     _log("Card inserted to %s (%s), refreshing available certificates", qPrintable(reader), qPrintable(atr.toHex()));
     // Check if module already present
-    std::vector<std::string> mods = P11Modules::getPaths({ba2v(atr)});
+    std::vector<std::string> modsv = P11Modules::getPaths({ba2v(atr)});
+    // Make the list uniq
+    QSet<QString> mods;
+    for (const auto &m: modsv) {
+        mods.insert(QString::fromStdString(m));
+    }
     if (mods.size() > 0) {
         for (const auto &m: mods) {
-            _log("Trying module %s", m.c_str());
-            if (!modules.contains(QString::fromStdString(m))) {
+            _log("Trying module %s", qPrintable(m));
+            if (!modules.contains(m)) {
                 _log("Module not yet loaded, doing it");
                 PKCS11Module *module = new PKCS11Module();
-                if (module->load(m) == CKR_OK) {
-                    modules[QString::fromStdString(m)] = module;
+                if (module->load(m.toStdString()) == CKR_OK) {
+                    modules[m] = module;
                     refresh(atr); // TODO: optimize
                     _log("Module loaded with %d certificates", module->getCerts().size());
                     break; // Use first module that reports certificates
                 } else {
-                    _log("Could not load module %s", m.c_str());
+                    _log("Could not load module %s", qPrintable(m));
                 }
             } else {
-                _log("%s is already loaded", m.c_str());
+                _log("%s is already loaded", qPrintable(m));
                 refresh(atr);
             }
         }
     } else {
+        _log("No ATR configured, emitting no driver");
         emit noDriver(reader, atr, 0);
     }
 }
 
 void QPKIWorker::cardRemoved(const QString &reader) {
     _log("Card removed from %s, refreshing PKCS#11 certificates", qPrintable(reader));
-    refresh();
+    refresh(0);
 }
 
 
 void QPKIWorker::refresh(const QByteArray &atr) {
+    // re-get all certificates from modules
     QMap<QByteArray, P11Token> certs;
     for (const auto &m: modules.keys()) {
         modules[m]->refresh();
@@ -62,11 +69,15 @@ void QPKIWorker::refresh(const QByteArray &atr) {
             certs[v2ba(c.first)] = c.second;
         }
     }
+
+    // If certificate list changed, emit signal
     if (certificates.size() != certs.size()) {
         certificates = certs;
         emit refreshed(certificates);
     }  else {
+        // If a card insertion event does not add certificates, we do not know or have the right driver.
         if (!atr.isEmpty()) {
+            _log("List did not change, emitting no driver");
             emit noDriver(0, atr, 0);
         }
     }

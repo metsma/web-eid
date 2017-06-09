@@ -62,14 +62,23 @@ public:
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
         connect(this, &QDialog::accepted, [this, ctx] {
-            return emit certificateSelected(certs[select->currentIndex()]);
+            // Find the certificate with the matching name
+            for (const auto &c: certs) {
+                if (certName(c) == select->currentText()) {
+                    return emit certificateSelected(c);
+                }
+            }
         });
 
-        connect(select, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, [=](int index) {
-            ok->setEnabled(true);
-            ok->setDefault(true);
-            ok->setFocus();
+        connect(select, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), this, [=](const QString &text) {
+            if (!text.isEmpty()) {
+                _log("Item changed to %s", qPrintable(text));
+            }
+            //    ok->setEnabled(true);
+            //    ok->setDefault(true);
+            //    ok->setFocus();
         });
+        centrify(true, true);
     }
 
 public slots:
@@ -82,38 +91,61 @@ public slots:
                 certs.append(c);
             }
         }
-
+        this->certs = certs;
         // Change from some to none, interpret as implicit cancel
-        // TODO: what about chaning cards?
+        // TODO: what about changing cards?
         if (certs.empty()) {
             message->setText(tr("No certificates found, please insert your card!"));
             select->hide();
             ok->hide();
             cancel->setDefault(true);
             cancel->setFocus();
+        } else if (certs.size() == 1) {
+            select->hide();
+            ok->setText(tr("OK"));
+
+            QSslCertificate x509(certs.at(0), QSsl::Der);
+            QString cname = certName(certs.at(0));
+            if (QDateTime::currentDateTime() >= x509.expiryDate()) {
+                ok->setEnabled(false);
+                cancel->setDefault(true);
+                cancel->setFocus();
+                message->setText(tr("Certificate for %1 has expired").arg(cname));
+            } else {
+                ok->show();
+                ok->setEnabled(true);
+                ok->setDefault(true);
+                ok->setFocus();
+                message->setText(tr("Use %1 for %2?").arg(cname).arg(type == Authentication ? tr("authentication") : tr("signing")));
+            }
         } else {
             QStringList crts;
-            message->setText(tr(type == Authentication ? "Select certificate for authentication" : "Select certificate for signing"));
+            message->setText(type == Authentication ? tr("Select certificate for authentication") : tr("Select certificate for signing"));
 
             for (const auto &c: certs) {
-                QString crt;
-
-                QSslCertificate cert(c, QSsl::Der);
-                if (cert.isNull()) {
-                    _log("Could not parse certificate");
-                    continue; // FIXME: fail
-                }
-
-                if (cert.subjectInfo(QSslCertificate::Organization).size() > 0) {
-                    crt += cert.subjectInfo(QSslCertificate::Organization).at(0) + ": ";
-                }
-                crt += cert.subjectInfo(QSslCertificate::CommonName).at(0) + " ";
-                crts << crt;
+                crts << certName(c);
             }
 
             select->clear();
             select->show();
             select->addItems(crts);
+
+            // Disable expired certs
+            QStandardItemModel* model = qobject_cast<QStandardItemModel*>(select->model());
+            for (const auto &c: certs) {
+                QSslCertificate x509(c, QSsl::Der);
+                QString cname = certName(c);
+                QStandardItem *item = model->findItems(cname).at(0);
+
+                if (QDateTime::currentDateTime() >= x509.expiryDate()) {
+                    item->setEnabled(false);
+                    item->setToolTip(tr("Certificate has expired"));
+                } else {
+                    select->setCurrentText(cname);
+                }
+            }
+
+
             ok->show();
             ok->setDefault(true);
             if (select->currentIndex() != -1) {
@@ -124,11 +156,11 @@ public slots:
             }
 
             ok->setFocus();
-            this->certs = certs;
         }
+        centrify();
         show();
-        activateWindow(); // to be always topmost and activated, on Linux
-        raise(); // to be always topmost, on macOS
+        activateWindow();
+        raise();
     }
 
     void cardInserted(const QString &reader, const QByteArray &atr, const QStringList &flags) {
@@ -137,7 +169,14 @@ public slots:
             message->setText(tr("Inserted card is not usable. Please check.").arg(reader));
         } else {
             message->setText(tr("Card inserted, looking for certificates ..."));
+            // If we currently have only one certificate, re-show the select box.
+            if (certs.size() == 1) {
+                select->clear();
+                select->addItems({certName(certs.at(0))});
+                select->show();
+            }
         }
+        centrify();
     }
 
     void noDriver(const QString &reader, const QByteArray &atr, const QByteArray &extra) {
@@ -145,9 +184,28 @@ public slots:
         message->setTextFormat(Qt::RichText);
         message->setTextInteractionFlags(Qt::TextBrowserInteraction);
         message->setOpenExternalLinks(true);
+        centrify();
         connect(message, &QLabel::linkActivated, this, [this] {
             reject();
         });
+    }
+
+    QString certName(const QByteArray &c) {
+        QString crt;
+
+        QSslCertificate cert(c, QSsl::Der);
+        if (cert.isNull())
+        {
+            _log("Could not parse certificate");
+            return QString();
+        }
+
+        if (cert.subjectInfo(QSslCertificate::Organization).size() > 0)
+        {
+            crt += cert.subjectInfo(QSslCertificate::Organization).at(0) + ": ";
+        }
+        crt += cert.subjectInfo(QSslCertificate::CommonName).at(0) + " ";
+        return crt;
     }
 
 signals:
