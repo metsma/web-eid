@@ -89,8 +89,8 @@ public:
             setWindowTitle(tr("Authenticating to %1").arg(context->friendlyOrigin()));
         }
 
-        //nameLabel->setText(x509subject(cert).c_str());
-        nameLabel->setText("serdi subjekt");
+        // FIXME: assumes a proper certificate
+        nameLabel->setText(QSslCertificate(cert, QSsl::Der).subjectInfo(QSslCertificate::CommonName).at(0));
         pinLabel->setText(tr("Enter PIN for \"%1\"").arg(QString::fromStdString(p11token.label)));
         ok->setEnabled(false);
         ok->setText(type == Signing ? tr("Sign") : tr("Authenticate"));

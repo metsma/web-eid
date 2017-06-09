@@ -31,23 +31,6 @@ static const std::string toHex(const std::vector<unsigned char> &data) {
     return QByteArray::fromRawData((const char*)data.data(), int(data.size())).toHex().toStdString();
 }
 
-static const std::vector<unsigned char> hex2v(const std::string &hex) {
-    if (hex.size() % 2 == 1)
-        throw std::invalid_argument("Hex count is odd");
-
-    std::vector<unsigned char> bin(hex.size() / 2, 0);
-    unsigned char *c = &bin[0];
-    const char *h = hex.c_str();
-    while (*h) {
-        int x;
-        sscanf(h, "%2X", &x);
-        *c = x;
-        c++;
-        h += 2;
-    }
-    return bin;
-}
-
 static const std::string x509subject(const std::vector<unsigned char> &c) {
     QSslCertificate cert(QByteArray::fromRawData((const char *)c.data(), int(c.size())), QSsl::Der);
     std::string result;

@@ -110,7 +110,7 @@ public:
     // TODO: type => list of oid-s to match
     void select(const WebContext *context, const CertificatePurpose type);
     // sign a hash with a given certificate
-    void sign(const WebContext *context, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo);
+    void sign(const WebContext *context, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo, const CertificatePurpose type);
 
     static QByteArray authenticate_dtbs(const QSslCertificate &cert, const QString &origin, const QString &nonce);
 

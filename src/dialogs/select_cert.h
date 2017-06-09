@@ -93,7 +93,7 @@ public slots:
             cancel->setFocus();
         } else {
             QStringList crts;
-            message->setText(tr("Select certificate for XXX"));
+            message->setText(tr(type == Authentication ? "Select certificate for authentication" : "Select certificate for signing"));
 
             for (const auto &c: certs) {
                 QString crt;

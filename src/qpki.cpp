@@ -150,11 +150,11 @@ void QPKI::select(const WebContext *context, const CertificatePurpose type) {
 
 // Calculate a signature, emit signature() when done
 // FIXME: add message to function signature, signature type as enum
-void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo) {
+void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo, CertificatePurpose type) {
     _log("Signing on %s %s:%s", qPrintable(context->friendlyOrigin()), qPrintable(hashalgo), qPrintable(hash.toHex()));
 
 #ifndef Q_OS_WIN
-    QtPINDialog *dlg = new QtPINDialog(context, cert, certificates[cert], CKR_OK, Signing);
+    QtPINDialog *dlg = new QtPINDialog(context, cert, certificates[cert], CKR_OK, type);
     connect(context, &WebContext::disconnected, dlg, &QDialog::reject);
     connect(dlg, &QDialog::rejected, this, [this, context] {
         return emit signature(context, CKR_FUNCTION_CANCELED, 0);
