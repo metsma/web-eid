@@ -49,7 +49,7 @@ static std::vector<ModuleATR> createMap() {
                 "3BF81300008131FE454A434F5076323431B7",
                 "3BFA1800008031FE45FE654944202F20504B4903"
             },
-            {"/Library/EstonianIDCard/lib/esteid-pkcs11.so", "/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so"}
+            {"/Library/EstonianIDCard/lib/esteid-pkcs11.so", "/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so", "CAPI"}
         },
         {   "Latvian ID-card",
             {"3BDD18008131FE45904C41545649412D65494490008C"},
