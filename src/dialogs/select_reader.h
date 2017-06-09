@@ -76,14 +76,7 @@ public:
         connect(PCSC, &QtPCSC::cardRemoved, this, &QtSelectReader::cardRemoved);
         connect(PCSC, &QtPCSC::readerAttached, this, &QtSelectReader::readerAttached);
         connect(ctx, &WebContext::disconnected, this, &QDialog::reject);
-#ifdef Q_OS_WIN
-        // Make sure PC/SC is running
-        PCSC->start();
-        connect(PCSC, &QtPCSC::stopped, this, [PCSC] {
-            // Try to re-start PCSC every 2 seconds, if there are no readers connected
-            QTimer::singleShot(2000, PCSC, &QtPCSC::start);
-        });
-#endif
+
         connect(select, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::currentIndexChanged), [this] (const QString &text) {
             if (!text.isEmpty()) {
                 _log("New item is %s", qPrintable(text));

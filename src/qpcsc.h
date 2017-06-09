@@ -118,6 +118,12 @@ public slots:
         return context;
     };
 
+#ifdef Q_OS_WIN
+    HANDLE getCancelHandle() {
+        QMutexLocker locker(&mutex);
+        return cancelHandle;
+    };
+#endif
     QMap<QString, QPair<QByteArray, QStringList>> getReaders();
 
 signals:
@@ -141,6 +147,9 @@ private:
     const char *pnpReaderName = "\\\\?PnP?\\Notification";
     QMap<QString, QPair<QByteArray, DWORD>> known; // Known readers
     QMutex mutex; // Lock that guards the known readers
+#ifdef Q_OS_WIN
+    HANDLE cancelHandle = NULL;
+#endif
 };
 
 
@@ -152,11 +161,13 @@ public:
     QtPCSC() {
         thread.start();
         worker.moveToThread(&thread);
-        running = true;
         connect(&worker, &QPCSCEventWorker::stopped, this, [this] (LONG rv) {
             running = false;
             _log("PCSC stopped: %s", errorName(rv));
-            emit stopped();
+        }, Qt::QueuedConnection);
+        connect(&worker, &QPCSCEventWorker::started, this, [this] () {
+            running = true;
+            _log("PCSC started");
         }, Qt::QueuedConnection);
         connect(&worker, &QPCSCEventWorker::cardInserted, this, &QtPCSC::cardInserted, Qt::QueuedConnection);
         connect(&worker, &QPCSCEventWorker::cardRemoved, this, &QtPCSC::cardRemoved, Qt::QueuedConnection);
@@ -170,20 +181,19 @@ public:
 
     void cancel();
 
-    void start() {
-        if (!running) {
-            running = true;
-            return emit startSignal();
-        } else {
-            _log("Already running");
-        }
-    }
     QMap<QString, QPair<QByteArray, QStringList>> getReaders();
     QPCSCReader *connectReader(WebContext *webcontext, const QString &reader, const QString &protocol, bool wait);
 
     static const char *errorName(LONG err);
 
     ~QtPCSC() {
+#ifdef Q_OS_WIN
+        if (SetEvent(worker.getCancelHandle()) == 0) {
+            _log("SetEvent failed");
+        } else {
+            _log("Set event on cancel handler");
+        }
+#endif
         if (running) {
             cancel();
         }
@@ -202,10 +212,9 @@ signals:
     void readerChanged(const QString &reader, const QByteArray &atr, const QStringList flags);
 
     void error(const QString &reader, const LONG err);
-    void started();
-    void stopped();
 
     void startSignal();
+
 private:
     bool running = false;
     QMap<QString, QPair<QByteArray, DWORD>> known; // Known readers

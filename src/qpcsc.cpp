@@ -136,6 +136,10 @@ static QStringList readerStateNames(DWORD state) {
 // rename start
 void QPCSCEventWorker::start() {
     LONG rv = SCARD_S_SUCCESS;
+#ifdef Q_OS_WIN
+    cancelHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
+    _log("Cancel handle: %p", cancelHandle);
+#endif
     for (;;) {
         // SCardEstablishContext works always on most machines.
         rv = SCard(EstablishContext, SCARD_SCOPE_USER, nullptr, nullptr, &context);
@@ -162,31 +166,46 @@ void QPCSCEventWorker::start() {
 
         _log("Generate returned %s", QtPCSC::errorName(rv));
         // return from generate() means there are no more readers. Clean up
-         _log("Doing cleanup");
-                for (auto &k: known.keys()) {
-                    if (known[k].second & SCARD_STATE_PRESENT)
-                        emit cardRemoved(k);
-                    emit readerRemoved(k);
-                }
-                known.clear();
-                emit readerListChanged(getReaders());
-        // If the servive got stopped, wait for it to start, before continuing, on Windows
+        _log("Doing cleanup");
+        for (auto& k : known.keys()) {
+            if (known[k].second & SCARD_STATE_PRESENT)
+                emit cardRemoved(k);
+            emit readerRemoved(k);
+        }
+        known.clear();
+        emit readerListChanged(getReaders());
+        emit stopped(rv);
+
+        if (rv == SCARD_E_CANCELLED) {
+            _log("Cancelled, returning");
+            return;
+        }
+
+// If the servive got stopped, wait for it to start, before continuing, on Windows
 #ifdef Q_OS_WIN
-        if (rv == SCARD_E_SERVICE_STOPPED) {
+        if (rv == SCARD_E_SERVICE_STOPPED || rv == SCARD_E_NO_SERVICE) {
             // Get a handle
-            _log("Starting to wait for pcscd");
-            HANDLE serviceStarted[] = {SCardAccessStartedEvent()};
+            _log("Starting to wait for smart card service");
+            HANDLE serviceStarted[] = {cancelHandle, SCardAccessStartedEvent()};
+            DWORD eventIndex = 0;
             if (serviceStarted[0] == NULL) {
                 _log("Could not get handle");
             }
             // Wait for service start, forever
-            if (WAIT_OBJECT_0 != WaitForMultipleObjects(1, serviceStarted, FALSE, INFINITE)) {
-                SCardReleaseStartedEvent();
+
+            eventIndex = WaitForMultipleObjects(2, serviceStarted, FALSE, INFINITE);
+            SCardReleaseStartedEvent();
+            _log("Wait function returned 0x%08x", eventIndex);
+            if (eventIndex - WAIT_OBJECT_0 == 1) {
+                _log("Service started, starting again");
+                continue;
+            } else if (eventIndex - WAIT_OBJECT_0 == 0) {
+                _log("Canceled, returning");
+                return;
+            } else {
                 _log("Could not wait for event!");
                 // Sleep for 1 minute.
                 QThread::currentThread()->sleep(60);
-            } else {
-                _log("Service started, starting again");
             }
         }
 #endif
@@ -195,6 +214,8 @@ void QPCSCEventWorker::start() {
 
 LONG QPCSCEventWorker::generate()
 {
+    emit started();
+
     LONG rv = SCARD_S_SUCCESS;
 
     bool list = true;
@@ -210,16 +231,6 @@ LONG QPCSCEventWorker::generate()
             DWORD size = 0;
             rv = SCard(ListReaders, context, nullptr, nullptr, &size);
             if (rv == LONG(SCARD_E_SERVICE_STOPPED)) {
-                // The next event would be service stopped on Window
-                // Emit cleanup signals
-                _log("Doing cleanup");
-                for (auto &k: known.keys()) {
-                    if (known[k].second & SCARD_STATE_PRESENT)
-                        emit cardRemoved(k);
-                    emit readerRemoved(k);
-                }
-                known.clear();
-                emit readerListChanged(getReaders());
                 return rv;
             }
             if (rv != SCARD_S_SUCCESS && rv != SCARD_E_NO_READERS_AVAILABLE) {
@@ -235,7 +246,7 @@ LONG QPCSCEventWorker::generate()
             rv = SCard(ListReaders, context, nullptr, &readers[0], &size);
             if (rv != SCARD_S_SUCCESS && rv != SCARD_E_NO_READERS_AVAILABLE) {
                 _log("SCardListReaders: %s", QtPCSC::errorName(rv));
-                continue; // We re-list on next run. XXX: deadloop possibility
+                continue; // We re-list on next run.
             }
             readers.resize(size);
             // Extract reader names
@@ -335,7 +346,7 @@ LONG QPCSCEventWorker::generate()
                 } else {
                     // Store previous state for comparison
                     previous[reader] = known[reader].second;
-                    // Save new state for changed reader, except the changed bit itself
+                    // Save new state for changed reader, except the changed bit itself. FIXME mutex
                     known[reader].second = i.dwEventState & ~SCARD_STATE_CHANGED;
                 }
                 // Save ATR, if present
