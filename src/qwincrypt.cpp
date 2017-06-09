@@ -281,6 +281,15 @@ QWinCrypt::ErroredResponse QWinCrypt::sign(const QByteArray &cert, const QByteAr
     CertFreeCertificateContext(certInStore);
     CertCloseStore(store, 0);
 
+    if (gotKey == FALSE) {
+        DWORD e = GetLastError();
+        _log("Did not get key: 0x%08x", e);
+        if (SCARD_W_CANCELLED_BY_USER == e) {
+            return {CKR_FUNCTION_CANCELED};
+        } else {
+            return {CKR_GENERAL_ERROR};
+        }
+    }
     // Certificate not needed any more, key handle acquired
     switch (spec)
     {
