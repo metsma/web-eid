@@ -5,9 +5,15 @@
 
 #ifdef Q_OS_MAC
 void nshideapp(bool);
+void nsshowapp();
 #endif
 class BetterDialog: public QDialog {
 public:
+    BetterDialog() {
+#ifdef Q_OS_MAC
+        nsshowapp();
+#endif
+    }
     ~BetterDialog() {
 #ifdef Q_OS_MAC
         nshideapp(false);

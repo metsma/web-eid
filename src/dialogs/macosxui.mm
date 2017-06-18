@@ -9,6 +9,11 @@ void nshideapp(bool force = false) {
     }
 }
 
+void nsshowapp() {
+    [NSApp activateIgnoringOtherApps:YES];
+    [[NSApplication sharedApplication] unhide: nil];
+}
+
 QString osascript(QString scpt) {
     NSAppleScript *script = [[NSAppleScript alloc] initWithSource:scpt.toNSString()];
     NSAppleEventDescriptor *result = [script executeAndReturnError:nil];
