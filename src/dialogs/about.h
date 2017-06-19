@@ -97,7 +97,7 @@ public:
         connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
         text->setText(tr("<h3>Web eID v%1</h3><div>Use your eID smart card on the Web!</div>").arg(VERSION));
         text->setText(text->text() + tr("<p>&copy; 2017 <a href=\"mailto:martin@martinpaljak.net\">Martin Paljak</a> & contributors</p>"));
-        text->setText(text->text() + tr("<p><a href=\"https://github.com/web-eid/web-eid/wiki/Licenses\">All licensing information</a></p>"));
+        text->setText(text->text() + tr("<p><a href=\"https://github.com/web-eid/web-eid/wiki/Licenses\">Open Source licenses</a></p>"));
         text->setText(text->text() + tr("<p>More information on <a href=\"https://web-eid.com\">web-eid.com</a></p>"));
         text->setAlignment(Qt::AlignCenter);
         text->setTextFormat(Qt::RichText);
