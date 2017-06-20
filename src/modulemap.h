@@ -2,10 +2,11 @@
  * Copyright (C) 2017 Martin Paljak
  */
 
-#include <string>
-#include <vector>
+#include <QStringList>
+#include <QByteArray>
 
-class P11Modules {
+class CardOracle {
 public:
-    static std::vector<std::string> getPaths(const std::vector<std::vector<unsigned char> > &atrs);
+    static QStringList atrOracle(const QByteArray &atr);
+    static bool isUsable(const QString &token);
 };

@@ -19,67 +19,40 @@
 #include <QSslCertificate>
 #include <QSslCertificateExtension>
 
-void QPKIWorker::cardInserted(const QString &reader, const QByteArray &atr) {
-    _log("Card inserted to %s (%s), refreshing available certificates", qPrintable(reader), qPrintable(atr.toHex()));
-    // Check if module already present
-    std::vector<std::string> modsv = P11Modules::getPaths({ba2v(atr)});
-    // Make the list uniq
-    QSet<QString> mods;
-    for (const auto &m: modsv) {
-        mods.insert(QString::fromStdString(m));
-    }
-    if (mods.size() > 0) {
-        for (const auto &m: mods) {
-            _log("Trying module %s", qPrintable(m));
-            if (!modules.contains(m)) {
-                _log("Module not yet loaded, doing it");
-                PKCS11Module *module = new PKCS11Module();
-                if (module->load(m.toStdString()) == CKR_OK) {
-                    modules[m] = module;
-                    refresh(atr); // TODO: optimize
-                    _log("Module loaded with %d certificates", module->getCerts().size());
-                    break; // Use first module that reports certificates
-                } else {
-                    _log("Could not load module %s", qPrintable(m));
-                }
-            } else {
-                _log("%s is already loaded", qPrintable(m));
-                refresh(atr);
-            }
+
+void QPKIWorker::refreshModule(const QString& module) {
+    PKCS11Module* m = nullptr;
+    _log("Trying module %s", qPrintable(module));
+    if (!modules.contains(module)) {
+        _log("Module not yet loaded, doing it");
+        m = new PKCS11Module();
+        if (m->load(module.toStdString()) == CKR_OK) {
+            modules[module] = m;
+            m->refresh();
+            _log("Module loaded with %d certificates", m->getCerts().size());
+             // Use first module that reports certificates
+        } else {
+            _log("Could not load module %s", qPrintable(module));
+            return;
         }
     } else {
-        _log("No ATR configured, emitting no driver");
-        emit noDriver(reader, atr, 0);
+        _log("%s is already loaded", qPrintable(module));
+        m->refresh();
+        _log("Module refreshed with %d certificates", m->getCerts().size());
     }
-}
 
-void QPKIWorker::cardRemoved(const QString &reader) {
-    _log("Card removed from %s, refreshing PKCS#11 certificates", qPrintable(reader));
-    refresh(0);
-}
-
-
-void QPKIWorker::refresh(const QByteArray &atr) {
-    // re-get all certificates from modules
+    // re-get all certificates from this modules
     QMap<QByteArray, P11Token> certs;
-    for (const auto &m: modules.keys()) {
-        modules[m]->refresh();
-        for (auto &c: modules[m]->getCerts()) {
-            c.second.module = m.toStdString();
-            certs[v2ba(c.first)] = c.second;
-        }
+    for (auto& c : m->getCerts()) {
+        c.second.module = module.toStdString();
+        certs[v2ba(c.first)] = c.second;
     }
 
     // If certificate list changed, emit signal
-    if (certificates.size() != certs.size()) {
+    // FIXME:always triggers. 
+    if (certificates.size() != certs.size() || 1) {
         certificates = certs;
         emit refreshed(certificates);
-    }  else {
-        // If a card insertion event does not add certificates, we do not know or have the right driver.
-        if (!atr.isEmpty()) {
-            _log("List did not change, emitting no driver");
-            emit noDriver(0, atr, 0);
-        }
     }
 }
 
@@ -104,6 +77,47 @@ void QPKIWorker::sign(const QByteArray &cert, const QByteArray &hash) {
     emit signDone(rv, v2ba(result));
 }
 
+/////////// QPKI
+
+
+void QPKI::handleCardInserted(const QString &reader, const QByteArray &atr) {
+    _log("Card inserted to %s (%s), refreshing available certificates", qPrintable(reader), qPrintable(atr.toHex()));
+    // Check if module already present
+    QStringList modsv = CardOracle::atrOracle(atr);
+    // Make the list uniq
+    QSet<QString> mods = QSet<QString>::fromList(modsv);
+
+    // Check configuration
+    if (mods.size() > 0) {
+        for (const auto &m: mods) {
+            if (m == "IGNORE") {
+                _log("Ignoring this card");
+                return;
+            } else if (m == "CAPI") {
+                _log("Using CryptoAPI for card");
+                // Give Windows time to start the drivers
+
+                refreshCAPI();
+                return;
+            } else {
+                // Let the worker do the trick
+                return emit refreshModule(m);
+            }
+        }
+    } else {
+        _log("No ATR configured, emitting no driver");
+        emit noDriver(reader, atr, 0);
+    }
+}
+
+void QPKI::handleCardRemoved(const QString &reader) {
+    _log("Card removed from %s, refreshing certificates", qPrintable(reader));
+    // If any of the certificates lists this reader, refresh the specified module
+    //refresh(0);
+}
+
+
+
 void QPKI::updateCertificates(const QMap<QByteArray, P11Token> certs) {
     // FIXME
     certificates = certs;
@@ -115,48 +129,88 @@ QVector<QByteArray> QPKI::getCertificates() {
     return QVector<QByteArray>::fromList(certificates.keys());
 }
 
-// Select a single certificate for a web context, signal certificate() when done
-void QPKI::select(const WebContext *context, const CertificatePurpose type) {
-    _log("Selecting certificate for %s", qPrintable(context->friendlyOrigin()));
-    // If we have PKCS#11 certs, show a Qt window, otherwise
-    // FIXME: logic is baaaaaad.
-#ifndef Q_OS_WIN
-    QtSelectCertificate *dlg = new QtSelectCertificate(context, type);
-    connect(context, &WebContext::disconnected, dlg, &QDialog::reject);
-    connect(PCSC, &QtPCSC::cardInserted, dlg, &QtSelectCertificate::cardInserted, Qt::QueuedConnection);
-    connect(this, &QPKI::certificateListChanged, dlg, &QtSelectCertificate::update);
-    connect(this, &QPKI::noDriver, dlg, &QtSelectCertificate::noDriver);
-    connect(dlg, &QDialog::rejected, this, [this, context] {
-        return emit certificate(context, CKR_FUNCTION_CANCELED, 0);
-    });
-    connect(dlg, &QtSelectCertificate::certificateSelected, this, [this, context] (const QByteArray &cert) {
-        return emit certificate(context, CKR_OK, cert);
-    });
-    dlg->update(QVector<QByteArray>::fromList(certificates.keys()));
-#endif
 
+
+void QPKI::refreshCAPI() {
 #ifdef Q_OS_WIN
-    connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, this, [this, context] {
-        this->winop.disconnect(); // remove signals
-        this->winopNotice.hide(); // close window
-        QWinCrypt::ErroredResponse result = this->winop.result();
-        _log("Winop done: %s %d", QPKI::errorName(result.error), result.result.size());
+    connect(&wincerts, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, this, [this] {
+        this->wincerts.disconnect(); // remove signals
+        QWinCrypt::ErroredResponse result = this->wincerts.result();
+        _log("Wincerts done: %s %d", QPKI::errorName(result.error), result.result.size());
         if (result.error == CKR_OK) {
-            return emit certificate(context, result.error, result.result.at(0)); // FIXME: range check
-        } else {
-            return emit certificate(context, result.error, 0);
+            // 
+            // Make a set for easy operations
+            _log("Refreshed CAPI certs");
+        
+            // Add new certificates 
+            for (auto& c : result.result) {
+                if (certificates.contains(c)) {
+                    _log("Already present!");
+                } else {
+                    QSslCertificate crt(c, QSsl::Der);
+                    QList<QString> cn = crt.subjectInfo(QSslCertificate::CommonName);
+                    _log("Adding certificate %s", qPrintable(cn.at(0)));
+                    certificates[c] = P11Token({0,0,{0},0,0,0, "CAPI"});
+                }
+            }
+        
+            // and remove ones that are gone.
+            for (auto & c: certificates.keys()) {
+                if (QString::fromStdString(certificates[c].module) == "CAPI" && !result.result.contains(c)) {
+                    QSslCertificate crt(c, QSsl::Der);
+                    QList<QString> cn = crt.subjectInfo(QSslCertificate::CommonName);
+                    _log("Certificate has disappeared: %s", qPrintable(cn.at(0)));
+                    certificates.remove(c);
+                }
+            }
         }
     });
-    // run future
-    winopNotice.display("Select certificate");
-    // XXX Give time to dialog to appear and become topmost
-    QTimer::singleShot(firstrun ? 1500 : 0, this, [this, type, context] {
-        firstrun = false;
-        QString msg = tr("Select certificate for %1").arg(type == Signing ? tr("signing") : tr("authentication"));
-        winop.setFuture(QtConcurrent::run(&QWinCrypt::selectCertificate, type, context->friendlyOrigin(), msg, HWND(winopNotice.winId())));
-    });
+    wincerts.setFuture(QtConcurrent::run(&QWinCrypt::getCertificates));
 #endif
-    //return emit certificate(context->id, CKR_FUNCTION_CANCELED, 0);
+
+}
+
+// Select a single certificate for a web context, signal certificate() when done
+void QPKI::select(const WebContext* context, const CertificatePurpose type) {
+    _log("Selecting certificate for %s", qPrintable(context->friendlyOrigin()));
+    QSettings settings;
+
+    // FIXME: force this if any of certificates is PCKS#11
+    if (settings.value("ownDialogs", false).toBool() || QSysInfo::productType() != "windows") {
+        QtSelectCertificate* dlg = new QtSelectCertificate(context, type);
+        connect(context, &WebContext::disconnected, dlg, &QDialog::reject);
+        connect(PCSC, &QtPCSC::cardInserted, dlg, &QtSelectCertificate::cardInserted, Qt::QueuedConnection);
+        connect(this, &QPKI::certificateListChanged, dlg, &QtSelectCertificate::update);
+        connect(this, &QPKI::noDriver, dlg, &QtSelectCertificate::noDriver);
+        connect(dlg, &QDialog::rejected, this, [this, context] { return emit certificate(context, CKR_FUNCTION_CANCELED, 0); });
+        connect(dlg, &QtSelectCertificate::certificateSelected, this,  [this, context](const QByteArray& cert) {
+            return emit certificate(context, CKR_OK, cert);
+        });
+        dlg->update(QVector<QByteArray>::fromList(certificates.keys()));
+    } else {
+#ifdef Q_OS_WIN
+        connect(&winop, &QFutureWatcher<QWinCrypt::ErroredResponse>::finished, this, [this, context] {
+            this->winop.disconnect();  // remove signals
+            this->winopNotice.hide();  // close window
+            QWinCrypt::ErroredResponse result = this->winop.result();
+            _log("Winop done: %s %d", QPKI::errorName(result.error), result.result.size());
+            if (result.error == CKR_OK) {
+                return emit certificate(context, result.error, result.result.at(0));  // FIXME: range check
+            } else {
+                return emit certificate(context, result.error, 0);
+            }
+        });
+        // run future
+        winopNotice.display("Select certificate");
+        // XXX Give time to dialog to appear and become topmost
+        QTimer::singleShot(firstrun ? 1500 : 0, this, [this, type, context] {
+            firstrun = false;
+            QString msg = tr("Select certificate for %1").arg(type == Signing ? tr("signing") : tr("authentication"));
+            winop.setFuture(
+                QtConcurrent::run(&QWinCrypt::selectCertificate, type, context->friendlyOrigin(), msg, HWND(winopNotice.winId())));
+        });
+#endif
+    }
 }
 
 // Calculate a signature, emit signature() when done
@@ -164,6 +218,7 @@ void QPKI::select(const WebContext *context, const CertificatePurpose type) {
 void QPKI::sign(const WebContext *context, const QByteArray &cert, const QByteArray &hash, const QString &hashalgo, CertificatePurpose type) {
     _log("Signing on %s %s:%s", qPrintable(context->friendlyOrigin()), qPrintable(hashalgo), qPrintable(hash.toHex()));
 
+    // FIXME: use only if cert indicates CAPI
 #ifndef Q_OS_WIN
     QtPINDialog *dlg = new QtPINDialog(context, cert, certificates[cert], CKR_OK, type);
     connect(context, &WebContext::disconnected, dlg, &QDialog::reject);

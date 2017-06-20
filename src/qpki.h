@@ -36,17 +36,18 @@ public:
 
 public slots:
     //refresh available certificates. Triggered by PCSC on cardInserted()
-    void cardInserted(const QString &reader, const QByteArray &atr);
-    void cardRemoved(const QString &reader);
+    //void cardInserted(const QString &reader, const QByteArray &atr);
+    //void cardRemoved(const QString &reader);
 
     // Refresh all certificate sources
-    void refresh(const QByteArray &atr = 0);
+    //void refresh(const QByteArray &atr = 0);
+    void refreshModule(const QString &module);
 
     void login(const QByteArray &cert, const QString &pin);
     void sign(const QByteArray &cert, const QByteArray &hash); // FIXME: hashtype
 
 signals:
-    // If list of available certificates changes after refresh
+    // If list of available certificates changes after card insertion or removal
     void refreshed(const QMap<QByteArray, P11Token> certs);
 
     void loginDone(const CK_RV rv);
@@ -99,12 +100,12 @@ public:
 
     void pause() {
         _log("Pausing PCSC event handling");
-        disconnect(PCSC, 0, &worker, 0);
+        disconnect(PCSC, 0, this, 0);
     };
     void resume() {
         _log("Resuming PCSC event handling");
-        connect(PCSC, &QtPCSC::cardInserted, &worker, &QPKIWorker::cardInserted, Qt::QueuedConnection);
-        connect(PCSC, &QtPCSC::cardRemoved, &worker, &QPKIWorker::cardRemoved, Qt::QueuedConnection);
+        connect(PCSC, &QtPCSC::cardInserted, this, &QPKI::handleCardInserted);
+        connect(PCSC, &QtPCSC::cardRemoved, this, &QPKI::handleCardRemoved);
     };
 
     // TODO: type => list of oid-s to match
@@ -116,6 +117,10 @@ public:
 
     void updateCertificates(const QMap<QByteArray, P11Token> certs);
 
+    void handleCardInserted(const QString &reader, const QByteArray &atr);
+    void handleCardRemoved(const QString &reader);
+
+
 signals:
     // TODO: enrich with PKCS#11 information (tries remainign etc)
     void certificateListChanged(const QVector<QByteArray> certs); // for dialog. FIXME. aggregate win + p11
@@ -126,13 +131,15 @@ signals:
 
     void noDriver(const QString &reader, const QByteArray &atr, const QByteArray &extra);
 
-    // Control signals with worker
+    // Control signals to worker
+    void refreshModule(const QString &module);
     void login(const QByteArray &cert, const QString &pin);
     void p11sign(const QByteArray &cert, const QByteArray &hash); // FIXME: hashtype
     void signDone(const CK_RV rv, const QByteArray &signature);
 
 private:
     void refresh();
+    void refreshCAPI();
 
 #ifdef Q_OS_WIN
     // Windows operation

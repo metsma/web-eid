@@ -11,6 +11,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <QSettings>
+#include <QFile>
+
 #ifndef _WIN32
 #include <unistd.h>
 #include <dlfcn.h>
@@ -24,14 +27,14 @@
 
 // We have a list of named lists
 struct ModuleATR {
-    std::string name;
-    std::vector<std::string> atrs;
-    std::vector<std::string> paths;
+    QString name;
+    QStringList atrs;
+    QStringList paths;
 };
 
-static std::vector<ModuleATR> createMap() {
+static QList<ModuleATR> createMap() {
     // First add specific ATR-s
-    std::vector<ModuleATR> m{
+    QList<ModuleATR> m{
         {   "e-token",
             {"3BD518008131FE7D8073C82110F4"},
             {"/Library/Frameworks/eToken.framework/Versions/Current/libeToken.dylib"}
@@ -49,109 +52,125 @@ static std::vector<ModuleATR> createMap() {
                 "3BF81300008131FE454A434F5076323431B7",
                 "3BFA1800008031FE45FE654944202F20504B4903"
             },
-            {"/Library/EstonianIDCard/lib/esteid-pkcs11.so", "/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so", "CAPI"}
+            {"CAPI", "/Library/EstonianIDCard/lib/esteid-pkcs11.so", "/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so"}
         },
         {   "Latvian ID-card",
             {"3BDD18008131FE45904C41545649412D65494490008C"},
-            {"/Library/latvia-eid/lib/otlv-pkcs11.so", "otlv-pkcs11.so"}
+            {"CAPI", "/Library/latvia-eid/lib/otlv-pkcs11.so", "otlv-pkcs11.so"}
         },
         {   "Finnish ID-card",
             {"3B7B940000806212515646696E454944"},
-            {"/Library/mPolluxDigiSign/libcryptoki.dylib", "opensc-pkcs11.so"}
+            {"CAPI", "/Library/mPolluxDigiSign/libcryptoki.dylib", "opensc-pkcs11.so"}
         },
         {   "Lithuanian ID-card",
             {   "3BF81300008131FE45536D617274417070F8",
                 "3B7D94000080318065B08311C0A983009000"
             },
-            {"/System/Library/Security/tokend/CCSuite.tokend/Contents/Frameworks/libccpkip11.dylib", "/usr/lib/ccs/libccpkip11.so"}
+            {"CAPI", "/System/Library/Security/tokend/CCSuite.tokend/Contents/Frameworks/libccpkip11.dylib", "/usr/lib/ccs/libccpkip11.so"}
         },
+       
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
         // Then add some last resort wildcards
         {"OpenSC fallback", {"*"}, {"/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so"}},
-#ifdef __linux__
-        //{"p11-kit fallback", {"*"}, {"p11-kit-proxy.so"}},
 #endif
-    };
 
-    // In each configuration list element
-    for (auto &e: m) {
-        // convert the ATR list element contents to upper case
-        for (auto &ae: e.atrs) {
-            std::transform(ae.begin(), ae.end(), ae.begin(), ::toupper);
-        }
-    }
+#ifdef Q_OS_WIN
+        {"CryptoAPI fallback", {"*"}, {"CAPI"}},
+#endif
+        {"Yubikey ignore", {"3bf81300008131fe15597562696b657934d4"}, {"IGNORE"}},
+    };
 
     // Log
     for (auto &e: m) {
-        std::stringstream msg;
-        msg << e.name << " is handled by ";
-        for (auto &me: e.paths) {
-            msg << me << " ";
-        }
-        _log("%s", msg.str().c_str());
+        _log("%s is handled by TODO", qPrintable(e.name));
     }
     return m;
 }
 
-// Given a list of ATR-s, return a list of PKCS#11 modules.
-// We do not know which ATR is of the card that is supposed to be used
-// nor do we know for sure which card is handled by which driver.
-
-std::vector<std::string> P11Modules::getPaths(const std::vector<std::vector<unsigned char>> &atrs) {
-    static const std::vector<ModuleATR> atrToDriverList = createMap();
-    std::vector<std::string> result;
-
-    // For every ATR ...
-    for (const auto &atrbytes: atrs) {
-        // convert ATR byte array to upper case HEX
-        std::string key = toHex(atrbytes);
-        std::transform(key.begin(), key.end(), key.begin(), ::toupper);
-        _log("Looking for %s", key.c_str());
-        for (const auto &conf: atrToDriverList) {
-            // Checking if ATR matches one in the list
-            bool atr_match = std::any_of(conf.atrs.cbegin(), conf.atrs.cend(), [&](const std::string &atr) {
-                if (atr == "*" || atr == key) {
-                    _log("ATR matches %s: %s", conf.name.c_str(), atr.c_str());
-                    return true;
-                }
-                return false;
-            });
-            // ATR matched config entry.
-            if (!atr_match)
-                continue;
-            // Check if any of the modules is usable/available
-            for (const auto &path: conf.paths) {
-                // 1. If module contains path separators, check if file exists
-                if (path.find_first_of("/\\") != std::string::npos) {
-                    if (access(path.c_str(), F_OK ) == -1) {
-                        _log("ignoring missing PKCS#11 module %s", path.c_str());
-                        continue;
-                    }
-                }
-                // try to open XXX: wrap in some common header
-                // TODO: maybe check if function list present ?
-#ifdef _WIN32
-                HINSTANCE handle = LoadLibraryA(path.c_str());
+bool CardOracle::isUsable(const QString &token) {
+    // Ignore a card
+    if (token.toUpper() == "IGNORE")
+        return true;
+    // Windows special key
+    if (token.toUpper() == "CAPI") {
+#ifdef Q_OS_WIN
+        return true;
 #else
-                void *handle = dlopen(path.c_str(), RTLD_LOCAL | RTLD_NOW);
+        return false;
 #endif
-                if (!handle) {
-                    _log("ignoring PKCS#11 module that did not load: %s", path.c_str());
-                    continue;
-                }
+    }
+
+    // Otherwise check the module
+    if (token.contains("/") || token.contains("\\")) {
+        QFile module(token);
+        if (!module.exists()) {
+            _log("ignoring missing PKCS#11 module %s", qPrintable(token));
+            return false;
+        }
+    }
+
+// Try to load it as well. FIXME: this can be a slow procedure
+// try to open XXX: wrap in some common header
 #ifdef _WIN32
-                FreeLibrary(handle);
+    HINSTANCE handle = LoadLibraryA(token.toStdString().c_str());
 #else
-                dlclose(handle);
+    void* handle = dlopen(token.toStdString().c_str(), RTLD_LOCAL | RTLD_NOW);
 #endif
-                // Assume usable module if dlopen is successful
-                result.push_back(path);
-                _log("%s found usable as %s via %s", key.c_str(), conf.name.c_str(), path.c_str());
-                break;
+    if (!handle) {
+        _log("ignoring PKCS#11 module that did not load: %s", qPrintable(token));
+        return false;
+    }
+#ifdef _WIN32
+    FreeLibrary(handle);
+#else
+    dlclose(handle);
+#endif
+    return true;
+}
+
+// Given an ATR, returns a list of PKCS#11 modules to try and/or CAPI to use CryptoAPI
+// Non-existing modules are ignored.
+QStringList CardOracle::atrOracle(const QByteArray &atr) {
+    static const QList<ModuleATR> atrToDriverList = createMap();
+
+    QStringList result;
+    QSettings settings;
+    settings.beginGroup("ATR");
+    QString atrstring = QString(atr.toHex());
+    // Iterate all keys
+    for (const auto &c: settings.childKeys()) {
+        if ((atrstring.contains(c, Qt::CaseInsensitive) || c == "*") && !result.contains("IGNORE")) {
+            _log("Matched %s for %s", qPrintable(c), qPrintable(atrstring));
+            QString atrvalue = settings.value(c).toString();
+            if (isUsable(atrvalue)) {
+                result << atrvalue;
             }
         }
     }
+
+    // Consult built-in config
     if (result.empty()) {
-        _log("no suitable drivers found for a total of %d cards", atrs.size());
+        for (const auto &c: atrToDriverList) {
+            for (const auto &a: c.atrs) {
+               if ((atrstring.contains(a, Qt::CaseInsensitive) || a == "*") && !result.contains("IGNORE")) {
+                    _log("Matched builtin %s for %s as %s", qPrintable(a), qPrintable(atrstring), qPrintable(c.name));
+                    for (const auto &p: c.paths) {
+                        if (isUsable(p)) {
+                            result << p;
+                        }    
+                    }
+                } 
+            }
+        }
     }
+
+    // Only one option if card is destined for ignore
+    if (result.contains("IGNORE"))
+        return {"IGNORE"};
+
+    if (result.empty()) {
+        _log("No configuration available for ATR %s", qPrintable(atrstring));
+    }
+
     return result;
 }

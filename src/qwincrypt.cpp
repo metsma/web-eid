@@ -56,7 +56,8 @@ extern "C" {
 // TODO UX: this is a slow operation, possibly skip it and let Windows do the job
 static BOOL isCardInReader(PCCERT_CONTEXT certContext) {
     return TRUE;
-    DWORD flags = CRYPT_ACQUIRE_CACHE_FLAG | CRYPT_ACQUIRE_COMPARE_KEY_FLAG | CRYPT_ACQUIRE_SILENT_FLAG;
+    //DWORD flags = CRYPT_ACQUIRE_CACHE_FLAG | CRYPT_ACQUIRE_COMPARE_KEY_FLAG | CRYPT_ACQUIRE_SILENT_FLAG;
+    DWORD flags = CRYPT_ACQUIRE_COMPARE_KEY_FLAG | CRYPT_ACQUIRE_SILENT_FLAG;
     NCRYPT_KEY_HANDLE key = 0;
     DWORD spec = 0;
     BOOL ncrypt = FALSE;
@@ -93,7 +94,7 @@ QWinCrypt::ErroredResponse QWinCrypt::getCertificates() {
     if (cert) {
         CertFreeCertificateContext(cert);
     }
-    _log("Found a total of %d certs in MY store", result.size());
+    _log("Found a total of %d certs with a present key in MY store", result.size());
     CertCloseStore(store, 0);
     return {CKR_OK, result};
 }
