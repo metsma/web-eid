@@ -268,7 +268,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     // Notify 14 days before cert expires
     if (QDateTime::currentDateTime().addDays(14) >= serviceCerts.at(0).expiryDate()) {
-         QDesktopServices::openUrl(QUrl(settings.value("welcomeUrl", "https://web-eid.com/app/?expires=" + serviceCerts.at(0).expiryDate().toString(Qt::RFC2822Date)).toString()));
+        QDesktopServices::openUrl(QUrl(settings.value("welcomeUrl", "https://web-eid.com/app/?expires=" + serviceCerts.at(0).expiryDate().toString(Qt::RFC2822Date)).toString()));
     }
 
     sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyNone);

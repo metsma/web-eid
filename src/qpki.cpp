@@ -30,7 +30,7 @@ void QPKIWorker::refreshModule(const QString& module) {
             modules[module] = m;
             m->refresh();
             _log("Module loaded with %d certificates", m->getCerts().size());
-             // Use first module that reports certificates
+            // Use first module that reports certificates
         } else {
             _log("Could not load module %s", qPrintable(module));
             return;
@@ -49,7 +49,7 @@ void QPKIWorker::refreshModule(const QString& module) {
     }
 
     // If certificate list changed, emit signal
-    // FIXME:always triggers. 
+    // FIXME:always triggers.
     if (certificates.size() != certs.size() || 1) {
         certificates = certs;
         emit refreshed(certificates);
@@ -138,11 +138,11 @@ void QPKI::refreshCAPI() {
         QWinCrypt::ErroredResponse result = this->wincerts.result();
         _log("Wincerts done: %s %d", QPKI::errorName(result.error), result.result.size());
         if (result.error == CKR_OK) {
-            // 
+            //
             // Make a set for easy operations
             _log("Refreshed CAPI certs");
-        
-            // Add new certificates 
+
+            // Add new certificates
             for (auto& c : result.result) {
                 if (certificates.contains(c)) {
                     _log("Already present!");
@@ -153,7 +153,7 @@ void QPKI::refreshCAPI() {
                     certificates[c] = P11Token({0,0,{0},0,0,0, "CAPI"});
                 }
             }
-        
+
             // and remove ones that are gone.
             for (auto & c: certificates.keys()) {
                 if (QString::fromStdString(certificates[c].module) == "CAPI" && !result.result.contains(c)) {

@@ -68,7 +68,7 @@ static QList<ModuleATR> createMap() {
             },
             {"CAPI", "/System/Library/Security/tokend/CCSuite.tokend/Contents/Frameworks/libccpkip11.dylib", "/usr/lib/ccs/libccpkip11.so"}
         },
-       
+
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
         // Then add some last resort wildcards
         {"OpenSC fallback", {"*"}, {"/Library/OpenSC/lib/opensc-pkcs11.so", "opensc-pkcs11.so"}},
@@ -152,14 +152,14 @@ QStringList CardOracle::atrOracle(const QByteArray &atr) {
     if (result.empty()) {
         for (const auto &c: atrToDriverList) {
             for (const auto &a: c.atrs) {
-               if ((atrstring.contains(a, Qt::CaseInsensitive) || a == "*") && !result.contains("IGNORE")) {
+                if ((atrstring.contains(a, Qt::CaseInsensitive) || a == "*") && !result.contains("IGNORE")) {
                     _log("Matched builtin %s for %s as %s", qPrintable(a), qPrintable(atrstring), qPrintable(c.name));
                     for (const auto &p: c.paths) {
                         if (isUsable(p)) {
                             result << p;
-                        }    
+                        }
                     }
-                } 
+                }
             }
         }
     }
