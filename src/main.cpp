@@ -188,6 +188,26 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     connect(viewLog, &QAction::triggered, this, [=] {
         QDesktopServices::openUrl(QUrl::fromLocalFile(Logger::getLogFilePath()));
     });
+
+    softCertEnabled = debugMenu->addAction(tr("Enable softcerts"));
+    softCertEnabled->setCheckable(true);
+    softCertEnabled->setChecked(settings.value("softCert", false).toBool());
+    connect(softCertEnabled, &QAction::toggled, this, [=] (bool checked) {
+        QSettings settings;
+        settings.setValue("softCert", checked);
+    });
+
+#ifdef Q_OS_WIN
+    ownDialogsEnabled = debugMenu->addAction(tr("Use own certificate dialogs"));
+    ownDialogsEnabled->setCheckable(true);
+    ownDialogsEnabled->setChecked(settings.value("ownDialogs", false).toBool());
+    connect(ownDialogsEnabled, &QAction::toggled, this, [=] (bool checked) {
+        QSettings settings;
+        settings.setValue("ownDialogs", checked);
+    });
+#endif
+
+
     QAction *websocket = debugMenu->addAction(tr("WebSocket enabled"));
     websocket->setCheckable(true);
     websocket->setChecked(true);
@@ -244,9 +264,15 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     keyFile.open(QIODevice::ReadOnly);
     QSslKey sslKey(&keyFile, QSsl::Rsa, QSsl::Pem);
     keyFile.close();
+    QList<QSslCertificate> serviceCerts = QSslCertificate::fromPath(settings.value("localhostCert", ":/app.web-eid.com.pem").toString());
+
+    // Notify 14 days before cert expires
+    if (QDateTime::currentDateTime().addDays(14) >= serviceCerts.at(0).expiryDate()) {
+         QDesktopServices::openUrl(QUrl(settings.value("welcomeUrl", "https://web-eid.com/app/?expires=" + serviceCerts.at(0).expiryDate().toString(Qt::RFC2822Date)).toString()));
+    }
 
     sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyNone);
-    sslConfiguration.setLocalCertificateChain(QSslCertificate::fromPath(settings.value("localhostCert", ":/app.web-eid.com.pem").toString()));
+    sslConfiguration.setLocalCertificateChain(serviceCerts);
     sslConfiguration.setPrivateKey(sslKey);
     sslConfiguration.setProtocol(QSsl::TlsV1SslV3);
 

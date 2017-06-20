@@ -8,9 +8,6 @@
 #include "qpki.h"
 #include "context.h"
 
-// Dialogs
-#include "dialogs/select_cert.h"
-
 #include <QApplication>
 #include <QSystemTrayIcon>
 #include <QTranslator>
@@ -58,6 +55,10 @@ private:
     QMenu *debugMenu;
     QAction *debugEnabled;
     QAction *debugLogEnabled;
+    QAction *softCertEnabled;
+#ifdef Q_OS_WIN
+    QAction *ownDialogsEnabled;
+#endif
 
     QWebSocketServer *ws; // IPv4
     QWebSocketServer *ws6; // IPv6
