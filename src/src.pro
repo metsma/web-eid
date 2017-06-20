@@ -43,7 +43,7 @@ DEFINES += VERSION=\\\"$$VERSION\\\"
 DEFINES += "GIT_REVISION=\"\\\"$$system(git describe --tags --always)\\\"\""
 SOURCES += \
     debuglog.cpp \
-    modulemap.cpp \
+    oracle.cpp \
     pkcs11module.cpp \
     main.cpp \
     qpcsc.cpp \

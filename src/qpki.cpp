@@ -8,7 +8,7 @@
 #include "debuglog.h"
 #include "util.h"
 
-#include "modulemap.h"
+#include "oracle.h"
 #include "qwincrypt.h"
 
 #include "dialogs/select_cert.h"
