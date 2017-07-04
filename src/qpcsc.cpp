@@ -176,7 +176,7 @@ void QPCSCEventWorker::start() {
         emit readerListChanged(getReaders());
         emit stopped(rv);
 
-        if (rv == SCARD_E_CANCELLED) {
+        if (rv == LONG(SCARD_E_CANCELLED)) {
             _log("Cancelled, returning");
             return;
         }
@@ -233,7 +233,7 @@ LONG QPCSCEventWorker::generate()
             if (rv == LONG(SCARD_E_SERVICE_STOPPED)) {
                 return rv;
             }
-            if (rv != SCARD_S_SUCCESS && rv != SCARD_E_NO_READERS_AVAILABLE) {
+            if (rv != SCARD_S_SUCCESS && rv != LONG(SCARD_E_NO_READERS_AVAILABLE)) {
                 _log("SCardListReaders(size): %s %d", QtPCSC::errorName(rv), size);
                 continue; // We re-list on next run
             }
@@ -244,7 +244,7 @@ LONG QPCSCEventWorker::generate()
             // TODO: Only meaningful if the size is > 0
             std::string readers(size, 0);
             rv = SCard(ListReaders, context, nullptr, &readers[0], &size);
-            if (rv != SCARD_S_SUCCESS && rv != SCARD_E_NO_READERS_AVAILABLE) {
+            if (rv != SCARD_S_SUCCESS && rv != LONG(SCARD_E_NO_READERS_AVAILABLE)) {
                 _log("SCardListReaders: %s", QtPCSC::errorName(rv));
                 continue; // We re-list on next run.
             }

@@ -2,7 +2,7 @@
 <qresource prefix="/">
 	<file alias="web-eid.svg">../artwork/icon.svg</file>
 	<file alias="inactive-web-eid.svg">../artwork/inactive-icon.svg</file>
-	<file alias="app.web-eid.com.key">../localhost.key</file>
-	<file alias="app.web-eid.com.pem">../fullchain.pem</file>
+	<file alias="teenusevoti">../keys/localhost.key</file>
+	<file alias="teenusetunnus">../keys/localhost.crt</file>
 </qresource>
 </RCC>

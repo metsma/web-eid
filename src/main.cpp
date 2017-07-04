@@ -10,7 +10,6 @@
 //#include "util.h"
 #include "debuglog.h"
 
-#include "dialogs/debug.h"
 #include "dialogs/about.h"
 
 #include <QIcon>
@@ -42,6 +41,13 @@
 #ifdef Q_OS_MAC
 void nshideapp(bool);
 #endif
+
+// Do the "magic" obfuscation
+static void selgita(QByteArray &bytes) {
+    for (int i = 0; i < bytes.size(); i++) {
+        bytes[i] = bytes[i] ^ ((42 + i) % 255);
+    }
+}
 
 QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->PCSC), tray(this) {
 
@@ -180,9 +186,11 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     debugLogEnabled->setCheckable(true);
     debugLogEnabled->setChecked(Logger::isEnabled());
     connect(debugLogEnabled, &QAction::toggled, this, [=] (bool checked) {
-        // create file.
-        QFile logfile(Logger::getLogFilePath());
-        logfile.open(QIODevice::WriteOnly | QIODevice::Text);
+        if (checked) {
+            // create file.
+            QFile logfile(Logger::getLogFilePath());
+            logfile.open(QIODevice::WriteOnly | QIODevice::Text);
+        }
     });
     QAction *viewLog = debugMenu->addAction(tr("View log"));
     connect(viewLog, &QAction::triggered, this, [=] {
@@ -260,11 +268,24 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     // Now this will probably get some bad publicity ...
     QSslConfiguration sslConfiguration;
-    QFile keyFile(settings.value("localhostKey", ":/app.web-eid.com.key").toString());
+    QFile keyFile(settings.value("teenusevoti", ":/teenusevoti").toString());
     keyFile.open(QIODevice::ReadOnly);
-    QSslKey sslKey(&keyFile, QSsl::Rsa, QSsl::Pem);
+    QByteArray privkeyBytes = keyFile.readAll();
+    if (keyFile.fileName().startsWith(":/")) {
+        selgita(privkeyBytes);
+    }
+    QSslKey sslKey(privkeyBytes, QSsl::Rsa, QSsl::Pem);
     keyFile.close();
-    QList<QSslCertificate> serviceCerts = QSslCertificate::fromPath(settings.value("localhostCert", ":/app.web-eid.com.pem").toString());
+    if (sslKey.isNull()) {
+        _log("NULL :(");
+    }
+    QFile certFile(settings.value("teenusetunnus", ":/teenusetunnus").toString());
+    certFile.open(QIODevice::ReadOnly);
+    QByteArray certBytes = certFile.readAll();
+    if (certFile.fileName().startsWith(":/")) {
+        selgita(certBytes);
+    }
+    QList<QSslCertificate> serviceCerts = QSslCertificate::fromData(certBytes);
 
     // Notify 14 days before cert expires
     if (QDateTime::currentDateTime().addDays(14) >= serviceCerts.at(0).expiryDate()) {
