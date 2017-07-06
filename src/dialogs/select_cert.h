@@ -180,6 +180,7 @@ public slots:
     }
 
     void noDriver(const QString &reader, const QByteArray &atr, const QByteArray &extra) {
+        _log("No driver for card in %s (%s) %s", qPrintable(reader), qPrintable(atr.toHex()), qPrintable(extra.toHex()));
         message->setText(tr("No driver available. <a href=\"http://smartcard-atr.appspot.com/parse?ATR=%1\">More information</a>").arg(QString(atr.toHex())));
         message->setTextFormat(Qt::RichText);
         message->setTextInteractionFlags(Qt::TextBrowserInteraction);
