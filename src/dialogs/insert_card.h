@@ -43,6 +43,7 @@ public:
     };
 
     void cardInserted(const QString &reader, const QByteArray &atr, const QStringList &flags) {
+        _log("Card inserted: %s", qPrintable(atr.toHex()));
         if (this->reader->name == reader) {
             if (flags.contains("MUTE")) {
                 message->setText(tr("Inserted card can not be used, please check the card"));
