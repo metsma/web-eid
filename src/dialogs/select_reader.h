@@ -96,6 +96,7 @@ public:
             }
         });
         connect(select, static_cast<void(QComboBox::*)(const QString &)>(&QComboBox::highlighted), [this](const QString &text) {
+            _log("Selected reader %", qPrintable(text));
             autoaccept->stop();
             ok->setText(oktext);
         });
