@@ -163,6 +163,7 @@ QStringList CardOracle::atrOracle(const QByteArray &atr) {
             }
         }
     }
+    result.removeDuplicates();
 
     // Only one option if card is destined for ignore
     if (result.contains("IGNORE"))
@@ -170,6 +171,11 @@ QStringList CardOracle::atrOracle(const QByteArray &atr) {
 
     if (result.empty()) {
         _log("No configuration available for ATR %s", qPrintable(atrstring));
+    }
+
+    // log
+    for (const auto &r: result) {
+        _log("Using %s", qPrintable(r));
     }
 
     return result;

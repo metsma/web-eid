@@ -70,6 +70,7 @@ public:
         worker.moveToThread(&thread);
         // FIXME: proxy
         connect(&worker, &QPKIWorker::refreshed, this, &QPKI::updateCertificates, Qt::QueuedConnection);
+        connect(this, &QPKI::refreshModule, &worker, &QPKIWorker::refreshModule, Qt::QueuedConnection);
         // control signals
         //connect(this, &QPKI::login, &worker, &QPKIWorker::login, Qt::QueuedConnection);
         // FIXME: have this tied to the PIN dialog maybe ?

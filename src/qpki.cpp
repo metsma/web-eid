@@ -83,9 +83,7 @@ void QPKIWorker::sign(const QByteArray &cert, const QByteArray &hash) {
 void QPKI::handleCardInserted(const QString &reader, const QByteArray &atr) {
     _log("Card inserted to %s (%s), refreshing available certificates", qPrintable(reader), qPrintable(atr.toHex()));
     // Check if module already present
-    QStringList modsv = CardOracle::atrOracle(atr);
-    // Make the list uniq
-    QSet<QString> mods = QSet<QString>::fromList(modsv);
+    QStringList mods = CardOracle::atrOracle(atr);
 
     // Check configuration
     if (mods.size() > 0) {
@@ -96,10 +94,10 @@ void QPKI::handleCardInserted(const QString &reader, const QByteArray &atr) {
             } else if (m == "CAPI") {
                 _log("Using CryptoAPI for card");
                 // Give Windows time to start the drivers
-
                 refreshCAPI();
                 return;
             } else {
+                _log("Refreshing module in PKI thread");
                 // Let the worker do the trick
                 return emit refreshModule(m);
             }
