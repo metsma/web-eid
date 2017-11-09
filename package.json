@@ -16,6 +16,6 @@
   },
   "homepage": "https://github.com/web-eid/web-eid#readme",
   "devDependencies": {
-    "appdmg": "^0.4.5"
+    "appdmg": "^0.5.1"
   }
 }
