@@ -2,7 +2,7 @@
 GIT_REPOSITORY=git@bitbucket.org:martinpaljak/hwcrypto-native
 VENDOR=martinpaljak
 BRANCH=websocket
-DISTROS = debian-testing ubuntu-16.10 ubuntu-17.04 fedora-25
+DISTROS = debian-testing ubuntu-16.10 ubuntu-17.04 ubuntu-17.10 fedora-25
 
 prepare:
 	for f in $(DISTROS); do \
