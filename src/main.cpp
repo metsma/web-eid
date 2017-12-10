@@ -441,7 +441,9 @@ void QtHost::newConnection(WebContext *ctx) {
             if (contexts.size() == 0) {
                 usage->menuAction()->setVisible(false);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
-                tray.setIcon(QIcon(":/inactive-web-eid.svg"));
+                QIcon icon = QIcon(":/inactive-web-eid.svg");
+                icon.setIsMask(true); // So that inverted colors would work on OSX
+                tray.setIcon(icon);
 #endif
                 if (once) {
                     _log("Context count is zero, quitting");
