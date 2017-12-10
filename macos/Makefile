@@ -72,5 +72,5 @@ Web-eID_$(VERSION)-unsigned.pkg: web-eid-app.pkg scripts.pkg
 
 signed: Web-eID_$(VERSION).pkg
 .PHONY: Web-eID_$(VERSION).pkg
-Web-eID_$(VERSION).pkg: pkg
+Web-eID_$(VERSION).pkg: pkg-pkg
 	productsign --sign "Developer ID Installer: $(SIGNER)" Web-eID_$(VERSION)-unsigned.pkg $@

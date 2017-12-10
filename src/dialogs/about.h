@@ -30,7 +30,11 @@ signals:
     void rightClicked();
 
 protected:
+    int clicked = 0;
     void mousePressEvent(QMouseEvent* event) {
+        if (clicked == 0)
+            load(QString(":/web-eid.svg"));
+        clicked++;    
         if(event->button() == Qt::RightButton) {
             emit rightClicked();
         } else if(event->button() == Qt::LeftButton) {
@@ -46,7 +50,7 @@ class AboutDialog: public BetterDialog {
 public:
     AboutDialog():
         layout(new QVBoxLayout(this)),
-        img(new SurpriseLabel(":/web-eid.svg", this)),
+        img(new SurpriseLabel(":/inactive-web-eid.svg", this)),
         text(new QLabel(this)),
         revision(new QLabel(this)),
         buttons(new QDialogButtonBox(this))

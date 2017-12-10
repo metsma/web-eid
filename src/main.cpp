@@ -87,7 +87,9 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
 
     // Construct tray icon and related menu
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
-    tray.setIcon(QIcon(":/inactive-web-eid.svg"));
+    QIcon trayicon(":/inactive-web-eid.svg");
+    trayicon.setIsMask(true);
+    tray.setIcon(trayicon);
 #else
     // Windows hides the icon and w10 has a dark bacground by default
     tray.setIcon(QIcon(":/web-eid.svg"));
