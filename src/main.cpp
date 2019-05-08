@@ -302,9 +302,11 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     // Listen on v4 and v6
     ws->setSslConfiguration(sslConfiguration);
     ws6->setSslConfiguration(sslConfiguration);
+    QString serverUrlDescription;
 
     if (ws6->listen(QHostAddress::LocalHostIPv6, port)) {
-        _log("Server running on %s", qPrintable(ws6->serverUrl().toString()));
+        serverUrlDescription = ws6->serverUrl().toString();
+        _log("Server running on %s", qPrintable(serverUrlDescription));
         connect(ws6, &QWebSocketServer::originAuthenticationRequired, this, &QtHost::checkOrigin);
         connect(ws6, &QWebSocketServer::newConnection, this, &QtHost::processConnect);
     } else {
@@ -312,7 +314,8 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     }
 
     if (ws->listen(QHostAddress::LocalHost, port)) {
-        _log("Server running on %s", qPrintable(ws->serverUrl().toString()));
+        serverUrlDescription = ws->serverUrl().toString();
+        _log("Server running on %s", qPrintable(serverUrlDescription));
         connect(ws, &QWebSocketServer::originAuthenticationRequired, this, &QtHost::checkOrigin);
         connect(ws, &QWebSocketServer::newConnection, this, &QtHost::processConnect);
     } else {
@@ -343,7 +346,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     }
 
     tray.setContextMenu(menu);
-    tray.setToolTip(tr("Web eID is running on port %1").arg(12345)); // FIXME
+    tray.setToolTip(tr("Web eID is running %1").arg(serverUrlDescription));
     if (QSystemTrayIcon::isSystemTrayAvailable()) {
         tray.show();
     } else {
