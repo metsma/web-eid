@@ -263,45 +263,11 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     connect(a2, &QAction::triggered, this, &QApplication::quit);
 
     // Initialize listening servers
-    ws = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
-    ws6 = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::SecureMode, this);
+    ws = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::NonSecureMode, this);
+    ws6 = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::NonSecureMode, this);
     ls = new QLocalServer(this);
     quint16 port = 42123; // TODO: 3 ports to try.
 
-    // Now this will probably get some bad publicity ...
-    QSslConfiguration sslConfiguration;
-    QFile keyFile(settings.value("teenusevoti", ":/teenusevoti").toString());
-    keyFile.open(QIODevice::ReadOnly);
-    QByteArray privkeyBytes = keyFile.readAll();
-    if (keyFile.fileName().startsWith(":/")) {
-        selgita(privkeyBytes);
-    }
-    QSslKey sslKey(privkeyBytes, QSsl::Rsa, QSsl::Pem);
-    keyFile.close();
-    if (sslKey.isNull()) {
-        _log("NULL :(");
-    }
-    QFile certFile(settings.value("teenusetunnus", ":/teenusetunnus").toString());
-    certFile.open(QIODevice::ReadOnly);
-    QByteArray certBytes = certFile.readAll();
-    if (certFile.fileName().startsWith(":/")) {
-        selgita(certBytes);
-    }
-    QList<QSslCertificate> serviceCerts = QSslCertificate::fromData(certBytes);
-
-    // Notify 14 days before cert expires
-    if (QDateTime::currentDateTime().addDays(14) >= serviceCerts.at(0).expiryDate()) {
-        QDesktopServices::openUrl(QUrl(settings.value("welcomeUrl", "https://web-eid.com/app/?expires=" + serviceCerts.at(0).expiryDate().toString(Qt::RFC2822Date)).toString()));
-    }
-
-    sslConfiguration.setPeerVerifyMode(QSslSocket::VerifyNone);
-    sslConfiguration.setLocalCertificateChain(serviceCerts);
-    sslConfiguration.setPrivateKey(sslKey);
-    sslConfiguration.setProtocol(QSsl::TlsV1SslV3);
-
-    // Listen on v4 and v6
-    ws->setSslConfiguration(sslConfiguration);
-    ws6->setSslConfiguration(sslConfiguration);
     QString serverUrlDescription;
 
     if (ws6->listen(QHostAddress::LocalHostIPv6, port)) {
