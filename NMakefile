@@ -11,11 +11,11 @@ EXE = src\release\Web-eID.exe
 DISTNAME = Web-eID
 
 app: src\*.h src\*.cpp src\dialogs\*.h
-	c:\Qt\5.9\msvc2015\bin\lrelease.exe src\src.pro
-	c:\Qt\5.9\msvc2015\bin\qmake.exe -config release -o QMakefile
+	c:\Qt\5.12.3\msvc2017\bin\lrelease.exe src\src.pro
+	c:\Qt\5.12.3\msvc2017\bin\qmake.exe -config release -o QMakefile
 	$(MAKE) /f QMakefile
 	copy src\nm-bridge\release\web-eid-bridge.exe src\release
-	c:\Qt\5.9\msvc2015\bin\windeployqt src\release\Web-eID.exe
+	c:\Qt\5.12.3\msvc2017\bin\windeployqt src\release\Web-eID.exe
 	copy c:\OpenSSL-Win32\bin\libeay32.dll src\release
 	copy c:\OpenSSL-Win32\bin\ssleay32.dll src\release
 
