@@ -1,6 +1,12 @@
-WHERE /q nmake.exe
-IF %ERRORLEVEL% NEQ 0 (
-  ECHO "No Visual Studio environment found, loading VS 2015"
-  CALL "C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\Tools\VsDevCmd.bat"
-)
-nmake /f NMakefile %*
+@echo off
+mkdir build 
+pushd build
+mkdir win64
+pushd win64
+
+cmake -G "Visual Studio 15 2017 Win64" ../../
+
+popd
+popd
+
+cmake --build build/win64 --config Release
