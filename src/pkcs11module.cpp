@@ -78,8 +78,8 @@ std::vector<CK_OBJECT_HANDLE> PKCS11Module::getKey(CK_SESSION_HANDLE session, co
     _log("Looking for key with id %s length %d", toHex(id).c_str(), id.size());
     CK_OBJECT_CLASS keyclass = CKO_PRIVATE_KEY;
     return objects({
-        {CKA_CLASS, &keyclass, sizeof(keyclass)},
-        {CKA_ID, (void*)id.data(), id.size()}
+        {CKA_CLASS, &keyclass, (CK_ULONG)sizeof(keyclass)},
+        {CKA_ID, (void*)id.data(), (CK_ULONG)id.size()}
     }, session, 1);
 }
 

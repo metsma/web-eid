@@ -266,7 +266,7 @@ QtHost::QtHost(int &argc, char *argv[]) : QApplication(argc, argv), PKI(&this->P
     ws = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::NonSecureMode, this);
     ws6 = new QWebSocketServer(QStringLiteral("Web eID"), QWebSocketServer::NonSecureMode, this);
     ls = new QLocalServer(this);
-    quint16 port = 42123; // TODO: 3 ports to try.
+    quint16 port = 59735;
 
     QString serverUrlDescription;
 
