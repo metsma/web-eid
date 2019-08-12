@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1.0)
 
-project(web-eid)
+project(web-eid VERSION 19.05)
 
 if(NOT DEFINED ENV{QTDIR})
 	message(FATAL_ERROR "QTDIR environment variable is not set!")
@@ -10,6 +10,9 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_PREFIX_PATH $ENV{QTDIR}/lib/cmake)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+set(INSTALL_BIN_PATH bin)
 
 find_package(Qt5Widgets CONFIG REQUIRED)
 find_package(Qt5Network CONFIG REQUIRED)
@@ -42,16 +45,19 @@ endforeach()
 
 include_directories(src src/dialogs)
 
-add_definitions(-DVERSION="19.05.0-evidos")
+add_definitions(-DVERSION="${PROJECT_VERSION}-evidos")
 add_definitions(-DGIT_REVISION="")
 
 IF (MSVC)
 	add_executable(web-eid WIN32 ${web-eid_SRCS} ${web-eid_RESOURCES})
+	
 elseif (APPLE)
 	add_executable(web-eid MACOSX_BUNDLE ${web-eid_SRCS} ${web-eid_RESOURCES})
 else()
 	add_executable(web-eid ${web-eid_SRCS} ${web-eid_RESOURCES})
 endif ()
+
+install(TARGETS web-eid DESTINATION ${INSTALL_BIN_PATH})
 
 target_link_libraries(web-eid
 	Qt5::Widgets
@@ -61,7 +67,37 @@ target_link_libraries(web-eid
 	Qt5::Concurrent
 	${LIBS})
 
-IF (MSVC)
-	find_program(WINDEPLOYQT_EXECUTABLE NAMES windeployqt HINTS ${QTDIR} ENV QTDIR PATH_SUFFIXES bin)
-	add_custom_command(TARGET web-eid POST_BUILD COMMAND ${WINDEPLOYQT_EXECUTABLE} "Release/Web-eID.exe" $<TARGET_FILE:web-eid>)
-endif (MSVC)
+set(CPACK_PACKAGE_EXECUTABLES web-eid "Web eID for Windows")
+set(CPACK_PACKAGE_VENDOR "Evidos")
+set(CPACK_PACKAGE_DESCRIPTION "Web eID is the platform that makes your traditional eID work well on the Web.")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/Evidos/web-eid")
+
+IF (WIN32)
+	configure_file("${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" "LICENSE.txt" COPYONLY)
+	
+	set(CPACK_GENERATOR WIX)
+	set(CPACK_WIX_UPGRADE_GUID "79730a31-61d7-4395-b91e-191279b08798")
+	set(CPACK_RESOURCE_FILE_LICENSE "LICENSE.txt")
+	#SET(CPACK_WIX_PATCH_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cpack.wixpatch")
+	SET(CPACK_WIX_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/wix.template.in")
+	SET(CPACK_WIX_EXTENSIONS "WixUtilExtension")
+	
+	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/wix-banner.bmp")
+		set(CPACK_WIX_UI_BANNER "${CMAKE_CURRENT_SOURCE_DIR}/wix-banner.bmp")
+	endif()
+	
+	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/wix-dialog.bmp")
+		set(CPACK_WIX_UI_DIALOG "${CMAKE_CURRENT_SOURCE_DIR}/wix-dialog.bmp")
+	endif()
+	
+	include(DeployQt)
+	windeployqt(web-eid ${INSTALL_BIN_PATH})
+endif (WIN32)
+
+
+if(APPLE)
+	include(DeployQt)
+	macdeployqt(web-eid ${INSTALL_BIN_PATH})
+endif()
+
+include(CPack)
